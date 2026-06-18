@@ -1,0 +1,24 @@
+{
+  "name": "monsters-boxing-hero",
+  "version": "0.1.0",
+  "description": "JRPG rhythm-sparring brawler with camera motion combat",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "cap:add": "cap add android",
+    "cap:sync": "npm run build && cap sync android",
+    "apk": "npm run build && cap sync android && cd android && gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.14"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/android": "^6.1.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}
