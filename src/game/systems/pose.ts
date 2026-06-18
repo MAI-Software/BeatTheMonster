@@ -19,6 +19,8 @@ export interface InputProvider {
   fists(): { L: Vec2; R: Vec2 };
   consumePunch(): Side | null; // edge-triggered, cleared on read
   update(nowMs: number): void;
+  // screen-space tracking overlay (head + both hands) for the camera, or null
+  tracking(): { head: Vec2; L: Vec2; R: Vec2; detected: boolean } | null;
   videoEl?: HTMLVideoElement;
   stop(): void;
 }
@@ -49,6 +51,7 @@ export class KeyboardInput implements InputProvider {
   head() { return this._head; }
   fists() { return { L: { x: 0.3, y: 0.5 }, R: { x: 0.7, y: 0.5 } }; }
   consumePunch() { const p = this.queued; this.queued = null; return p; }
+  tracking() { return null; }
   update() {}
   stop() {
     window.removeEventListener("keydown", this.onKey);
@@ -74,6 +77,9 @@ export class PoseInput implements InputProvider {
   private prevT = 0;
   private queued: Side | null = null;
   private punchCooldown: Record<Side, number> = { L: 0, R: 0 };
+  private detected = false;
+  private rawPrevL: Vec2 | null = null;
+  private rawPrevR: Vec2 | null = null;
 
   constructor() {
     this.videoEl = document.createElement("video");
@@ -107,37 +113,44 @@ export class PoseInput implements InputProvider {
   head() { return this._head; }
   fists() { return { L: this._L, R: this._R }; }
   consumePunch() { const p = this.queued; this.queued = null; return p; }
+  tracking() { return { head: this._head, L: this._L, R: this._R, detected: this.detected }; }
 
   update(nowMs: number): void {
     if (!this.ready || !this.landmarker || this.videoEl.readyState < 2) return;
     const res = this.landmarker.detectForVideo(this.videoEl, nowMs);
     const lm = res.landmarks?.[0];
-    if (!lm) return;
+    if (!lm) { this.detected = false; return; }
+    this.detected = true;
 
-    // mirror x for selfie view
+    // mirror x for selfie view + exponential smoothing to kill jitter
     const mx = (p: { x: number }) => 1 - p.x;
-    this._head = { x: mx(lm[NOSE]), y: lm[NOSE].y };
-    this._L = { x: mx(lm[L_WRIST]), y: lm[L_WRIST].y };
-    this._R = { x: mx(lm[R_WRIST]), y: lm[R_WRIST].y };
+    const k = 0.45; // smoothing factor (higher = snappier)
+    const ema = (cur: Vec2, nx: number, ny: number): Vec2 => ({ x: cur.x + (nx - cur.x) * k, y: cur.y + (ny - cur.y) * k });
+    this._head = ema(this._head, mx(lm[NOSE]), lm[NOSE].y);
+    this._L = ema(this._L, mx(lm[L_WRIST]), lm[L_WRIST].y);
+    this._R = ema(this._R, mx(lm[R_WRIST]), lm[R_WRIST].y);
 
-    // punch detection: wrist moves up/forward fast relative to shoulder, with cooldown.
+    // punch detection on RAW wrist positions (not the smoothed display ones) so a
+    // fast jab keeps its real velocity. Wrist must be up near/above shoulder.
     const dt = Math.max(16, nowMs - this.prevT);
     this.prevT = nowMs;
     const shY = (lm[L_SH].y + lm[R_SH].y) / 2;
-    const detect = (cur: Vec2, prev: Vec2 | null, side: Side, wrist: { y: number }) => {
+    const rawL: Vec2 = { x: mx(lm[L_WRIST]), y: lm[L_WRIST].y };
+    const rawR: Vec2 = { x: mx(lm[R_WRIST]), y: lm[R_WRIST].y };
+    const detect = (cur: Vec2, prev: Vec2 | null, side: Side, wristY: number) => {
       if (prev) {
         const speed = Math.hypot(cur.x - prev.x, cur.y - prev.y) / (dt / 1000);
-        const extended = wrist.y < shY + 0.05; // hand around/above shoulder line
-        if (speed > 1.6 && extended && nowMs > this.punchCooldown[side]) {
+        const extended = wristY < shY + 0.08;
+        if (speed > 1.3 && extended && nowMs > this.punchCooldown[side]) {
           this.queued = side;
-          this.punchCooldown[side] = nowMs + 220;
+          this.punchCooldown[side] = nowMs + 200;
         }
       }
     };
-    detect(this._L, this.prevL, "L", lm[L_WRIST]);
-    detect(this._R, this.prevR, "R", lm[R_WRIST]);
-    this.prevL = { ...this._L };
-    this.prevR = { ...this._R };
+    detect(rawL, this.rawPrevL, "L", lm[L_WRIST].y);
+    detect(rawR, this.rawPrevR, "R", lm[R_WRIST].y);
+    this.rawPrevL = rawL;
+    this.rawPrevR = rawR;
   }
 
   stop(): void {

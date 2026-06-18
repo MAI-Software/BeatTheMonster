@@ -24,33 +24,39 @@ const MIN_SAME_SIDE_GAP = 360;
 const PUNCH_LEAD = 850;
 const DODGE_LEAD = 1000;
 
+const GAP_AFTER = 220; // ms breathing room between one event resolving and the next starting
+
 export function buildBeatmap(beats: number[], durationMs: number, enemy: Enemy, diff: Difficulty, seed = 1): Beatmap {
   let rng = seed * 9301 + 49297;
   const rand = () => { rng = (rng * 9301 + 49297) % 233280; return rng / 233280; };
   const notes: Note[] = [];
   let id = 0;
   let side: Side = "R";
-  const lastPunch: Record<Side, number> = { L: -1e9, R: -1e9 };
   let lastDodge = -1e9;
+  // events are strictly sequential: the next one can only START filling after the
+  // previous one has fully resolved (+gap). Guarantees one thing on screen at a time.
+  let resolveEnd = -1e9;
   const keep = enemy.intensity * 0.85 + 0.25;
 
   for (const t of beats) {
     if (rand() > keep * diff.density) continue;
 
-    // dodge sometimes, alternating with punches; keep dodges spaced out
-    if (rand() < diff.dodgeRatio && t - lastDodge > 1400) {
-      const ds: Side = rand() < 0.5 ? "L" : "R";
-      notes.push({ id: id++, kind: "dodge", side: ds, tHit: t, leadMs: DODGE_LEAD });
-      lastDodge = t;
-      continue;
-    }
+    const isDodge = rand() < diff.dodgeRatio && t - lastDodge > 1600;
+    const lead = isDodge ? DODGE_LEAD : PUNCH_LEAD;
+    const tail = isDodge ? diff.dodgeWindowMs : diff.goodMs;
 
-    side = rand() < 0.78 ? (side === "L" ? "R" : "L") : side;
-    if (t - lastPunch[side] < MIN_SAME_SIDE_GAP) side = side === "L" ? "R" : "L";
-    if (t - lastPunch[side] < MIN_SAME_SIDE_GAP) continue;
-    const lead = Math.min(PUNCH_LEAD, Math.max(420, t - lastPunch[side] - 40));
-    notes.push({ id: id++, kind: "punch", side, tHit: t, leadMs: lead });
-    lastPunch[side] = t;
+    // reject if this event would start before the previous one resolved
+    if (t - lead < resolveEnd + GAP_AFTER) continue;
+
+    if (isDodge) {
+      const ds: Side = rand() < 0.5 ? "L" : "R";
+      notes.push({ id: id++, kind: "dodge", side: ds, tHit: t, leadMs: lead });
+      lastDodge = t;
+    } else {
+      side = rand() < 0.6 ? (side === "L" ? "R" : "L") : side; // vary fist
+      notes.push({ id: id++, kind: "punch", side, tHit: t, leadMs: lead });
+    }
+    resolveEnd = t + tail;
   }
   return { durationMs, notes };
 }

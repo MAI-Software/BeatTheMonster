@@ -131,9 +131,27 @@ export function runCombat(
       ctx.fillStyle = glow ? COL.on : "#fff"; ctx.beginPath(); ctx.arc(x, cy, 3, 0, Math.PI * 2); ctx.fill();
     }
 
+    // overlay markers for what the camera tracks: head + both hands, in screen space
+    function drawTracking() {
+      if (!isCam) return;
+      const t = input.tracking?.(); if (!t || !t.detected) return;
+      const { w, h } = geom();
+      const dot = (p: { x: number; y: number }, col: string, r: number, label: string) => {
+        const x = p.x * w, y = p.y * h;
+        ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 10;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.font = "700 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#0009";
+        ctx.fillText(label, x, y - r - 4); ctx.fillStyle = "#fff"; ctx.fillText(label, x, y - r - 5);
+      };
+      dot(t.head, "#ffffff", 9, "CABEZA");
+      dot(t.L, COL.L, 11, "IZQ");
+      dot(t.R, COL.R, 11, "DER");
+    }
+
     function drawPrep() {
       const { w, h, cx, cy, R } = geom();
       ctx.clearRect(0, 0, w, h);
+      drawTracking();
       drawRing(cx, cy, R);
       // centre guide
       ctx.setLineDash([6, 6]); ctx.strokeStyle = "#9fb0c8"; ctx.lineWidth = 2;
@@ -172,6 +190,7 @@ export function runCombat(
     function draw(songMs: number, now: number) {
       const { w, h, cx, cy, R } = geom();
       ctx.clearRect(0, 0, w, h);
+      drawTracking();
       drawHalfFill(cx, cy, R, "L", songMs); drawHalfFill(cx, cy, R, "R", songMs);
       drawRing(cx, cy, R);
       drawDodge(cx, cy, R, songMs);

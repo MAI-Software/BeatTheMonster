@@ -7,7 +7,7 @@ import { effectiveStats, grantXp } from "./game/systems/progression";
 import { applyFightResult, refreshChallenges } from "./game/systems/challenges";
 import { fightScore } from "./game/systems/ranking";
 import { createInput, type InputProvider } from "./game/systems/pose";
-import { DIFFICULTIES, DIFFICULTY_ORDER, type DifficultyId } from "./game/data/difficulty";
+import { DIFFICULTIES, DIFFICULTY_ORDER, isDifficultyUnlocked, unlockHint, type DifficultyId } from "./game/data/difficulty";
 import { listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
 import { icon } from "./game/ui/icons";
@@ -47,6 +47,8 @@ class Game implements App {
     const songs = await listSongs();
     let useCamera = true;
     let chosenSong: SongMeta | null = null; // null = synth (game rhythm)
+    const unlocked = (d: DifficultyId) => isDifficultyUnlocked(d, this.save.level, this.save.difficultyWins);
+    if (!unlocked(this.difficulty)) this.difficulty = "easy";
 
     const render = () => {
       this.root.innerHTML = `
@@ -57,8 +59,14 @@ class Game implements App {
             <div class="pf-title">${enemy.title}</div>
             <p class="hint">Mantén el cuerpo erguido. Inclina la cabeza a los lados para esquivar. Cada mitad del círculo se rellena: golpea ese puño justo cuando llega al borde.</p>
             <h4>Dificultad</h4>
-            <div class="seg seg-diff">
-              ${DIFFICULTY_ORDER.map((d) => `<button data-diff="${d}" class="${this.difficulty === d ? "on" : ""}">${DIFFICULTIES[d].name}</button>`).join("")}
+            <div class="diff-grid">
+              ${DIFFICULTY_ORDER.map((d) => {
+                const lock = !unlocked(d);
+                return `<button data-diff="${d}" class="diff-card ${this.difficulty === d ? "on" : ""} ${lock ? "locked" : ""}" ${lock ? "disabled" : ""}>
+                  <span class="dc-name">${DIFFICULTIES[d].name}</span>
+                  ${lock ? `<span class="dc-lock">${icon("lock", 13)} ${unlockHint(d)}</span>` : `<span class="dc-ok">Recompensa ×${({ easy: "0.75", normal: "1", hard: "1.4", master: "1.9" } as any)[d]}</span>`}
+                </button>`;
+              }).join("")}
             </div>
             <h4>Control</h4>
             <div class="seg">
@@ -115,6 +123,7 @@ class Game implements App {
     s.coins += coins; s.premium += premium;
     const lv = grantXp(s, xpGain);
     s.bestScore = Math.max(s.bestScore, score);
+    if (r.won) s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
     applyFightResult(s, { perfects: r.perfects, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won });
     let frontier = 0;
     for (const ep of EPISODES) for (const id of ep.enemies) { if (id === enemyId && frontier === s.episodeProgress && r.won) s.episodeProgress++; frontier++; }

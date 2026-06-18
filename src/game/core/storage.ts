@@ -33,6 +33,7 @@ export interface SaveState {
   equippedFlow: string | null;
   equippedGear: Partial<Record<string, string>>; // slot -> equipId
   episodeProgress: number; // index of furthest cleared enemy across episodes
+  difficultyWins: Record<string, number>; // wins per difficulty id (gates harder modes)
   bestScore: number;
   totalPerfects: number;
   totalWins: number;
@@ -59,6 +60,7 @@ export function defaultSave(): SaveState {
     equippedFlow: "flow_oraora",
     equippedGear: {},
     episodeProgress: 0,
+    difficultyWins: {},
     bestScore: 0,
     totalPerfects: 0,
     totalWins: 0,

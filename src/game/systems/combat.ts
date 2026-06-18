@@ -141,7 +141,8 @@ export class Combat {
 
   update(songMs: number, now: number, input: InputProvider) {
     if (this.finished) return;
-    this.headX = Math.max(-1, Math.min(1, (input.head().x - 0.5) * 2));
+    // amplify lean so a small head shift moves clearly toward a side
+    this.headX = Math.max(-1, Math.min(1, (input.head().x - 0.5) * 2 * 1.5));
 
     // punches
     let p = input.consumePunch();

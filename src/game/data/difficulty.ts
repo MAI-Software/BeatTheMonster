@@ -21,3 +21,27 @@ export const DIFFICULTIES: Record<DifficultyId, Difficulty> = {
 };
 
 export const DIFFICULTY_ORDER: DifficultyId[] = ["easy", "normal", "hard", "master"];
+
+// Unlock requirements: clear a win on the previous tier AND reach a minimum level.
+export interface UnlockReq { prev: DifficultyId | null; minLevel: number }
+export const UNLOCK: Record<DifficultyId, UnlockReq> = {
+  easy:   { prev: null,     minLevel: 1 },
+  normal: { prev: "easy",   minLevel: 5 },
+  hard:   { prev: "normal", minLevel: 15 },
+  master: { prev: "hard",   minLevel: 30 },
+};
+
+export function isDifficultyUnlocked(id: DifficultyId, level: number, wins: Record<string, number>): boolean {
+  const req = UNLOCK[id];
+  if (level < req.minLevel) return false;
+  if (req.prev && (wins[req.prev] ?? 0) < 1) return false;
+  return true;
+}
+
+export function unlockHint(id: DifficultyId): string {
+  const req = UNLOCK[id];
+  const parts: string[] = [];
+  if (req.prev) parts.push(`Gana en ${DIFFICULTIES[req.prev].name}`);
+  if (req.minLevel > 1) parts.push(`Nivel ${req.minLevel}`);
+  return parts.join(" · ");
+}
