@@ -2,6 +2,9 @@ node_modules/
 dist/
 *.apk
 
+# stray tsc output (vite builds from .ts)
+src/**/*.js
+
 # capacitor / android build artifacts
 android/.gradle/
 android/build/
