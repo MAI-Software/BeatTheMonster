@@ -7,6 +7,7 @@ import { effectiveStats, grantXp } from "./game/systems/progression";
 import { applyFightResult, refreshChallenges } from "./game/systems/challenges";
 import { fightScore } from "./game/systems/ranking";
 import { createInput, type InputProvider } from "./game/systems/pose";
+import { DIFFICULTIES, DIFFICULTY_ORDER, type DifficultyId } from "./game/data/difficulty";
 import { listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
 import { icon } from "./game/ui/icons";
@@ -19,6 +20,7 @@ class Game implements App {
   root = document.getElementById("app")!;
   save: SaveState = loadSave();
   input: InputProvider | null = null;
+  difficulty: DifficultyId = "normal";
 
   constructor() {
     refreshChallenges(this.save); this.persist(); this.go("home");
@@ -54,6 +56,10 @@ class Game implements App {
             <div class="pf-enemy">${enemy.name}</div>
             <div class="pf-title">${enemy.title}</div>
             <p class="hint">Mantén el cuerpo erguido. Inclina la cabeza a los lados para esquivar. Cada mitad del círculo se rellena: golpea ese puño justo cuando llega al borde.</p>
+            <h4>Dificultad</h4>
+            <div class="seg seg-diff">
+              ${DIFFICULTY_ORDER.map((d) => `<button data-diff="${d}" class="${this.difficulty === d ? "on" : ""}">${DIFFICULTIES[d].name}</button>`).join("")}
+            </div>
             <h4>Control</h4>
             <div class="seg">
               <button data-ctl="cam" class="${useCamera ? "on" : ""}">Cámara</button>
@@ -69,6 +75,7 @@ class Game implements App {
           </div>
         </div>`;
       this.root.querySelector<HTMLButtonElement>("#pfback")!.onclick = () => this.go("campaign");
+      this.root.querySelectorAll<HTMLButtonElement>("[data-diff]").forEach((b) => b.onclick = () => { this.difficulty = b.dataset.diff as DifficultyId; render(); });
       this.root.querySelectorAll<HTMLButtonElement>("[data-ctl]").forEach((b) => b.onclick = () => { useCamera = b.dataset.ctl === "cam"; render(); });
       this.root.querySelectorAll<HTMLButtonElement>("[data-song]").forEach((b) => b.onclick = () => {
         chosenSong = b.dataset.song ? songs.find((s) => s.id === b.dataset.song) ?? null : null; render();
@@ -90,7 +97,7 @@ class Game implements App {
       }
       const eff = effectiveStats(this.save);
       const flow = this.save.equippedFlow ? getFlowState(this.save.equippedFlow) : undefined;
-      const result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song);
+      const result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty]);
       this.onFightEnd(enemyId, episodeId, result);
     };
 
@@ -99,10 +106,12 @@ class Game implements App {
 
   private onFightEnd(enemyId: string, episodeId: number | undefined, r: any) {
     const enemy = ENEMIES[enemyId]; const s = this.save;
-    const score = fightScore({ perfects: r.perfects, goods: r.goods, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won, enemyHp: r.enemyMaxHp });
-    const coins = Math.round(r.perfects * 4 + r.goods * 2 + (r.won ? 80 : 20));
-    const premium = r.won ? Math.max(1, Math.round(enemy.bpm / 30)) : 0;
-    const xpGain = r.perfects * 6 + r.goods * 3 + (r.won ? 120 : 30);
+    const diffMult: Record<DifficultyId, number> = { easy: 0.75, normal: 1, hard: 1.4, master: 1.9 };
+    const dm = diffMult[this.difficulty];
+    const score = Math.round(fightScore({ perfects: r.perfects, goods: r.goods, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won, enemyHp: r.enemyMaxHp }) * dm);
+    const coins = Math.round((r.perfects * 4 + r.goods * 2 + (r.dodges ?? 0) * 3 + (r.won ? 80 : 20)) * dm);
+    const premium = r.won ? Math.max(1, Math.round((enemy.bpm / 30) * dm)) : 0;
+    const xpGain = Math.round((r.perfects * 6 + r.goods * 3 + (r.won ? 120 : 30)) * dm);
     s.coins += coins; s.premium += premium;
     const lv = grantXp(s, xpGain);
     s.bestScore = Math.max(s.bestScore, score);
@@ -118,7 +127,7 @@ class Game implements App {
         <div class="res-grid">
           <div><b>${r.perfects}</b><span>Perfects</span></div>
           <div><b>${r.goods}</b><span>Goods</span></div>
-          <div><b>${r.misses}</b><span>Fallos</span></div>
+          <div><b>${r.dodges ?? 0}</b><span>Esquivas</span></div>
           <div><b>${r.maxCombo}</b><span>Combo máx</span></div>
           <div><b>${r.superCombos}</b><span>Supers</span></div>
           <div><b>${score.toLocaleString()}</b><span>Puntos</span></div>
