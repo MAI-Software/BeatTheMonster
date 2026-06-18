@@ -1,12 +1,13 @@
 // Motion input. Captures two kinds of input from the body:
-//  1) HEAD position (nose landmark) — the player moves their body so the head
-//     follows the orbiting ball around the circle.
-//  2) PUNCHES — left/right wrist thrust forward/out detects a jab; left vs right
-//     half of the tracked sphere decides which fist (L/R) it counts as.
+//  1) HEAD x position (nose landmark) — used only for a horizontal lean/weave to
+//     dodge; never requires crouching.
+//  2) PUNCHES — left/right wrist thrust up/forward detects a jab; left vs right
+//     fist maps to the left/right half of the circle.
 //
+// MediaPipe is dynamically imported so menus boot without loading the vision wasm.
 // Falls back to keyboard/mouse when no camera, so the game is fully testable headless.
 
-import { FilesetResolver, PoseLandmarker } from "@mediapipe/tasks-vision";
+import type { PoseLandmarker as PoseLandmarkerT } from "@mediapipe/tasks-vision";
 
 export type Side = "L" | "R";
 export interface Vec2 { x: number; y: number }
@@ -63,7 +64,7 @@ export class PoseInput implements InputProvider {
   ready = false;
   kind = "camera" as const;
   videoEl: HTMLVideoElement;
-  private landmarker: PoseLandmarker | null = null;
+  private landmarker: PoseLandmarkerT | null = null;
   private stream: MediaStream | null = null;
   private _head: Vec2 = { x: 0.5, y: 0.5 };
   private _L: Vec2 = { x: 0.35, y: 0.5 };
@@ -81,6 +82,7 @@ export class PoseInput implements InputProvider {
   }
 
   async init(): Promise<void> {
+    const { FilesetResolver, PoseLandmarker } = await import("@mediapipe/tasks-vision");
     const vision = await FilesetResolver.forVisionTasks(
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
     );
