@@ -44,6 +44,11 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 
 /* ---------- home ---------- */
 .home { align-items: center; justify-content: center; gap: 22px; text-align: center; padding: 24px; }
+.home::before { display: none; } /* gym image replaces the cage texture here */
+.home .gym-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #07080f; }
+.gym-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.2); transition: opacity .55s ease, transform 3.6s cubic-bezier(.2,.6,.2,1); will-change: opacity, transform; }
+.gym-layer.show { opacity: 1; }
+.home .gym-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #07080fdd 0%, #07080f66 32%, #07080f55 55%, #07080fe6 100%); }
 .hero-head { width: 100%; max-width: 460px; }
 .logo { font-size: 38px; font-weight: 900; letter-spacing: 1px; line-height: .92;
   background: linear-gradient(95deg, var(--pink), var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }

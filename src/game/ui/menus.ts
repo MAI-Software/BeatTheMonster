@@ -41,6 +41,7 @@ export function renderHome(app: App) {
   const need = xpToNext(s.level); const maxed = s.level >= CAPS.PLAYER_LEVEL;
   app.root.innerHTML = `
     <div class="scene menu home">
+      <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
       <div class="hero-head">
         <div class="logo">BEAT THE<span>MONSTER</span></div>
         <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""}</div>
@@ -63,9 +64,43 @@ export function renderHome(app: App) {
       <div class="foot">Sin micropagos · monedas se ganan jugando</div>
     </div>`;
   wireNav(app);
+  setupGymWalk(app);
 }
 const tile = (nav: string, ic: IconName, label: string, big = false) =>
   `<button data-nav="${nav}" class="${big ? "big" : ""}">${icon(ic, big ? 30 : 24)}<span>${label}</span></button>`;
+
+// Walk through the gym: focusing/hovering an option pans + crossfades the background
+// toward that option's image (falling back to gym.svg), simulating moving around.
+function setupGymWalk(app: App) {
+  const layers = Array.from(app.root.querySelectorAll<HTMLImageElement>(".gym-layer"));
+  if (layers.length < 2) return;
+  let active = 0;
+  let current = "";
+  const tiles = Array.from(app.root.querySelectorAll<HTMLButtonElement>(".menu-grid [data-nav]"));
+  const N = Math.max(1, tiles.length - 1);
+
+  const setView = (base: string, idx: number) => {
+    if (base === current) return;
+    current = base;
+    const next = layers[active ^ 1];
+    next.onerror = () => { if (!next.src.endsWith("gym.svg")) next.src = "menu/gym.svg"; };
+    next.src = `menu/${base}.svg`;
+    const pan = (idx / N - 0.5) * 14; // % horizontal travel = walking
+    next.style.transform = `scale(1.2) translateX(${-pan}%)`;
+    next.classList.add("show");
+    layers[active].classList.remove("show");
+    active ^= 1;
+  };
+
+  setView("gym", 0); // initial: enter the gym
+  tiles.forEach((t, i) => {
+    const base = t.dataset.nav!;
+    const go = () => setView(base, i);
+    t.addEventListener("pointerenter", go);
+    t.addEventListener("focus", go);
+    t.addEventListener("touchstart", go, { passive: true });
+  });
+}
 
 export function renderCampaign(app: App) {
   const s = app.save; let idx = 0;
