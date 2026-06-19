@@ -1,35 +1,42 @@
-# Tus canciones
+# Tus canciones (una carpeta por enemigo)
 
-Pon aquí tus archivos de audio (`.mp3`, `.ogg`, `.wav`, `.m4a`) y añádelos a
-`manifest.json`. El juego analiza los **beats** de la canción y sincroniza los
-golpes con el ritmo.
+Cada enemigo tiene su **propia carpeta**. La canción que pongas ahí se asocia
+directamente a ese enemigo y suena en su combate, sincronizada a sus beats.
 
-## Cómo añadir una canción
+```
+public/songs/
+  joe_mixen/       -> Joe Mixen
+  rciardo_noxin/   -> Rcicardo Noxin
+  vladi_pootin/    -> Vladi Pootin
+  kym_jongun/      -> Kym Jong-Fun
+  elon_tusk/       -> Elon Tusk
+  doni_crump/      -> Doni Crump
+```
 
-1. Copia el archivo en esta carpeta, p.ej. `mi-tema.mp3`
-2. Edita `manifest.json`:
+## Cómo añadir música a un enemigo
+
+1. Copia tu audio (`.mp3`, `.ogg`, `.wav`, `.m4a`) dentro de la carpeta del enemigo,
+   p.ej. `public/songs/doni_crump/final.mp3`
+2. Edita el `manifest.json` de **esa misma carpeta**:
 
 ```json
 [
-  { "id": "mitema", "name": "Mi Tema", "file": "mi-tema.mp3" },
-  { "id": "otra",   "name": "Otra Canción", "file": "otra.ogg" }
+  { "id": "final", "name": "Tema Final", "file": "final.mp3" }
 ]
 ```
 
 Campos:
-- `id` — identificador único (sin espacios)
-- `name` — nombre que se muestra en el selector
-- `file` — nombre exacto del archivo en esta carpeta
-- `bpm` *(opcional)* — si lo sabes, ayuda a afinar el ritmo
+- `id` — identificador único dentro de la carpeta (sin espacios)
+- `name` — nombre mostrado en el selector antes del combate
+- `file` — nombre exacto del archivo en esa carpeta
+- `bpm` *(opcional)* — si lo conoces
 
-3. Reconstruye (`npm run build`) o, en dev, recarga la página.
+3. Reconstruye (`npm run build`) o recarga en dev.
 
-> Si dejas `manifest.json` vacío (`[]`), el juego usa su **ritmo interno**
-> (metrónomo) basado en el BPM del enemigo.
+> Si la carpeta del enemigo no tiene canciones (`manifest.json` vacío `[]`), ese
+> combate usa el **ritmo interno** del juego (metrónomo según el BPM del enemigo).
 
 ## Notas
-
-- Usa canciones de las que tengas derechos. No subas material con copyright a un
-  sitio público.
-- Formatos recomendados: `.mp3` o `.ogg` (compatibles con navegadores móviles).
-- Archivos muy largos tardan más en analizar al iniciar el combate.
+- Usa música de la que tengas derechos. No subas material con copyright a un sitio público.
+- `.mp3` / `.ogg` son los más compatibles en móvil.
+- Para añadir un nuevo enemigo/modo: crea una carpeta con su `id` y un `manifest.json`.

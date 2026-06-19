@@ -44,9 +44,9 @@ class Game implements App {
   async startFight(enemyId: string, episodeId?: number) {
     unlockSongAudio();
     const enemy = ENEMIES[enemyId];
-    const songs = await listSongs();
+    const songs = await listSongs(enemyId); // this enemy's own music folder
     let useCamera = true;
-    let chosenSong: SongMeta | null = null; // null = synth (game rhythm)
+    let chosenSong: SongMeta | null = songs[0] ?? null; // default to the enemy's song if present
     const unlocked = (d: DifficultyId) => isDifficultyUnlocked(d, this.save.level, this.save.difficultyWins);
     if (!unlocked(this.difficulty)) this.difficulty = "easy";
 

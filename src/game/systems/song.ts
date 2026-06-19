@@ -12,13 +12,16 @@ function ctx(): AudioContext {
   return _ctx;
 }
 
-// Read the user-editable manifest in /public/songs. Missing/empty => synth only.
-export async function listSongs(): Promise<SongMeta[]> {
+// Each enemy/mode has its own folder under /public/songs/<id>/ with a manifest.json.
+// Drop an audio file there + list it and it becomes that enemy's battle music.
+// File paths are returned already prefixed with the folder so loadSongPlayer works.
+export async function listSongs(folder: string): Promise<SongMeta[]> {
   try {
-    const res = await fetch("songs/manifest.json", { cache: "no-cache" });
+    const res = await fetch(`songs/${folder}/manifest.json`, { cache: "no-cache" });
     if (!res.ok) return [];
     const data = await res.json();
-    return Array.isArray(data) ? data : data.songs ?? [];
+    const list: SongMeta[] = Array.isArray(data) ? data : data.songs ?? [];
+    return list.map((m) => ({ ...m, file: `${folder}/${m.file}` }));
   } catch {
     return [];
   }

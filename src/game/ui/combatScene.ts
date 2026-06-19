@@ -114,21 +114,38 @@ export function runCombat(
       resolve(combat.result ?? r);
     }
 
-    function geom() { const w = root.clientWidth, h = root.clientHeight; return { w, h, cx: w / 2, cy: h * 0.46, R: Math.min(w, h) * 0.33 }; }
+    function geom() { const w = root.clientWidth, h = root.clientHeight; return { w, h, cx: w / 2, cy: h * 0.48, R: Math.min(w, h) * 0.32 }; }
 
-    function drawRing(cx: number, cy: number, R: number) {
-      ctx.lineWidth = 3; ctx.strokeStyle = COL.rim;
-      ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
-      ctx.font = "600 13px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#9fb0c8";
-      ctx.fillText("IZQUIERDA", cx - R * 0.5, cy - R - 14);
-      ctx.fillText("DERECHA", cx + R * 0.5, cy - R - 14);
+    interface Tri { w: number; h: number; cx: number; cy: number; R: number; baseHalf: number; baseY: number; apexY: number; apex: { x: number; y: number }; BL: { x: number; y: number }; BR: { x: number; y: number } }
+    // Boxer-guard triangle: apex on top = the head, slipping left/right organically
+    // with a small idle bob. Base = the guard. lean in [-1,1].
+    function tri(lean: number, now: number): Tri {
+      const { w, h, cx, cy, R } = geom();
+      const baseHalf = R * 1.0, baseY = cy + R * 0.78, apexY = cy - R * 1.02;
+      const bobX = Math.sin(now / 620) * 4, bobY = Math.sin(now / 470) * 3;
+      const apex = { x: cx + lean * baseHalf * 0.72 + bobX, y: apexY + bobY };
+      return { w, h, cx, cy, R, baseHalf, baseY, apexY, apex, BL: { x: cx - baseHalf, y: baseY }, BR: { x: cx + baseHalf, y: baseY } };
     }
-    function drawHeadDot(cx: number, cy: number, R: number, hx: number, glow = false) {
-      const x = cx + hx * R;
-      ctx.strokeStyle = glow ? COL.on : COL.head; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(x, cy, 15, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = glow ? COL.on : "#fff"; ctx.beginPath(); ctx.arc(x, cy, 3, 0, Math.PI * 2); ctx.fill();
+    function triPath(g: Tri) { ctx.beginPath(); ctx.moveTo(g.apex.x, g.apex.y); ctx.lineTo(g.BR.x, g.BR.y); ctx.lineTo(g.BL.x, g.BL.y); ctx.closePath(); }
+
+    function drawGuard(g: Tri) {
+      triPath(g); ctx.lineWidth = 3; ctx.strokeStyle = COL.rim; ctx.lineJoin = "round"; ctx.stroke();
+      // centre divider (L/R fists)
+      ctx.beginPath(); ctx.moveTo(g.cx, g.baseY); ctx.lineTo(g.cx, g.apexY + g.R * 0.5); ctx.stroke();
+      // guard gloves at the base corners
+      for (const corner of [g.BL, g.BR]) { ctx.fillStyle = "#0006"; ctx.beginPath(); ctx.arc(corner.x, corner.y, 9, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = COL.rim; ctx.lineWidth = 2; ctx.stroke(); }
+      ctx.font = "600 12px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#9fb0c8";
+      ctx.fillText("IZQ", g.cx - g.baseHalf * 0.45, g.baseY + 22);
+      ctx.fillText("DER", g.cx + g.baseHalf * 0.45, g.baseY + 22);
+    }
+
+    function drawHead(g: Tri, glow: boolean) {
+      const { x, y } = g.apex;
+      ctx.fillStyle = glow ? COL.on : "#10131f"; ctx.strokeStyle = glow ? COL.on : COL.head; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      // simple face hint
+      ctx.fillStyle = glow ? "#06210f" : "#fff";
+      ctx.beginPath(); ctx.arc(x - 5, y - 2, 1.8, 0, Math.PI * 2); ctx.arc(x + 5, y - 2, 1.8, 0, Math.PI * 2); ctx.fill();
     }
 
     // overlay markers for what the camera tracks: head + both hands, in screen space
@@ -140,8 +157,8 @@ export function runCombat(
         const x = p.x * w, y = p.y * h;
         ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 10;
         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-        ctx.font = "700 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#0009";
-        ctx.fillText(label, x, y - r - 4); ctx.fillStyle = "#fff"; ctx.fillText(label, x, y - r - 5);
+        ctx.font = "700 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#fff";
+        ctx.fillText(label, x, y - r - 5);
       };
       dot(t.head, "#ffffff", 9, "CABEZA");
       dot(t.L, COL.L, 11, "IZQ");
@@ -149,65 +166,69 @@ export function runCombat(
     }
 
     function drawPrep() {
-      const { w, h, cx, cy, R } = geom();
+      const { w, h } = geom();
       ctx.clearRect(0, 0, w, h);
       drawTracking();
-      drawRing(cx, cy, R);
-      // centre guide
+      const g = tri(headX(), performance.now());
+      drawGuard(g);
+      // centre guide line for aligning the head
       ctx.setLineDash([6, 6]); ctx.strokeStyle = "#9fb0c8"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(cx, cy, 26, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-      drawHeadDot(cx, cy, R, headX(), Math.abs(headX()) < 0.22);
+      ctx.beginPath(); ctx.moveTo(g.cx, g.apexY - 20); ctx.lineTo(g.cx, g.apexY + 20); ctx.stroke(); ctx.setLineDash([]);
+      drawHead(g, Math.abs(headX()) < 0.22);
     }
 
-    function drawHalfFill(cx: number, cy: number, R: number, side: "L" | "R", songMs: number) {
+    function drawFill(g: Tri, side: "L" | "R", songMs: number) {
       const f = combat.fillFor(side, songMs); if (!f) return;
+      const c = side === "L" ? COL.L : COL.R, p = Math.min(1, f.p);
+      const level = g.baseY - p * (g.baseY - g.apexY);
       ctx.save();
+      triPath(g); ctx.clip();
       ctx.beginPath();
-      if (side === "L") ctx.rect(cx - R - 4, cy - R - 4, R + 4, (R + 4) * 2); else ctx.rect(cx, cy - R - 4, R + 4, (R + 4) * 2);
+      if (side === "L") ctx.rect(0, 0, g.cx, g.h); else ctx.rect(g.cx, 0, g.w - g.cx, g.h);
       ctx.clip();
-      const c = side === "L" ? COL.L : COL.R, fr = Math.min(1, f.p) * R;
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, fr));
-      g.addColorStop(0, c + "22"); g.addColorStop(0.7, c + (f.full ? "cc" : "66")); g.addColorStop(1, c + (f.full ? "ff" : "aa"));
-      ctx.beginPath(); ctx.arc(cx, cy, Math.max(1, fr), 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
-      if (f.full) { ctx.lineWidth = 6 + f.flash * 6; ctx.strokeStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 24 * f.flash; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
+      const grad = ctx.createLinearGradient(0, g.baseY, 0, level);
+      grad.addColorStop(0, c + (f.full ? "ee" : "99")); grad.addColorStop(1, c + "22");
+      ctx.fillStyle = grad; ctx.fillRect(0, level, g.w, g.baseY - level);
       ctx.restore();
+      if (f.full) { ctx.save(); triPath(g); ctx.clip(); ctx.beginPath(); if (side === "L") ctx.rect(0, 0, g.cx, g.h); else ctx.rect(g.cx, 0, g.w - g.cx, g.h); ctx.clip(); triPath(g); ctx.lineWidth = 6; ctx.strokeStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 22 * f.flash; ctx.stroke(); ctx.restore(); }
     }
 
-    function drawDodge(cx: number, cy: number, R: number, songMs: number) {
+    function drawDodge(g: Tri, songMs: number) {
       const d = combat.dodgeState(songMs); if (!d) return;
-      const x = cx + (d.side === "L" ? -R : R), y = cy;
-      // incoming telegraph ring shrinking onto the sphere
-      const rr = 14 + (1 - d.p) * 60;
+      // sphere on the outer side of the guard; slip head that way to dodge
+      const sx = g.cx + (d.side === "L" ? -g.baseHalf * 1.12 : g.baseHalf * 1.12);
+      const sy = g.cy - g.R * 0.1;
+      const rr = 14 + (1 - d.p) * 64;
       ctx.strokeStyle = d.aligned ? COL.on : COL.danger; ctx.lineWidth = 4; ctx.globalAlpha = 0.5 + d.p * 0.5;
-      ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
-      // the dodge sphere on the rim
+      ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
       ctx.fillStyle = d.aligned ? COL.on : COL.danger; ctx.shadowColor = ctx.fillStyle as string; ctx.shadowBlur = d.inWindow ? 26 : 12;
-      ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.arc(sx, sy, 16, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
       ctx.font = "800 16px system-ui"; ctx.fillStyle = d.aligned ? COL.on : "#fff"; ctx.textAlign = "center";
-      ctx.fillText(d.side === "L" ? "ESQUIVA ←" : "→ ESQUIVA", cx, cy - R * 0.62);
+      ctx.fillText(d.side === "L" ? "ESQUIVA ←" : "→ ESQUIVA", g.cx, g.apexY - 10);
     }
 
     function draw(songMs: number, now: number) {
-      const { w, h, cx, cy, R } = geom();
+      const { w, h } = geom();
       ctx.clearRect(0, 0, w, h);
       drawTracking();
-      drawHalfFill(cx, cy, R, "L", songMs); drawHalfFill(cx, cy, R, "R", songMs);
-      drawRing(cx, cy, R);
-      drawDodge(cx, cy, R, songMs);
+      const g = tri(combat.headX, now);
+      drawFill(g, "L", songMs); drawFill(g, "R", songMs);
+      drawGuard(g);
+      drawDodge(g, songMs);
       // full prompt
       const fl = combat.fillFor("L", songMs), fr = combat.fillFor("R", songMs);
       ctx.font = "800 20px system-ui"; ctx.textAlign = "center";
-      if (fl?.full) { ctx.fillStyle = COL.L; ctx.globalAlpha = fl.flash; ctx.fillText("¡GOLPEA!", cx - R * 0.5, cy); ctx.globalAlpha = 1; }
-      if (fr?.full) { ctx.fillStyle = COL.R; ctx.globalAlpha = fr.flash; ctx.fillText("¡GOLPEA!", cx + R * 0.5, cy); ctx.globalAlpha = 1; }
+      if (fl?.full) { ctx.fillStyle = COL.L; ctx.globalAlpha = fl.flash; ctx.fillText("¡GOLPEA!", g.cx - g.baseHalf * 0.45, g.cy); ctx.globalAlpha = 1; }
+      if (fr?.full) { ctx.fillStyle = COL.R; ctx.globalAlpha = fr.flash; ctx.fillText("¡GOLPEA!", g.cx + g.baseHalf * 0.45, g.cy); ctx.globalAlpha = 1; }
       const d = combat.dodgeState(songMs);
-      drawHeadDot(cx, cy, R, combat.headX, !!d?.aligned);
+      drawHead(g, !!d?.aligned);
       // popups
       let i = 0;
       for (const pp of combat.popups) {
         const age = (now - pp.bornMs) / 850; if (age > 1) continue;
         ctx.globalAlpha = 1 - age; ctx.fillStyle = pp.color;
         ctx.font = `800 ${pp.kind === "super" || pp.kind === "flow" ? 30 : 24}px system-ui`;
-        ctx.fillText(pp.text, cx, cy - R * 0.32 - age * 26 - i * 4); ctx.globalAlpha = 1; i++;
+        ctx.fillText(pp.text, g.cx, g.apexY - 30 - age * 26 - i * 4); ctx.globalAlpha = 1; i++;
       }
     }
 
