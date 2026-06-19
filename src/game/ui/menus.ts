@@ -7,12 +7,19 @@ import { canTrain, effectiveStats, spendVoucher, train, trainCost, xpToNext } fr
 import { PULL_COST, canPull, fragInfo, pull } from "../systems/gacha";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
+import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
 import { icon, type IconName } from "./icons";
 
 export interface App {
   root: HTMLElement; save: any;
   persist(): void; go(screen: string): void;
-  startFight(enemyId: string, episodeId?: number): void; toast(msg: string): void;
+  startFight(enemyId: string, episodeId?: number): void;
+  startPractice(kind: "punch" | "dodge"): void;
+  toast(msg: string): void;
+}
+
+function speak(text: string) {
+  try { const s = window.speechSynthesis; if (!s) return; const u = new SpeechSynthesisUtterance(text); u.lang = "es-ES"; u.rate = 1.04; s.cancel(); s.speak(u); } catch {}
 }
 
 const slotIcon: Record<string, IconName> = { gloves: "glove", boots: "boot", headband: "headband", charm: "charm" };
@@ -45,6 +52,8 @@ export function renderHome(app: App) {
       </div>
       <div class="menu-grid">
         ${tile("campaign", "swords", "Campaña", true)}
+        ${tile("practice", "target", "Práctica")}
+        ${tile("tutorial", "fist", "Tutorial")}
         ${tile("training", "dumbbell", "Entrenar")}
         ${tile("equip", "glove", "Equipo & Flow")}
         ${tile("gacha", "star", "Gacha")}
@@ -177,6 +186,60 @@ export function renderRanking(app: App) {
   wireNav(app);
 }
 
+export function renderPractice(app: App) {
+  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Práctica")}<div class="scroll">
+    <p class="hint">Entrena una mecánica a la vez. Sin daño ni derrota — solo para coger el ritmo.</p>
+    <button class="practice-card p-punch" data-practice="punch">
+      <span class="pc-ic">${icon("glove", 26)}</span>
+      <div><div class="pc-name">Puños</div><div class="pc-sub">Golpea izquierda/derecha cuando la mitad se llene</div></div>
+    </button>
+    <button class="practice-card p-dodge" data-practice="dodge">
+      <span class="pc-ic">${icon("target", 26)}</span>
+      <div><div class="pc-name">Esquivas</div><div class="pc-sub">Inclina la cabeza hacia la esfera para esquivar</div></div>
+    </button>
+  </div></div>`;
+  wireNav(app);
+  app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => app.startPractice(b.dataset.practice as "punch" | "dodge"));
+}
+
+export function renderTutorial(app: App) {
+  let i = 0;
+  const draw = () => {
+    const step = TUTORIAL_STEPS[i];
+    const last = i === TUTORIAL_STEPS.length - 1;
+    app.root.innerHTML = `<div class="scene menu tutorial">
+      ${topBar(app, "Tutorial")}
+      <div class="scroll tut-wrap">
+        <div class="coach">
+          <div class="coach-portrait">
+            <img src="characters/coach/coach.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+            <span class="coach-fallback" style="display:none">${icon("fist", 54)}</span>
+          </div>
+          <div class="coach-name">${COACH_NAME}</div>
+        </div>
+        <div class="bubble">${step.text}</div>
+        <div class="tut-progress">${i + 1} / ${TUTORIAL_STEPS.length}</div>
+        <div class="tut-nav">
+          ${i > 0 ? `<button data-tut="prev">Anterior</button>` : ""}
+          ${!last ? `<button class="primary" data-tut="next">Siguiente</button>`
+            : `<button class="primary" data-practice="punch">Practicar puños</button>
+               <button class="primary" data-practice="dodge">Practicar esquivas</button>
+               <button data-nav="campaign">A la campaña</button>`}
+          <button data-tut="replay">Repetir voz</button>
+        </div>
+      </div>
+    </div>`;
+    speak(step.text);
+    app.save.tutorialDone = true; app.persist();
+    wireNav(app);
+    app.root.querySelector<HTMLButtonElement>('[data-tut="next"]')?.addEventListener("click", () => { i++; draw(); });
+    app.root.querySelector<HTMLButtonElement>('[data-tut="prev"]')?.addEventListener("click", () => { i--; draw(); });
+    app.root.querySelector<HTMLButtonElement>('[data-tut="replay"]')?.addEventListener("click", () => speak(step.text));
+    app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => { try { window.speechSynthesis?.cancel(); } catch {} app.startPractice(b.dataset.practice as "punch" | "dodge"); });
+  };
+  draw();
+}
+
 function wireNav(app: App) {
-  app.root.querySelectorAll<HTMLButtonElement>("[data-nav]").forEach((b) => b.onclick = () => app.go(b.dataset.nav!));
+  app.root.querySelectorAll<HTMLButtonElement>("[data-nav]").forEach((b) => b.onclick = () => { try { window.speechSynthesis?.cancel(); } catch {} app.go(b.dataset.nav!); });
 }

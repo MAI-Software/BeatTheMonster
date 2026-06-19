@@ -16,7 +16,7 @@ export interface CombatResult { won: boolean; perfects: number; goods: number; m
 export interface FillState { p: number; full: boolean; flash: number }
 export interface DodgeState { side: Side; p: number; inWindow: boolean; aligned: boolean }
 
-const DODGE_TARGET = 0.32; // headX past this toward a side = aligned
+const DODGE_TARGET = 0.26; // headX past this toward a side = aligned (forgiving)
 
 export class Combat {
   headX = 0;
@@ -31,7 +31,7 @@ export class Combat {
   private flow: FlowState | null; private noMissCount = 0;
   private alignedDodges = new Set<number>();
 
-  constructor(private enemy: Enemy, beatmap: Beatmap, private stats: EffectiveStats, flow: FlowState | null, private diff: Difficulty) {
+  constructor(private enemy: Enemy, beatmap: Beatmap, private stats: EffectiveStats, flow: FlowState | null, private diff: Difficulty, private practice = false) {
     this.notes = beatmap.notes.map((n) => ({ ...n }));
     this.enemyHp = this.enemyMaxHp = enemy.hp;
     this.playerHp = this.playerMaxHp = stats.vt;
@@ -116,6 +116,7 @@ export class Combat {
   }
 
   private takeHit(now: number, factor = 1) {
+    if (this.practice) return 0; // no damage / no death in practice
     const dmg = Math.round(counterDamage(this.enemy.atk, this.stats.def) * this.flowTakenMult() * this.diff.incomingDmgMult * factor);
     if (dmg > 0) this.playerHp = Math.max(0, this.playerHp - dmg);
     return dmg;
@@ -161,7 +162,8 @@ export class Combat {
     if (this.flowActive && now >= this.flowEndsAt) { this.flowActive = false; this.addPopup("FLOW FIN", "#9fb0c8", "flow", now); }
     this.tryActivateFlow(now);
 
-    if (this.enemyHp <= 0) this.end(true);
+    if (this.practice) { if (this.notes.every((n) => n.judged) && songMs > 1000) this.end(true); }
+    else if (this.enemyHp <= 0) this.end(true);
     else if (this.playerHp <= 0) this.end(false);
     else if (this.notes.every((n) => n.judged) && songMs > 1000) this.end(this.enemyHp < this.enemyMaxHp * 0.5);
   }

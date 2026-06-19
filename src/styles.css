@@ -233,3 +233,31 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .enemy-name { font-size: 17px; text-shadow: 0 2px 6px #000; }
 #flowlabel { font-size: 12.5px; }
 .combo b { font-size: 52px; }
+
+/* enemy face beside the HP bar */
+.enemy-bar { display: flex; align-items: center; gap: 11px; }
+.enemy-info { flex: 1; min-width: 0; }
+.enemy-face { width: 50px; height: 50px; border-radius: 12px; overflow: hidden; flex: none; border: 2px solid var(--c); background: #0b0e1a; box-shadow: 0 0 14px color-mix(in srgb, var(--c) 60%, transparent); }
+.enemy-face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.enemy-face span { width: 100%; height: 100%; place-items: center; font-weight: 900; font-size: 24px; color: var(--c); }
+
+/* practice cards */
+.practice-card { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 18px; border-radius: 14px; margin-bottom: 12px; background: var(--panel); border: 1px solid var(--line); color: var(--txt); }
+.practice-card .pc-ic { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 12px; background: var(--bg2); flex: none; }
+.practice-card.p-punch .pc-ic { color: var(--blue); } .practice-card.p-dodge .pc-ic { color: var(--orange); }
+.practice-card.p-punch { border-color: #5db4ff55; } .practice-card.p-dodge { border-color: #ff8a4d55; }
+.pc-name { font-weight: 800; font-size: 17px; } .pc-sub { font-size: 12.5px; color: var(--dim); margin-top: 2px; }
+
+/* coach / tutorial */
+.tut-wrap { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.coach { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+.coach-portrait { width: 130px; height: 160px; border-radius: 16px; overflow: hidden; background: linear-gradient(160deg, var(--panel2), var(--panel)); border: 1px solid var(--line); box-shadow: 0 10px 30px #0007; }
+.coach-portrait img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.coach-fallback { width: 100%; height: 100%; place-items: center; color: var(--blue); filter: drop-shadow(0 0 8px var(--blue)); }
+.coach-name { font-weight: 800; color: var(--gold); letter-spacing: .3px; }
+.bubble { position: relative; max-width: 440px; background: var(--panel2); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; font-size: 15px; line-height: 1.55; }
+.bubble::before { content: ""; position: absolute; top: -9px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 16px; height: 16px; background: var(--panel2); border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
+.tut-progress { color: var(--dim); font-size: 12px; margin: 10px 0; }
+.tut-nav { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 440px; }
+.tut-nav button { padding: 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); font-weight: 700; color: var(--txt); }
+.tut-nav .primary { background: var(--pink); border-color: var(--pink); color: #fff; }

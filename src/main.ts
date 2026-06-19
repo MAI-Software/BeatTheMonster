@@ -1,6 +1,6 @@
 // App bootstrap + screen router + fight orchestration (control + song selection).
 import "./styles.css";
-import { ENEMIES, EPISODES } from "./game/data/enemies";
+import { ENEMIES, EPISODES, type Enemy } from "./game/data/enemies";
 import { getFlowState } from "./game/data/flowStates";
 import { loadSave, writeSave, type SaveState } from "./game/core/storage";
 import { effectiveStats, grantXp } from "./game/systems/progression";
@@ -13,8 +13,10 @@ import { runCombat } from "./game/ui/combatScene";
 import { icon } from "./game/ui/icons";
 import {
   renderCampaign, renderChallenges, renderEquip, renderGacha, renderHome,
-  renderRanking, renderTraining, type App,
+  renderPractice, renderRanking, renderTraining, renderTutorial, type App,
 } from "./game/ui/menus";
+
+const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#5db4ff" };
 
 class Game implements App {
   root = document.getElementById("app")!;
@@ -23,7 +25,8 @@ class Game implements App {
   difficulty: DifficultyId = "normal";
 
   constructor() {
-    refreshChallenges(this.save); this.persist(); this.go("home");
+    refreshChallenges(this.save); this.persist();
+    this.go(this.save.tutorialDone ? "home" : "tutorial");
   }
   persist() { writeSave(this.save); }
 
@@ -31,8 +34,20 @@ class Game implements App {
     const map: Record<string, (a: App) => void> = {
       campaign: renderCampaign, training: renderTraining, equip: renderEquip,
       gacha: renderGacha, challenges: renderChallenges, ranking: renderRanking,
+      tutorial: renderTutorial, practice: renderPractice,
     };
     (map[screen] ?? renderHome)(this);
+  }
+
+  async startPractice(kind: "punch" | "dodge") {
+    this.root.innerHTML = `<div class="scene menu loading"><div class="spinner"></div><p>Preparando práctica…</p></div>`;
+    if (this.input) this.input.stop();
+    this.input = await createInput(true);
+    if (this.input.kind !== "camera") this.toast("Sin cámara — practica con teclado (A/D, ratón)");
+    const song = synthSongPlayer(TRAINING_ENEMY.bpm);
+    const eff = effectiveStats(this.save);
+    await runCombat(this.root, TRAINING_ENEMY, eff, null, this.input, song, DIFFICULTIES.easy, { practiceKind: kind });
+    this.go("practice");
   }
 
   toast(msg: string) {

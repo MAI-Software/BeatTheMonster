@@ -19,6 +19,7 @@ export interface InputProvider {
   fists(): { L: Vec2; R: Vec2 };
   consumePunch(): Side | null; // edge-triggered, cleared on read
   update(nowMs: number): void;
+  guardUp(): boolean; // both hands up at face height (camera) — true for keyboard
   // screen-space tracking overlay (head + both hands) for the camera, or null
   tracking(): { head: Vec2; L: Vec2; R: Vec2; detected: boolean } | null;
   videoEl?: HTMLVideoElement;
@@ -51,6 +52,7 @@ export class KeyboardInput implements InputProvider {
   head() { return this._head; }
   fists() { return { L: { x: 0.3, y: 0.5 }, R: { x: 0.7, y: 0.5 } }; }
   consumePunch() { const p = this.queued; this.queued = null; return p; }
+  guardUp() { return true; }
   tracking() { return null; }
   update() {}
   stop() {
@@ -78,8 +80,11 @@ export class PoseInput implements InputProvider {
   private queued: Side | null = null;
   private punchCooldown: Record<Side, number> = { L: 0, R: 0 };
   private detected = false;
+  private guard = false;
   private rawPrevL: Vec2 | null = null;
   private rawPrevR: Vec2 | null = null;
+  private prevZL: number | null = null;
+  private prevZR: number | null = null;
 
   constructor() {
     this.videoEl = document.createElement("video");
@@ -113,6 +118,7 @@ export class PoseInput implements InputProvider {
   head() { return this._head; }
   fists() { return { L: this._L, R: this._R }; }
   consumePunch() { const p = this.queued; this.queued = null; return p; }
+  guardUp() { return this.guard; }
   tracking() { return { head: this._head, L: this._L, R: this._R, detected: this.detected }; }
 
   update(nowMs: number): void {
@@ -130,27 +136,33 @@ export class PoseInput implements InputProvider {
     this._L = ema(this._L, mx(lm[L_WRIST]), lm[L_WRIST].y);
     this._R = ema(this._R, mx(lm[R_WRIST]), lm[R_WRIST].y);
 
-    // punch detection on RAW wrist positions (not the smoothed display ones) so a
-    // fast jab keeps its real velocity. Wrist must be up near/above shoulder.
+    // punch detection: a jab is the hand THRUSTING TOWARD the camera. MediaPipe gives
+    // a depth z per landmark (more negative = closer). We trigger on forward z-velocity
+    // (hand approaching) and fall back to fast 2D motion. Hand must be up near guard.
     const dt = Math.max(16, nowMs - this.prevT);
     this.prevT = nowMs;
     const shY = (lm[L_SH].y + lm[R_SH].y) / 2;
     const rawL: Vec2 = { x: mx(lm[L_WRIST]), y: lm[L_WRIST].y };
     const rawR: Vec2 = { x: mx(lm[R_WRIST]), y: lm[R_WRIST].y };
-    const detect = (cur: Vec2, prev: Vec2 | null, side: Side, wristY: number) => {
-      if (prev) {
-        const speed = Math.hypot(cur.x - prev.x, cur.y - prev.y) / (dt / 1000);
-        const extended = wristY < shY + 0.08;
-        if (speed > 1.3 && extended && nowMs > this.punchCooldown[side]) {
-          this.queued = side;
-          this.punchCooldown[side] = nowMs + 200;
-        }
+    const zL = lm[L_WRIST].z ?? 0, zR = lm[R_WRIST].z ?? 0;
+    const detect = (cur: Vec2, prev: Vec2 | null, z: number, prevZ: number | null, side: Side, wristY: number) => {
+      if (prev == null) return;
+      const speed2d = Math.hypot(cur.x - prev.x, cur.y - prev.y) / (dt / 1000);
+      const forward = prevZ != null ? (prevZ - z) / (dt / 1000) : 0; // >0 = approaching camera
+      const extended = wristY < shY + 0.12; // around/above shoulder line
+      const thrust = forward > 0.6 || speed2d > 1.4;
+      if (thrust && extended && nowMs > this.punchCooldown[side]) {
+        this.queued = side;
+        this.punchCooldown[side] = nowMs + 210;
       }
     };
-    detect(rawL, this.rawPrevL, "L", lm[L_WRIST].y);
-    detect(rawR, this.rawPrevR, "R", lm[R_WRIST].y);
-    this.rawPrevL = rawL;
-    this.rawPrevR = rawR;
+    detect(rawL, this.rawPrevL, zL, this.prevZL, "L", lm[L_WRIST].y);
+    detect(rawR, this.rawPrevR, zR, this.prevZR, "R", lm[R_WRIST].y);
+    this.rawPrevL = rawL; this.rawPrevR = rawR;
+    this.prevZL = zL; this.prevZR = zR;
+
+    // guard = both hands up near face height
+    this.guard = lm[L_WRIST].y < shY + 0.06 && lm[R_WRIST].y < shY + 0.06;
   }
 
   stop(): void {

@@ -17,12 +17,15 @@ const COL = { L: "#5db4ff", R: "#ff8a4d", rim: "#2e3550", on: "#3bd28a", head: "
 
 export function runCombat(
   root: HTMLElement, enemy: Enemy, stats: EffectiveStats, flow: FlowState | null,
-  input: InputProvider, song: SongPlayer, diff: Difficulty
+  input: InputProvider, song: SongPlayer, diff: Difficulty,
+  opts: { practiceKind?: "punch" | "dodge" } = {}
 ): Promise<CombatResult> {
   return new Promise((resolve) => {
     unlockAudio();
+    const practice = !!opts.practiceKind;
     const beatmap = buildBeatmap(song.beats, song.durationMs, enemy, diff, (enemy.bpm | 0) + 7);
-    const combat = new Combat(enemy, beatmap, stats, flow, diff);
+    if (opts.practiceKind) beatmap.notes = beatmap.notes.filter((n) => n.kind === opts.practiceKind);
+    const combat = new Combat(enemy, beatmap, stats, flow, diff, practice);
 
     root.innerHTML = `
       <div class="scene combat">
@@ -30,8 +33,16 @@ export function runCombat(
         <div class="cam-tint"></div>
         <canvas id="ring"></canvas>
         <div class="hud-top">
-          <div class="enemy-bar"><div class="enemy-name">${enemy.name}<span>${enemy.title}</span></div>
-            <div class="bar enemy"><i id="ehp" class="fill"></i></div></div>
+          <div class="enemy-bar">
+            <div class="enemy-face" style="--c:${enemy.color}">
+              <img src="characters/enemies/${enemy.id}.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+              <span style="display:none">${enemy.name[0]}</span>
+            </div>
+            <div class="enemy-info">
+              <div class="enemy-name">${enemy.name}<span>${enemy.title}</span></div>
+              <div class="bar enemy"><i id="ehp" class="fill"></i></div>
+            </div>
+          </div>
         </div>
         <div class="hud-bottom">
           <div class="bar player"><i id="php" class="fill"></i><b id="phptext"></b></div>
@@ -40,9 +51,9 @@ export function runCombat(
         <div id="combo" class="combo"></div>
         <div id="prep" class="prep-overlay">
           <div class="prep-box">
-            <h3>Prepárate · ${diff.name}</h3>
-            <p>Ponte de pie frente a la cámara, cuerpo erguido y centrado. Alinea tu cabeza con la guía. Inclínate a los lados para esquivar; lanza puños cuando una mitad se llene.</p>
-            <div id="prepstatus" class="prep-status">Centra tu cabeza…</div>
+            <h3>Prepárate · ${practice ? "Práctica" : diff.name}</h3>
+            <p>De pie frente a la cámara. <b>Sube la GUARDIA</b> (las dos manos a la altura de la cara) y centra la cabeza. Inclínate a los lados para esquivar; empuja el puño hacia la cámara para golpear.</p>
+            <div id="prepstatus" class="prep-status">Sube la guardia…</div>
             <button id="prepstart" class="primary">${icon("play", 18)} Estoy listo</button>
           </div>
         </div>
@@ -81,13 +92,16 @@ export function runCombat(
     function loop(now: number) {
       input.update(now);
       if (phase === "prep") {
-        // auto-ready when head held near centre (camera); button always works
-        const centered = Math.abs(headX()) < 0.22;
+        // auto-ready when guard is up AND head centred for a moment (camera)
+        const centered = Math.abs(headX()) < 0.24;
+        const guard = input.guardUp?.() ?? true;
         if (isCam) {
-          if (centered) { if (!holdStart) holdStart = now; const held = now - holdStart;
-            prepstatus.textContent = `Mantén… ${Math.max(0, (1.4 - held / 1000)).toFixed(1)}s`;
-            if (held > 1400) beginCountdown();
-          } else { holdStart = 0; prepstatus.textContent = "Centra tu cabeza…"; }
+          if (!guard) { holdStart = 0; prepstatus.textContent = "Sube la guardia (manos arriba)…"; }
+          else if (!centered) { holdStart = 0; prepstatus.textContent = "¡Guardia! Ahora centra la cabeza…"; }
+          else { if (!holdStart) holdStart = now; const held = now - holdStart;
+            prepstatus.textContent = `Mantén la guardia… ${Math.max(0, (1.3 - held / 1000)).toFixed(1)}s`;
+            if (held > 1300) beginCountdown();
+          }
         } else prepstatus.textContent = "Pulsa Estoy listo para empezar.";
         drawPrep();
       } else if (phase === "countdown") {
