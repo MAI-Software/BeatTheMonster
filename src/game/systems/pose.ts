@@ -87,6 +87,8 @@ export class PoseInput implements InputProvider {
   private rawPrevR: Vec2 | null = null;
   private prevZL: number | null = null;
   private prevZR: number | null = null;
+  private prevExtL: number | null = null;
+  private prevExtR: number | null = null;
 
   constructor() {
     this.videoEl = document.createElement("video");
@@ -143,32 +145,38 @@ export class PoseInput implements InputProvider {
     const shY = (lm[L_SH].y + lm[R_SH].y) / 2;
     const zL = lm[L_WRIST].z ?? 0, zR = lm[R_WRIST].z ?? 0;
 
-    // guard = both hands up around face height (lenient). Computed FIRST so it can
-    // suppress false punches while you simply raise/hold the guard.
-    const upL = lm[L_WRIST].y < shY + 0.15, upR = lm[R_WRIST].y < shY + 0.15;
+    // guard = both hands up around face height (used only for auto-start, not to gate punches)
+    const upL = lm[L_WRIST].y < shY + 0.18, upR = lm[R_WRIST].y < shY + 0.18;
     this.guard = upL && upR;
 
-    // A punch is a clear THRUST TOWARD the camera (z drops fast). We do NOT use 2D
-    // motion (raising the guard is fast 2D and fired false punches), and never trigger
-    // while the guard is up (both hands at the face).
-    const detect = (z: number, prevZ: number | null, side: Side, up: boolean) => {
-      if (prevZ == null) return;
-      const forward = (prevZ - z) / (dt / 1000); // >0 = approaching camera
-      if (!this.guard && up && forward > 0.9 && nowMs > this.punchCooldown[side]) {
-        this.queued = side;
-        this.punchCooldown[side] = nowMs + 260;
-      }
-    };
-    detect(zL, this.prevZL, "L", upL);
-    detect(zR, this.prevZR, "R", upR);
-    this.prevZL = zL; this.prevZR = zR;
-
-    // hand depth toward camera (forward = positive), smoothed, ~0..1
+    // smoothed depth toward camera per hand (0..1). A punch = this jumps up fast.
     const shZ = ((lm[L_SH].z ?? 0) + (lm[R_SH].z ?? 0)) / 2;
+    const prevDepthL = this.depthL, prevDepthR = this.depthR;
     const dl = Math.max(0, Math.min(1, (shZ - zL) * 2.2));
     const dr = Math.max(0, Math.min(1, (shZ - zR) * 2.2));
-    this.depthL += (dl - this.depthL) * 0.4;
-    this.depthR += (dr - this.depthR) * 0.4;
+    this.depthL += (dl - this.depthL) * 0.5;
+    this.depthR += (dr - this.depthR) * 0.5;
+
+    // arm extension (wrist-shoulder distance) as a 2nd punch signal for noisy depth.
+    const extL = Math.hypot(mx(lm[L_WRIST]) - mx(lm[L_SH]), lm[L_WRIST].y - lm[L_SH].y);
+    const extR = Math.hypot(mx(lm[R_WRIST]) - mx(lm[R_SH]), lm[R_WRIST].y - lm[R_SH].y);
+
+    // A jab fires when the hand thrusts toward the camera (depth rises) OR the arm
+    // extends quickly, while roughly at/above shoulder height. No guard gate so a
+    // forward jab (hands stay up) still counts; raising the guard barely changes depth.
+    const detect = (depth: number, prevDepth: number, ext: number, prevExt: number | null, side: Side, up: boolean) => {
+      if (prevExt == null) return;
+      const dDepth = (depth - prevDepth) / (dt / 1000);
+      const dExt = (ext - prevExt) / (dt / 1000);
+      if (up && nowMs > this.punchCooldown[side] && (dDepth > 1.1 || dExt > 0.9)) {
+        this.queued = side;
+        this.punchCooldown[side] = nowMs + 240;
+      }
+    };
+    detect(this.depthL, prevDepthL, extL, this.prevExtL, "L", upL);
+    detect(this.depthR, prevDepthR, extR, this.prevExtR, "R", upR);
+    this.prevZL = zL; this.prevZR = zR;
+    this.prevExtL = extL; this.prevExtR = extR;
   }
 
   stop(): void {

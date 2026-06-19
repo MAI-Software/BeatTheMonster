@@ -48,15 +48,9 @@ export function runCombat(
           <div class="bar player"><i id="php" class="fill"></i><b id="phptext"></b></div>
           <div class="flow-row"><div class="bar flow"><i id="flowfill" class="fill"></i></div><span id="flowlabel"></span></div>
         </div>
-        <div id="combo" class="combo"></div>
-        <div id="prep" class="prep-overlay">
-          <div class="prep-box">
-            <h3>Prepárate · ${practice ? "Práctica" : diff.name}</h3>
-            <p>De pie frente a la cámara. <b>Sube la GUARDIA</b> (las dos manos a la altura de la cara) y centra la cabeza. Inclínate a los lados para esquivar; empuja el puño hacia la cámara para golpear.</p>
-            <div id="prepstatus" class="prep-status">Sube la guardia…</div>
-            <button id="prepstart" class="primary">${icon("play", 18)} Estoy listo</button>
-          </div>
-        </div>
+        <div id="info" class="combat-info"></div>
+        <div id="judge" class="judge-feed"></div>
+        <div id="prephint" class="prep-hint"></div>
         <div id="countdown" class="countdown"></div>
         <button id="quit" class="quit">${icon("close", 18)}</button>
       </div>`;
@@ -68,8 +62,8 @@ export function runCombat(
 
     const canvas = $<HTMLCanvasElement>("#ring"), ctx = canvas.getContext("2d")!;
     const ehp = $<HTMLElement>("#ehp"), php = $<HTMLElement>("#php"), phptext = $<HTMLElement>("#phptext");
-    const comboEl = $<HTMLElement>("#combo"), flowfill = $<HTMLElement>("#flowfill"), flowlabel = $<HTMLElement>("#flowlabel");
-    const countdown = $<HTMLElement>("#countdown"), prep = $<HTMLElement>("#prep"), prepstatus = $<HTMLElement>("#prepstatus");
+    const infoEl = $<HTMLElement>("#info"), judgeEl = $<HTMLElement>("#judge"), flowfill = $<HTMLElement>("#flowfill"), flowlabel = $<HTMLElement>("#flowlabel");
+    const countdown = $<HTMLElement>("#countdown"), prephint = $<HTMLElement>("#prephint");
 
     function resize() {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -83,30 +77,26 @@ export function runCombat(
     let phase: "prep" | "countdown" | "play" = "prep";
     let countStart = 0, holdStart = 0;
     $<HTMLButtonElement>("#quit").onclick = () => { quit = true; };
-    $<HTMLButtonElement>("#prepstart").onclick = () => beginCountdown();
 
-    function beginCountdown() { if (phase !== "prep") return; phase = "countdown"; countStart = performance.now(); prep.style.display = "none"; }
+    function beginCountdown() { if (phase !== "prep") return; phase = "countdown"; countStart = performance.now(); prephint.textContent = ""; }
 
     function headX(): number { return Math.max(-1, Math.min(1, (input.head().x - 0.5) * 2)); }
 
     function loop(now: number) {
       input.update(now);
       if (phase === "prep") {
-        // auto-ready when guard is up AND head centred for a moment (camera)
-        const centered = Math.abs(headX()) < 0.24;
+        // start automatically once in guard + head aligned (camera). No instructions box.
+        const centered = Math.abs(headX()) < 0.26;
         const guard = input.guardUp?.() ?? true;
         if (isCam) {
-          if (!guard) { holdStart = 0; prepstatus.textContent = "Sube la guardia (manos arriba)…"; }
-          else if (!centered) { holdStart = 0; prepstatus.textContent = "¡Guardia! Ahora centra la cabeza…"; }
-          else { if (!holdStart) holdStart = now; const held = now - holdStart;
-            prepstatus.textContent = `¡Listo! Empezamos… ${Math.max(0, (1.0 - held / 1000)).toFixed(1)}s`;
-            if (held > 1000) beginCountdown();
-          }
-        } else prepstatus.textContent = "Pulsa Estoy listo para empezar.";
+          if (!guard) { holdStart = 0; prephint.textContent = "GUARDIA"; prephint.className = "prep-hint"; }
+          else if (!centered) { holdStart = 0; prephint.textContent = "ALINEA"; prephint.className = "prep-hint"; }
+          else { if (!holdStart) holdStart = now; prephint.textContent = "¡LISTO!"; prephint.className = "prep-hint ok"; if (now - holdStart > 900) beginCountdown(); }
+        } else { if (!holdStart) holdStart = now; prephint.textContent = "ALÍNEATE"; if (now - holdStart > 1400) beginCountdown(); }
         drawPrep();
       } else if (phase === "countdown") {
-        const left = 2600 - (now - countStart);
-        countdown.textContent = left > 0 ? String(Math.ceil(left / 1000)) : "¡YA!";
+        const left = 2200 - (now - countStart);
+        countdown.textContent = left > 0 ? String(Math.ceil(left / 1000)) : "";
         drawPrep();
         if (left <= 0) { phase = "play"; while (input.consumePunch()) {} song.start(); countdown.textContent = ""; }
       } else {
@@ -222,18 +212,30 @@ export function runCombat(
 
     function drawDodge(g: Tri, songMs: number) {
       const d = combat.dodgeState(songMs); if (!d) return;
-      // sphere on the outer side of the guard; slip head that way to dodge
-      const sx = g.cx + (d.side === "L" ? -g.baseHalf * 1.12 : g.baseHalf * 1.12);
-      const sy = g.cy - g.R * 0.1;
-      const rr = 18 + (1 - d.p) * 72;
-      ctx.strokeStyle = d.aligned ? COL.on : COL.danger; ctx.lineWidth = 6; ctx.globalAlpha = 0.55 + d.p * 0.45;
-      ctx.shadowColor = ctx.strokeStyle as string; ctx.shadowBlur = 18;
+      // threat sphere sits OUTSIDE the triangle on that side; lean head toward it.
+      const sx = g.cx + (d.side === "L" ? -g.baseHalf * 1.25 : g.baseHalf * 1.25);
+      const sy = g.cy - g.R * 0.15;
+      const col = d.aligned ? COL.on : COL.danger;
+      // incoming telegraph ring
+      const rr = 16 + (1 - d.p) * 64;
+      ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.globalAlpha = 0.5 + d.p * 0.5;
+      ctx.shadowColor = col; ctx.shadowBlur = 18;
       ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.fillStyle = d.aligned ? COL.on : COL.danger; ctx.shadowColor = ctx.fillStyle as string; ctx.shadowBlur = d.inWindow ? 34 : 18;
-      ctx.beginPath(); ctx.arc(sx, sy, 21, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-      ctx.font = "900 19px system-ui"; ctx.fillStyle = d.aligned ? COL.on : "#fff"; ctx.textAlign = "center";
+      // the sphere
+      ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = d.inWindow ? 32 : 16;
+      ctx.beginPath(); ctx.arc(sx, sy, 20, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      // sustained note: ring arc filling as you hold the lean (follow it)
+      if (d.holdMs > 0) {
+        ctx.lineWidth = 5; ctx.strokeStyle = "#0008";
+        ctx.beginPath(); ctx.arc(sx, sy, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = COL.on;
+        ctx.beginPath(); ctx.arc(sx, sy, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * d.holdFilled); ctx.stroke();
+      }
+      // direction arrow on the triangle edge
+      ctx.font = "900 30px system-ui"; ctx.fillStyle = col; ctx.textAlign = "center";
       ctx.shadowColor = "#000"; ctx.shadowBlur = 8;
-      ctx.fillText(d.side === "L" ? "ESQUIVA ←" : "→ ESQUIVA", g.cx, g.apexY - 12); ctx.shadowBlur = 0;
+      ctx.fillText(d.side === "L" ? "‹" : "›", g.cx + (d.side === "L" ? -g.baseHalf * 0.7 : g.baseHalf * 0.7), g.apexY + g.R * 0.4);
+      ctx.shadowBlur = 0;
     }
 
     function draw(songMs: number, now: number) {
@@ -245,34 +247,24 @@ export function runCombat(
       drawApproach(g, "L", songMs, trk?.depthL ?? 0); drawApproach(g, "R", songMs, trk?.depthR ?? 0);
       drawGuard(g);
       drawDodge(g, songMs);
-      // landed prompt near each target
-      const fl = combat.fillFor("L", songMs), fr = combat.fillFor("R", songMs);
-      ctx.font = "900 26px system-ui"; ctx.textAlign = "center";
-      const golpea = (side: "L" | "R", c: string, flash: number) => {
-        const t = target(g, side);
-        ctx.save(); ctx.globalAlpha = Math.max(0.5, flash); ctx.fillStyle = "#fff";
-        ctx.shadowColor = c; ctx.shadowBlur = 22; ctx.fillText("¡YA!", t.x, t.y - 46);
-        ctx.fillStyle = c; ctx.fillText("¡YA!", t.x, t.y - 46); ctx.restore();
-      };
-      if (fl?.full) golpea("L", COL.L, fl.flash);
-      if (fr?.full) golpea("R", COL.R, fr.flash);
       const d = combat.dodgeState(songMs);
       drawHead(g, !!d?.aligned);
-      // popups
-      let i = 0;
-      for (const pp of combat.popups) {
-        const age = (now - pp.bornMs) / 850; if (age > 1) continue;
-        ctx.globalAlpha = 1 - age; ctx.fillStyle = pp.color;
-        ctx.font = `800 ${pp.kind === "super" || pp.kind === "flow" ? 30 : 24}px system-ui`;
-        ctx.fillText(pp.text, g.cx, g.apexY - 30 - age * 26 - i * 4); ctx.globalAlpha = 1; i++;
-      }
     }
 
     function sync() {
       ehp.style.width = `${(combat.enemyHp / combat.enemyMaxHp) * 100}%`;
       php.style.width = `${(combat.playerHp / combat.playerMaxHp) * 100}%`;
       phptext.textContent = `${Math.ceil(combat.playerHp)} / ${combat.playerMaxHp}`;
-      comboEl.innerHTML = combat.combo > 1 ? `<b>${combat.combo}</b><small>COMBO</small>${combat.superCombo ? `<div class="super">SUPER ×2.5</div>` : ""}` : "";
+      // combo + points, OUTSIDE the triangle (top-left)
+      infoEl.innerHTML =
+        `<div class="ci-score">${combat.score.toLocaleString()} <span>PTS</span></div>` +
+        (combat.combo > 1 ? `<div class="ci-combo ${combat.superCombo ? "super" : ""}">${combat.combo} <span>COMBO${combat.superCombo ? " · SUPER ×2.5" : ""}</span></div>` : "");
+      // judgement feed (PERFECT / GOOD / ...), top-right
+      const now = performance.now();
+      judgeEl.innerHTML = combat.popups.slice(-5).map((pp) => {
+        const age = (now - pp.bornMs) / 1100; if (age > 1) return "";
+        return `<div class="jl" style="color:${pp.color};opacity:${(1 - age).toFixed(2)}">${pp.text}</div>`;
+      }).join("");
       flowfill.style.width = `${combat.flowMeter}%`;
       const f = combat.flowRef();
       flowlabel.textContent = combat.flowActive ? `${f?.name ?? "FLOW"} ACTIVO` : f ? f.name : "Sin Flow";

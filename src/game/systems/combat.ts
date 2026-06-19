@@ -14,7 +14,7 @@ import { sfx } from "./audio";
 export interface Popup { text: string; color: string; bornMs: number; kind: "perfect" | "good" | "miss" | "flow" | "super" | "dodge" }
 export interface CombatResult { won: boolean; perfects: number; goods: number; misses: number; maxCombo: number; superCombos: number; dodges: number; enemyMaxHp: number }
 export interface FillState { p: number; full: boolean; flash: number }
-export interface DodgeState { side: Side; p: number; inWindow: boolean; aligned: boolean }
+export interface DodgeState { side: Side; p: number; inWindow: boolean; aligned: boolean; holdMs: number; holdProgress: number; holdFilled: number }
 
 const DODGE_TARGET = 0.26; // headX past this toward a side = aligned (forgiving)
 
@@ -24,12 +24,15 @@ export class Combat {
   flowActive = false; flowEndsAt = 0; flowMeter = 0;
   enemyHp: number; enemyMaxHp: number; playerHp: number; playerMaxHp: number;
   popups: Popup[] = [];
+  score = 0;
   finished = false; result: CombatResult | null = null;
 
   private notes: Note[];
   private maxCombo = 0; private perfects = 0; private goods = 0; private misses = 0; private superCount = 0; private dodgeCount = 0;
   private flow: FlowState | null; private noMissCount = 0;
   private alignedDodges = new Set<number>();
+  private dodgeHold = new Map<number, number>(); // note id -> aligned ms accumulated
+  private lastNow = 0;
 
   constructor(private enemy: Enemy, beatmap: Beatmap, private stats: EffectiveStats, flow: FlowState | null, private diff: Difficulty, private practice = false) {
     this.notes = beatmap.notes.map((n) => ({ ...n }));
@@ -79,15 +82,19 @@ export class Combat {
     let best: Note | null = null;
     for (const n of this.notes) {
       if (n.judged || n.kind !== "dodge") continue;
+      const hold = n.holdMs ?? 0;
       if (n.tHit - songMs > n.leadMs) continue;
-      if (songMs - n.tHit > this.diff.dodgeWindowMs) continue;
+      if (songMs - n.tHit > this.diff.dodgeWindowMs + hold) continue;
       if (!best || n.tHit < best.tHit) best = n;
     }
     if (!best) return null;
+    const hold = best.holdMs ?? 0;
     const p = Math.max(0, Math.min(1, (songMs - (best.tHit - best.leadMs)) / best.leadMs));
-    const inWindow = Math.abs(songMs - best.tHit) <= this.diff.dodgeWindowMs;
+    const inWindow = Math.abs(songMs - best.tHit) <= this.diff.dodgeWindowMs + hold;
     const aligned = best.side === "L" ? this.headX < -DODGE_TARGET : this.headX > DODGE_TARGET;
-    return { side: best.side, p, inWindow, aligned };
+    const holdProgress = hold > 0 ? Math.max(0, Math.min(1, (songMs - best.tHit) / hold)) : 0;
+    const holdFilled = hold > 0 ? Math.min(1, (this.dodgeHold.get(best.id) ?? 0) / hold) : aligned ? 1 : 0;
+    return { side: best.side, p, inWindow, aligned, holdMs: hold, holdProgress, holdFilled };
   }
 
   private judgePunch(side: Side, songMs: number, now: number) {
@@ -108,6 +115,8 @@ export class Combat {
     }
     this.superCombo = this.perfectStreak >= COMBO.SUPER_THRESHOLD;
     if (this.superCombo) mult *= COMBO.SUPER_DMG_MULT;
+    const pts = judgement === "perfect" ? 300 : 100;
+    this.score += this.superCombo ? pts * 2 : pts;
     let dmg = hitDamage(this.stats.atk, this.enemy.def, mult, this.flowDmgMult());
     if (this.flowActive && this.flow?.buff.autoCounter) dmg = Math.round(dmg * 1.3);
     this.enemyHp = Math.max(0, this.enemyHp - dmg);
@@ -128,10 +137,13 @@ export class Combat {
     sfx.miss();
   }
   private onDodgeResolve(n: Note, now: number) {
-    if (this.alignedDodges.has(n.id)) {
+    const hold = n.holdMs ?? 0;
+    const ok = hold > 0 ? (this.dodgeHold.get(n.id) ?? 0) / hold > 0.55 : this.alignedDodges.has(n.id);
+    if (ok) {
       n.judged = "dodged"; this.dodgeCount++;
+      this.score += 200;
       this.flowMeter = Math.min(100, this.flowMeter + 4 * this.stats.flowGainMult);
-      this.addPopup("¡ESQUIVA!", "#7fffa0", "dodge", now); sfx.good();
+      this.addPopup("ESQUIVA", "#7fffa0", "dodge", now); sfx.good();
     } else {
       n.judged = "hit";
       this.combo = 0; this.perfectStreak = 0; this.superCombo = false; this.noMissCount = 0;
@@ -150,14 +162,21 @@ export class Combat {
     let p = input.consumePunch();
     while (p) { this.judgePunch(p, songMs, now); p = input.consumePunch(); }
 
-    // record dodge alignment while in window; resolve when window passes
+    const dt = this.lastNow ? Math.min(60, now - this.lastNow) : 16;
+    this.lastNow = now;
+
+    // record dodge alignment (tap or sustained hold); resolve when span passes
     for (const n of this.notes) {
       if (n.judged) continue;
       if (n.kind === "punch") { if (songMs - n.tHit > this.diff.goodMs) { n.judged = "miss"; this.onPunchMiss(now); } continue; }
-      // dodge
-      const inWin = Math.abs(songMs - n.tHit) <= this.diff.dodgeWindowMs;
-      if (inWin) { const ok = n.side === "L" ? this.headX < -DODGE_TARGET : this.headX > DODGE_TARGET; if (ok) this.alignedDodges.add(n.id); }
-      if (songMs - n.tHit > this.diff.dodgeWindowMs) this.onDodgeResolve(n, now);
+      const hold = n.holdMs ?? 0;
+      const aligned = n.side === "L" ? this.headX < -DODGE_TARGET : this.headX > DODGE_TARGET;
+      if (hold > 0) {
+        if (songMs >= n.tHit && songMs <= n.tHit + hold && aligned) this.dodgeHold.set(n.id, (this.dodgeHold.get(n.id) ?? 0) + dt);
+      } else if (Math.abs(songMs - n.tHit) <= this.diff.dodgeWindowMs && aligned) {
+        this.alignedDodges.add(n.id);
+      }
+      if (songMs - n.tHit > this.diff.dodgeWindowMs + hold) this.onDodgeResolve(n, now);
     }
 
     if (this.flowActive && now >= this.flowEndsAt) { this.flowActive = false; this.addPopup("FLOW FIN", "#9fb0c8", "flow", now); }
