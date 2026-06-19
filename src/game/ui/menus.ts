@@ -52,7 +52,7 @@ export function renderHome(app: App) {
         </div>
       </div>
       <div class="menu-grid">
-        ${tile("campaign", "swords", "Campaña", true)}
+        ${tile("campaign", "swords", "Luchar", true)}
         ${tile("practice", "target", "Práctica")}
         ${tile("tutorial", "fist", "Tutorial")}
         ${tile("training", "dumbbell", "Entrenar")}
@@ -92,13 +92,23 @@ function setupGymWalk(app: App) {
     active ^= 1;
   };
 
+  const home = app.root.querySelector<HTMLElement>(".home");
+  let stepping = false;
+  const stepInto = (nav: string, i: number) => {
+    if (stepping) return; stepping = true;
+    setView(nav, i);            // bring that room up
+    home?.classList.add("stepping"); // CSS pushes the camera into the ring + fades UI
+    setTimeout(() => app.go(nav), 380);
+  };
+
   setView("gym", 0); // initial: enter the gym
   tiles.forEach((t, i) => {
     const base = t.dataset.nav!;
-    const go = () => setView(base, i);
-    t.addEventListener("pointerenter", go);
-    t.addEventListener("focus", go);
-    t.addEventListener("touchstart", go, { passive: true });
+    const preview = () => setView(base, i);
+    t.addEventListener("pointerenter", preview);
+    t.addEventListener("focus", preview);
+    t.addEventListener("touchstart", preview, { passive: true });
+    t.onclick = () => stepInto(base, i); // override default nav with a "walk in" transition
   });
 }
 
