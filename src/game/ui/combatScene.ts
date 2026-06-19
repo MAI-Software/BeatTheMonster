@@ -140,12 +140,14 @@ export function runCombat(
     }
 
     function drawHead(g: Tri, glow: boolean) {
-      const { x, y } = g.apex;
-      ctx.fillStyle = glow ? COL.on : "#10131f"; ctx.strokeStyle = glow ? COL.on : COL.head; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      // simple face hint
+      const { x, y } = g.apex; const r = Math.max(22, g.R * 0.13);
+      ctx.save();
+      ctx.shadowColor = glow ? COL.on : COL.head; ctx.shadowBlur = glow ? 30 : 16;
+      ctx.fillStyle = glow ? COL.on : "#10131f"; ctx.strokeStyle = glow ? "#eaffe9" : COL.head; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.restore();
       ctx.fillStyle = glow ? "#06210f" : "#fff";
-      ctx.beginPath(); ctx.arc(x - 5, y - 2, 1.8, 0, Math.PI * 2); ctx.arc(x + 5, y - 2, 1.8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.12, 2.2, 0, Math.PI * 2); ctx.arc(x + r * 0.3, y - r * 0.12, 2.2, 0, Math.PI * 2); ctx.fill();
     }
 
     // overlay markers for what the camera tracks: head + both hands, in screen space
@@ -187,10 +189,11 @@ export function runCombat(
       if (side === "L") ctx.rect(0, 0, g.cx, g.h); else ctx.rect(g.cx, 0, g.w - g.cx, g.h);
       ctx.clip();
       const grad = ctx.createLinearGradient(0, g.baseY, 0, level);
-      grad.addColorStop(0, c + (f.full ? "ee" : "99")); grad.addColorStop(1, c + "22");
+      grad.addColorStop(0, c + (f.full ? "ff" : "bb")); grad.addColorStop(1, c + "33");
+      if (f.full) { ctx.shadowColor = c; ctx.shadowBlur = 30; }
       ctx.fillStyle = grad; ctx.fillRect(0, level, g.w, g.baseY - level);
       ctx.restore();
-      if (f.full) { ctx.save(); triPath(g); ctx.clip(); ctx.beginPath(); if (side === "L") ctx.rect(0, 0, g.cx, g.h); else ctx.rect(g.cx, 0, g.w - g.cx, g.h); ctx.clip(); triPath(g); ctx.lineWidth = 6; ctx.strokeStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 22 * f.flash; ctx.stroke(); ctx.restore(); }
+      if (f.full) { ctx.save(); triPath(g); ctx.clip(); ctx.beginPath(); if (side === "L") ctx.rect(0, 0, g.cx, g.h); else ctx.rect(g.cx, 0, g.w - g.cx, g.h); ctx.clip(); triPath(g); ctx.lineWidth = 9; ctx.strokeStyle = "#fff"; ctx.shadowColor = c; ctx.shadowBlur = 34; ctx.stroke(); ctx.lineWidth = 4; ctx.strokeStyle = c; ctx.stroke(); ctx.restore(); }
     }
 
     function drawDodge(g: Tri, songMs: number) {
@@ -198,13 +201,15 @@ export function runCombat(
       // sphere on the outer side of the guard; slip head that way to dodge
       const sx = g.cx + (d.side === "L" ? -g.baseHalf * 1.12 : g.baseHalf * 1.12);
       const sy = g.cy - g.R * 0.1;
-      const rr = 14 + (1 - d.p) * 64;
-      ctx.strokeStyle = d.aligned ? COL.on : COL.danger; ctx.lineWidth = 4; ctx.globalAlpha = 0.5 + d.p * 0.5;
+      const rr = 18 + (1 - d.p) * 72;
+      ctx.strokeStyle = d.aligned ? COL.on : COL.danger; ctx.lineWidth = 6; ctx.globalAlpha = 0.55 + d.p * 0.45;
+      ctx.shadowColor = ctx.strokeStyle as string; ctx.shadowBlur = 18;
       ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.fillStyle = d.aligned ? COL.on : COL.danger; ctx.shadowColor = ctx.fillStyle as string; ctx.shadowBlur = d.inWindow ? 26 : 12;
-      ctx.beginPath(); ctx.arc(sx, sy, 16, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-      ctx.font = "800 16px system-ui"; ctx.fillStyle = d.aligned ? COL.on : "#fff"; ctx.textAlign = "center";
-      ctx.fillText(d.side === "L" ? "ESQUIVA ←" : "→ ESQUIVA", g.cx, g.apexY - 10);
+      ctx.fillStyle = d.aligned ? COL.on : COL.danger; ctx.shadowColor = ctx.fillStyle as string; ctx.shadowBlur = d.inWindow ? 34 : 18;
+      ctx.beginPath(); ctx.arc(sx, sy, 21, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.font = "900 19px system-ui"; ctx.fillStyle = d.aligned ? COL.on : "#fff"; ctx.textAlign = "center";
+      ctx.shadowColor = "#000"; ctx.shadowBlur = 8;
+      ctx.fillText(d.side === "L" ? "ESQUIVA ←" : "→ ESQUIVA", g.cx, g.apexY - 12); ctx.shadowBlur = 0;
     }
 
     function draw(songMs: number, now: number) {
@@ -215,11 +220,16 @@ export function runCombat(
       drawFill(g, "L", songMs); drawFill(g, "R", songMs);
       drawGuard(g);
       drawDodge(g, songMs);
-      // full prompt
+      // full prompt — large + glowing so it reads from far away
       const fl = combat.fillFor("L", songMs), fr = combat.fillFor("R", songMs);
-      ctx.font = "800 20px system-ui"; ctx.textAlign = "center";
-      if (fl?.full) { ctx.fillStyle = COL.L; ctx.globalAlpha = fl.flash; ctx.fillText("¡GOLPEA!", g.cx - g.baseHalf * 0.45, g.cy); ctx.globalAlpha = 1; }
-      if (fr?.full) { ctx.fillStyle = COL.R; ctx.globalAlpha = fr.flash; ctx.fillText("¡GOLPEA!", g.cx + g.baseHalf * 0.45, g.cy); ctx.globalAlpha = 1; }
+      ctx.font = "900 34px system-ui"; ctx.textAlign = "center";
+      const golpea = (x: number, c: string, flash: number) => {
+        ctx.save(); ctx.globalAlpha = Math.max(0.5, flash); ctx.fillStyle = "#fff";
+        ctx.shadowColor = c; ctx.shadowBlur = 28; ctx.fillText("¡GOLPEA!", x, g.cy + 6);
+        ctx.shadowBlur = 0; ctx.fillStyle = c; ctx.fillText("¡GOLPEA!", x, g.cy + 6); ctx.restore();
+      };
+      if (fl?.full) golpea(g.cx - g.baseHalf * 0.45, COL.L, fl.flash);
+      if (fr?.full) golpea(g.cx + g.baseHalf * 0.45, COL.R, fr.flash);
       const d = combat.dodgeState(songMs);
       drawHead(g, !!d?.aligned);
       // popups
