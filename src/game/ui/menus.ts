@@ -212,7 +212,7 @@ export function renderTutorial(app: App) {
       <div class="scroll tut-wrap">
         <div class="coach">
           <div class="coach-portrait">
-            <img src="characters/coach/coach.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+            <img src="characters/coach/coach.svg" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
             <span class="coach-fallback" style="display:none">${icon("fist", 54)}</span>
           </div>
           <div class="coach-name">${COACH_NAME}</div>
