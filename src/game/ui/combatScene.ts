@@ -99,8 +99,8 @@ export function runCombat(
           if (!guard) { holdStart = 0; prepstatus.textContent = "Sube la guardia (manos arriba)…"; }
           else if (!centered) { holdStart = 0; prepstatus.textContent = "¡Guardia! Ahora centra la cabeza…"; }
           else { if (!holdStart) holdStart = now; const held = now - holdStart;
-            prepstatus.textContent = `Mantén la guardia… ${Math.max(0, (1.3 - held / 1000)).toFixed(1)}s`;
-            if (held > 1300) beginCountdown();
+            prepstatus.textContent = `¡Listo! Empezamos… ${Math.max(0, (1.0 - held / 1000)).toFixed(1)}s`;
+            if (held > 1000) beginCountdown();
           }
         } else prepstatus.textContent = "Pulsa Estoy listo para empezar.";
         drawPrep();
@@ -108,7 +108,7 @@ export function runCombat(
         const left = 2600 - (now - countStart);
         countdown.textContent = left > 0 ? String(Math.ceil(left / 1000)) : "¡YA!";
         drawPrep();
-        if (left <= 0) { phase = "play"; song.start(); countdown.textContent = ""; }
+        if (left <= 0) { phase = "play"; while (input.consumePunch()) {} song.start(); countdown.textContent = ""; }
       } else {
         const songMs = Math.max(0, song.timeMs());
         combat.update(songMs, now, input);

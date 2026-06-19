@@ -138,29 +138,29 @@ export class PoseInput implements InputProvider {
     this._L = ema(this._L, mx(lm[L_WRIST]), lm[L_WRIST].y);
     this._R = ema(this._R, mx(lm[R_WRIST]), lm[R_WRIST].y);
 
-    // punch detection: a jab is the hand THRUSTING TOWARD the camera. MediaPipe gives
-    // a depth z per landmark (more negative = closer). We trigger on forward z-velocity
-    // (hand approaching) and fall back to fast 2D motion. Hand must be up near guard.
     const dt = Math.max(16, nowMs - this.prevT);
     this.prevT = nowMs;
     const shY = (lm[L_SH].y + lm[R_SH].y) / 2;
-    const rawL: Vec2 = { x: mx(lm[L_WRIST]), y: lm[L_WRIST].y };
-    const rawR: Vec2 = { x: mx(lm[R_WRIST]), y: lm[R_WRIST].y };
     const zL = lm[L_WRIST].z ?? 0, zR = lm[R_WRIST].z ?? 0;
-    const detect = (cur: Vec2, prev: Vec2 | null, z: number, prevZ: number | null, side: Side, wristY: number) => {
-      if (prev == null) return;
-      const speed2d = Math.hypot(cur.x - prev.x, cur.y - prev.y) / (dt / 1000);
-      const forward = prevZ != null ? (prevZ - z) / (dt / 1000) : 0; // >0 = approaching camera
-      const extended = wristY < shY + 0.12; // around/above shoulder line
-      const thrust = forward > 0.6 || speed2d > 1.4;
-      if (thrust && extended && nowMs > this.punchCooldown[side]) {
+
+    // guard = both hands up around face height (lenient). Computed FIRST so it can
+    // suppress false punches while you simply raise/hold the guard.
+    const upL = lm[L_WRIST].y < shY + 0.15, upR = lm[R_WRIST].y < shY + 0.15;
+    this.guard = upL && upR;
+
+    // A punch is a clear THRUST TOWARD the camera (z drops fast). We do NOT use 2D
+    // motion (raising the guard is fast 2D and fired false punches), and never trigger
+    // while the guard is up (both hands at the face).
+    const detect = (z: number, prevZ: number | null, side: Side, up: boolean) => {
+      if (prevZ == null) return;
+      const forward = (prevZ - z) / (dt / 1000); // >0 = approaching camera
+      if (!this.guard && up && forward > 0.9 && nowMs > this.punchCooldown[side]) {
         this.queued = side;
-        this.punchCooldown[side] = nowMs + 210;
+        this.punchCooldown[side] = nowMs + 260;
       }
     };
-    detect(rawL, this.rawPrevL, zL, this.prevZL, "L", lm[L_WRIST].y);
-    detect(rawR, this.rawPrevR, zR, this.prevZR, "R", lm[R_WRIST].y);
-    this.rawPrevL = rawL; this.rawPrevR = rawR;
+    detect(zL, this.prevZL, "L", upL);
+    detect(zR, this.prevZR, "R", upR);
     this.prevZL = zL; this.prevZR = zR;
 
     // hand depth toward camera (forward = positive), smoothed, ~0..1
@@ -169,9 +169,6 @@ export class PoseInput implements InputProvider {
     const dr = Math.max(0, Math.min(1, (shZ - zR) * 2.2));
     this.depthL += (dl - this.depthL) * 0.4;
     this.depthR += (dr - this.depthR) * 0.4;
-
-    // guard = both hands up near face height
-    this.guard = lm[L_WRIST].y < shY + 0.06 && lm[R_WRIST].y < shY + 0.06;
   }
 
   stop(): void {
