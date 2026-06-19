@@ -20,8 +20,8 @@ export interface InputProvider {
   consumePunch(): Side | null; // edge-triggered, cleared on read
   update(nowMs: number): void;
   guardUp(): boolean; // both hands up at face height (camera) — true for keyboard
-  // screen-space tracking overlay (head + both hands) for the camera, or null
-  tracking(): { head: Vec2; L: Vec2; R: Vec2; detected: boolean } | null;
+  // screen-space tracking overlay (head + both hands) + hand depth, or null
+  tracking(): { head: Vec2; L: Vec2; R: Vec2; detected: boolean; depthL: number; depthR: number } | null;
   videoEl?: HTMLVideoElement;
   stop(): void;
 }
@@ -81,6 +81,8 @@ export class PoseInput implements InputProvider {
   private punchCooldown: Record<Side, number> = { L: 0, R: 0 };
   private detected = false;
   private guard = false;
+  private depthL = 0;
+  private depthR = 0;
   private rawPrevL: Vec2 | null = null;
   private rawPrevR: Vec2 | null = null;
   private prevZL: number | null = null;
@@ -119,7 +121,7 @@ export class PoseInput implements InputProvider {
   fists() { return { L: this._L, R: this._R }; }
   consumePunch() { const p = this.queued; this.queued = null; return p; }
   guardUp() { return this.guard; }
-  tracking() { return { head: this._head, L: this._L, R: this._R, detected: this.detected }; }
+  tracking() { return { head: this._head, L: this._L, R: this._R, detected: this.detected, depthL: this.depthL, depthR: this.depthR }; }
 
   update(nowMs: number): void {
     if (!this.ready || !this.landmarker || this.videoEl.readyState < 2) return;
@@ -160,6 +162,13 @@ export class PoseInput implements InputProvider {
     detect(rawR, this.rawPrevR, zR, this.prevZR, "R", lm[R_WRIST].y);
     this.rawPrevL = rawL; this.rawPrevR = rawR;
     this.prevZL = zL; this.prevZR = zR;
+
+    // hand depth toward camera (forward = positive), smoothed, ~0..1
+    const shZ = ((lm[L_SH].z ?? 0) + (lm[R_SH].z ?? 0)) / 2;
+    const dl = Math.max(0, Math.min(1, (shZ - zL) * 2.2));
+    const dr = Math.max(0, Math.min(1, (shZ - zR) * 2.2));
+    this.depthL += (dl - this.depthL) * 0.4;
+    this.depthR += (dr - this.depthR) * 0.4;
 
     // guard = both hands up near face height
     this.guard = lm[L_WRIST].y < shY + 0.06 && lm[R_WRIST].y < shY + 0.06;

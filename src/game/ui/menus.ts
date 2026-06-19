@@ -18,8 +18,9 @@ export interface App {
   toast(msg: string): void;
 }
 
-function speak(text: string) {
-  try { const s = window.speechSynthesis; if (!s) return; const u = new SpeechSynthesisUtterance(text); u.lang = "es-ES"; u.rate = 1.04; s.cancel(); s.speak(u); } catch {}
+// section background image (each menu shows its own room). Falls back to gym.
+function sectionBg(key: string): string {
+  return `<div class="section-bg"><img src="menu/${key}.webp" alt="" onerror="this.onerror=null;this.src='menu/gym.webp'"></div>`;
 }
 
 const slotIcon: Record<string, IconName> = { gloves: "glove", boots: "boot", headband: "headband", charm: "charm" };
@@ -59,7 +60,6 @@ export function renderHome(app: App) {
         ${tile("equip", "glove", "Equipo & Flow")}
         ${tile("gacha", "star", "Gacha")}
         ${tile("challenges", "calendar", "Desafíos")}
-        ${tile("ranking", "trophy", "Ranking")}
       </div>
       <div class="foot">Sin micropagos · monedas se ganan jugando</div>
     </div>`;
@@ -83,8 +83,8 @@ function setupGymWalk(app: App) {
     if (base === current) return;
     current = base;
     const next = layers[active ^ 1];
-    next.onerror = () => { if (!next.src.endsWith("gym.svg")) next.src = "menu/gym.svg"; };
-    next.src = `menu/${base}.svg`;
+    next.onerror = () => { if (!next.src.endsWith("gym.webp")) next.src = "menu/gym.webp"; };
+    next.src = `menu/${base}.webp`;
     const pan = (idx / N - 0.5) * 14; // % horizontal travel = walking
     next.style.transform = `scale(1.2) translateX(${-pan}%)`;
     next.classList.add("show");
@@ -125,7 +125,7 @@ export function renderCampaign(app: App) {
     }).join("");
     return `<div class="episode"><div class="ep-name">${ep.name}</div><div class="ep-enemies">${enemies}</div></div>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Luchar")}<div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p>${cards}</div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar")}<div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p>${cards}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!, Number(b.dataset.ep)));
 }
@@ -142,7 +142,7 @@ export function renderTraining(app: App) {
       ${s.statVouchers > 0 && !atMax ? `<button class="tr-vch" data-vch="${stat}">Vale</button>` : ""}
     </div>`;
   };
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Entrenar")}<div class="scroll">
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar")}<div class="scroll">
     <p class="hint">Sube stats con monedas. Vales de logro: <b>${s.statVouchers}</b>.</p>
     ${row("vt", "VT · Vida", "c-green")}${row("atk", "ATK · Ataque", "c-orange")}${row("def", "DEF · Defensa", "c-blue")}
     <p class="hint small">Más ATK = más daño. Más DEF = menos daño recibido. VT = aguante.</p>
@@ -171,7 +171,7 @@ export function renderEquip(app: App) {
       <span class="ic-state">${eq ? "EQUIPADO" : owned ? "Equipar" : icon("lock", 16)}</span>
     </button>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Equipo & Flow")}<div class="scroll"><h3>Estados de Flujo</h3>${flows}<h3>Accesorios</h3>${gear}</div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("equip")}${topBar(app, "Equipo & Flow")}<div class="scroll"><h3>Estados de Flujo</h3>${flows}<h3>Accesorios</h3>${gear}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-flow]").forEach((b) => { if (b.dataset.flow) b.onclick = () => { s.equippedFlow = b.dataset.flow!; app.persist(); renderEquip(app); }; });
   app.root.querySelectorAll<HTMLButtonElement>("[data-gear]").forEach((b) => { if (b.dataset.gear) b.onclick = () => { const sl = b.dataset.slot!; s.equippedGear[sl] = s.equippedGear[sl] === b.dataset.gear ? undefined : b.dataset.gear; app.persist(); renderEquip(app); }; });
@@ -179,7 +179,7 @@ export function renderEquip(app: App) {
 
 export function renderGacha(app: App) {
   const s = app.save;
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Gacha")}<div class="scroll">
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Gacha")}<div class="scroll">
     <p class="hint">Tira para ganar <b>fragmentos</b>. Junta los suficientes y el objeto se crea. Común = 20 frags (~4-5 por tirada). Sin pagos reales.</p>
     <div class="banner normal"><div class="banner-title">Banner Normal</div><div class="banner-sub">Accesorios · ${icon("coin", 14)} ${PULL_COST.normal}</div>
       <button class="pull-btn" data-pull="normal" ${canPull(s, "normal") ? "" : "disabled"}>Tirar</button></div>
@@ -219,7 +219,7 @@ export function renderChallenges(app: App) {
     return `<div class="chal achv"><div class="chal-text">${a.text} <i>Nv.${ap.tier}</i></div><div class="bar tiny"><i class="fill gold" style="width:${pct}%"></i></div>
       <div class="chal-foot"><span>${ap.progress}/${next}</span><span class="reward">+1 Vale stat</span></div></div>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Desafíos")}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos")}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-claim]").forEach((b) => b.onclick = () => { if (claimChallenge(s, b.dataset.claim!, b.dataset.scope as any)) { app.persist(); renderChallenges(app); } });
 }
@@ -227,12 +227,12 @@ export function renderChallenges(app: App) {
 export function renderRanking(app: App) {
   const s = app.save; const board = leaderboard(s);
   const rows = board.map((e, i) => `<div class="rank-row ${e.you ? "you" : ""}"><span class="pos">${i + 1}</span><span class="nm">${e.name}</span><span class="sc">${e.score.toLocaleString()}</span></div>`).join("");
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Ranking")}<div class="scroll"><p class="hint">Tu mejor: <b>${s.bestScore.toLocaleString()}</b> · Puesto #${myRank(s)}. Sin PvP.</p><div class="rank-list">${rows}</div></div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Ranking")}<div class="scroll"><p class="hint">Tu mejor: <b>${s.bestScore.toLocaleString()}</b> · Puesto #${myRank(s)}. Sin PvP.</p><div class="rank-list">${rows}</div></div></div>`;
   wireNav(app);
 }
 
 export function renderPractice(app: App) {
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Práctica")}<div class="scroll">
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("practice")}${topBar(app, "Práctica")}<div class="scroll">
     <p class="hint">Entrena una mecánica a la vez. Sin daño ni derrota — solo para coger el ritmo.</p>
     <button class="practice-card p-punch" data-practice="punch">
       <span class="pc-ic">${icon("glove", 26)}</span>
@@ -247,40 +247,32 @@ export function renderPractice(app: App) {
   app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => app.startPractice(b.dataset.practice as "punch" | "dodge"));
 }
 
+// Cinematic intro: coach full-bleed (no frame), story text at the bottom, no voice.
 export function renderTutorial(app: App) {
   let i = 0;
   const draw = () => {
     const step = TUTORIAL_STEPS[i];
     const last = i === TUTORIAL_STEPS.length - 1;
-    app.root.innerHTML = `<div class="scene menu tutorial">
-      ${topBar(app, "Tutorial")}
-      <div class="scroll tut-wrap">
-        <div class="coach">
-          <div class="coach-portrait">
-            <img src="characters/coach/coach.svg" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
-            <span class="coach-fallback" style="display:none">${icon("fist", 54)}</span>
-          </div>
-          <div class="coach-name">${COACH_NAME}</div>
-        </div>
-        <div class="bubble">${step.text}</div>
-        <div class="tut-progress">${i + 1} / ${TUTORIAL_STEPS.length}</div>
-        <div class="tut-nav">
-          ${i > 0 ? `<button data-tut="prev">Anterior</button>` : ""}
-          ${!last ? `<button class="primary" data-tut="next">Siguiente</button>`
-            : `<button class="primary" data-practice="punch">Practicar puños</button>
-               <button class="primary" data-practice="dodge">Practicar esquivas</button>
-               <button data-nav="campaign">A la campaña</button>`}
-          <button data-tut="replay">Repetir voz</button>
-        </div>
+    app.root.innerHTML = `<div class="scene intro" id="introScene">
+      <img class="intro-coach" src="characters/coach/coach.webp" alt="" onerror="this.style.display='none'">
+      <div class="intro-skip"><button data-nav="home">Saltar</button></div>
+      <div class="intro-bottom">
+        <div class="intro-name">${COACH_NAME}</div>
+        <div class="intro-text">${step.text}</div>
+        <div class="intro-dots">${TUTORIAL_STEPS.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("")}</div>
+        <button class="primary intro-next">${last ? "Empezar" : "Continuar"}</button>
       </div>
     </div>`;
-    speak(step.text);
     app.save.tutorialDone = true; app.persist();
     wireNav(app);
-    app.root.querySelector<HTMLButtonElement>('[data-tut="next"]')?.addEventListener("click", () => { i++; draw(); });
-    app.root.querySelector<HTMLButtonElement>('[data-tut="prev"]')?.addEventListener("click", () => { i--; draw(); });
-    app.root.querySelector<HTMLButtonElement>('[data-tut="replay"]')?.addEventListener("click", () => speak(step.text));
-    app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => { try { window.speechSynthesis?.cancel(); } catch {} app.startPractice(b.dataset.practice as "punch" | "dodge"); });
+    const advance = () => { if (last) app.go("home"); else { i++; draw(); } };
+    app.root.querySelector<HTMLButtonElement>(".intro-next")!.onclick = advance;
+    // tapping the scene (not the buttons) also advances
+    app.root.querySelector<HTMLElement>("#introScene")!.addEventListener("click", (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest(".intro-next") || t.closest(".intro-skip")) return;
+      advance();
+    });
   };
   draw();
 }

@@ -187,7 +187,7 @@ function showBoot(): Promise<void> {
     let tip = Math.floor(Math.random() * TIPS.length);
     root.innerHTML = `
       <div class="boot">
-        <img class="boot-title" src="title.svg" alt="Beat the Monster" onerror="this.style.display='none'">
+        <img class="boot-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
         <div class="boot-bar"><i id="bootfill"></i></div>
         <div class="boot-tip" id="boottip">${TIPS[tip]}</div>
         <div class="boot-hint">Consejo</div>

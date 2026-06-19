@@ -128,18 +128,21 @@ export function runCombat(
       resolve(combat.result ?? r);
     }
 
-    function geom() { const w = root.clientWidth, h = root.clientHeight; return { w, h, cx: w / 2, cy: h * 0.48, R: Math.min(w, h) * 0.32 }; }
+    function geom() { const w = root.clientWidth, h = root.clientHeight; return { w, h, cx: w / 2, cy: h * 0.49, R: Math.min(w, h) * 0.26 }; }
 
     interface Tri { w: number; h: number; cx: number; cy: number; R: number; baseHalf: number; baseY: number; apexY: number; apex: { x: number; y: number }; BL: { x: number; y: number }; BR: { x: number; y: number } }
     // Boxer-guard triangle: apex on top = the head, slipping left/right organically
     // with a small idle bob. Base = the guard. lean in [-1,1].
     function tri(lean: number, now: number): Tri {
       const { w, h, cx, cy, R } = geom();
-      const baseHalf = R * 1.0, baseY = cy + R * 0.78, apexY = cy - R * 1.02;
-      const bobX = Math.sin(now / 620) * 4, bobY = Math.sin(now / 470) * 3;
-      const apex = { x: cx + lean * baseHalf * 0.72 + bobX, y: apexY + bobY };
+      const baseHalf = R * 1.0, baseY = cy + R * 0.8, apexY = cy - R * 1.0;
+      const bobX = Math.sin(now / 700) * 2.5, bobY = Math.sin(now / 520) * 2;
+      // limited apex travel keeps the head "locked" near the top centre
+      const apex = { x: cx + lean * baseHalf * 0.5 + bobX, y: apexY + bobY };
       return { w, h, cx, cy, R, baseHalf, baseY, apexY, apex, BL: { x: cx - baseHalf, y: baseY }, BR: { x: cx + baseHalf, y: baseY } };
     }
+    // hit target at the middle of each half — Perfect = the approach ring lands here
+    function target(g: Tri, side: "L" | "R") { return { x: g.cx + (side === "L" ? -g.baseHalf * 0.42 : g.baseHalf * 0.42), y: g.cy + g.R * 0.12 }; }
     function triPath(g: Tri) { ctx.beginPath(); ctx.moveTo(g.apex.x, g.apex.y); ctx.lineTo(g.BR.x, g.BR.y); ctx.lineTo(g.BL.x, g.BL.y); ctx.closePath(); }
 
     function drawGuard(g: Tri) {
@@ -177,8 +180,9 @@ export function runCombat(
         ctx.fillText(label, x, y - r - 5);
       };
       dot(t.head, "#ffffff", 9, "CABEZA");
-      dot(t.L, COL.L, 11, "IZQ");
-      dot(t.R, COL.R, 11, "DER");
+      // hands grow as they approach the camera (depth feedback)
+      dot(t.L, COL.L, 10 + t.depthL * 18, "IZQ");
+      dot(t.R, COL.R, 10 + t.depthR * 18, "DER");
     }
 
     function drawPrep() {
@@ -193,21 +197,27 @@ export function runCombat(
       drawHead(g, Math.abs(headX()) < 0.22);
     }
 
-    function drawFill(g: Tri, side: "L" | "R", songMs: number) {
+    // Guitar-Hero style: a target ring sits at the middle of each half; an approach
+    // ring shrinks onto it and you punch the instant it lands ("justo encima").
+    function drawApproach(g: Tri, side: "L" | "R", songMs: number, depth: number) {
+      const c = side === "L" ? COL.L : COL.R;
+      const t = target(g, side);
+      const targetR = 24 + depth * 18; // the punch circle grows as your hand nears the camera
+      // static target ring
+      ctx.lineWidth = 3; ctx.strokeStyle = c + "66";
+      ctx.beginPath(); ctx.arc(t.x, t.y, targetR, 0, Math.PI * 2); ctx.stroke();
       const f = combat.fillFor(side, songMs); if (!f) return;
-      const c = side === "L" ? COL.L : COL.R, p = Math.min(1, f.p);
-      const level = g.baseY - p * (g.baseY - g.apexY);
+      const p = Math.min(1, f.p);
+      const approachR = targetR + (1 - p) * g.R * 0.95; // converges onto the target at tHit
       ctx.save();
-      triPath(g); ctx.clip();
-      ctx.beginPath();
-      if (side === "L") ctx.rect(0, 0, g.cx, g.h); else ctx.rect(g.cx, 0, g.w - g.cx, g.h);
-      ctx.clip();
-      const grad = ctx.createLinearGradient(0, g.baseY, 0, level);
-      grad.addColorStop(0, c + (f.full ? "ff" : "bb")); grad.addColorStop(1, c + "33");
-      if (f.full) { ctx.shadowColor = c; ctx.shadowBlur = 30; }
-      ctx.fillStyle = grad; ctx.fillRect(0, level, g.w, g.baseY - level);
+      ctx.lineWidth = f.full ? 7 : 5; ctx.strokeStyle = c;
+      ctx.shadowColor = c; ctx.shadowBlur = f.full ? 30 : 12; ctx.globalAlpha = 0.4 + p * 0.6;
+      ctx.beginPath(); ctx.arc(t.x, t.y, approachR, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
-      if (f.full) { ctx.save(); triPath(g); ctx.clip(); ctx.beginPath(); if (side === "L") ctx.rect(0, 0, g.cx, g.h); else ctx.rect(g.cx, 0, g.w - g.cx, g.h); ctx.clip(); triPath(g); ctx.lineWidth = 9; ctx.strokeStyle = "#fff"; ctx.shadowColor = c; ctx.shadowBlur = 34; ctx.stroke(); ctx.lineWidth = 4; ctx.strokeStyle = c; ctx.stroke(); ctx.restore(); }
+      if (f.full) { // landed — flash the target
+        ctx.save(); ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 26; ctx.globalAlpha = f.flash;
+        ctx.beginPath(); ctx.arc(t.x, t.y, targetR, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      }
     }
 
     function drawDodge(g: Tri, songMs: number) {
@@ -229,21 +239,23 @@ export function runCombat(
     function draw(songMs: number, now: number) {
       const { w, h } = geom();
       ctx.clearRect(0, 0, w, h);
+      const trk = isCam ? input.tracking?.() : null;
       drawTracking();
       const g = tri(combat.headX, now);
-      drawFill(g, "L", songMs); drawFill(g, "R", songMs);
+      drawApproach(g, "L", songMs, trk?.depthL ?? 0); drawApproach(g, "R", songMs, trk?.depthR ?? 0);
       drawGuard(g);
       drawDodge(g, songMs);
-      // full prompt — large + glowing so it reads from far away
+      // landed prompt near each target
       const fl = combat.fillFor("L", songMs), fr = combat.fillFor("R", songMs);
-      ctx.font = "900 34px system-ui"; ctx.textAlign = "center";
-      const golpea = (x: number, c: string, flash: number) => {
+      ctx.font = "900 26px system-ui"; ctx.textAlign = "center";
+      const golpea = (side: "L" | "R", c: string, flash: number) => {
+        const t = target(g, side);
         ctx.save(); ctx.globalAlpha = Math.max(0.5, flash); ctx.fillStyle = "#fff";
-        ctx.shadowColor = c; ctx.shadowBlur = 28; ctx.fillText("¡GOLPEA!", x, g.cy + 6);
-        ctx.shadowBlur = 0; ctx.fillStyle = c; ctx.fillText("¡GOLPEA!", x, g.cy + 6); ctx.restore();
+        ctx.shadowColor = c; ctx.shadowBlur = 22; ctx.fillText("¡YA!", t.x, t.y - 46);
+        ctx.fillStyle = c; ctx.fillText("¡YA!", t.x, t.y - 46); ctx.restore();
       };
-      if (fl?.full) golpea(g.cx - g.baseHalf * 0.45, COL.L, fl.flash);
-      if (fr?.full) golpea(g.cx + g.baseHalf * 0.45, COL.R, fr.flash);
+      if (fl?.full) golpea("L", COL.L, fl.flash);
+      if (fr?.full) golpea("R", COL.R, fr.flash);
       const d = combat.dodgeState(songMs);
       drawHead(g, !!d?.aligned);
       // popups

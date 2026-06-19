@@ -142,8 +142,9 @@ export class Combat {
 
   update(songMs: number, now: number, input: InputProvider) {
     if (this.finished) return;
-    // amplify lean so a small head shift moves clearly toward a side
-    this.headX = Math.max(-1, Math.min(1, (input.head().x - 0.5) * 2 * 1.5));
+    // amplify lean a touch, then smooth so the head stays locked (no jitter)
+    const target = Math.max(-1, Math.min(1, (input.head().x - 0.5) * 2 * 1.3));
+    this.headX += (target - this.headX) * 0.35;
 
     // punches
     let p = input.consumePunch();
