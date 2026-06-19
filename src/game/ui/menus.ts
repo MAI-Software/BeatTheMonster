@@ -1,6 +1,6 @@
 // All non-combat screens. SVG icons only (no emoji). Render-to-HTML + wire buttons.
 import { CAPS } from "../data/balance";
-import { EPISODES, ENEMIES } from "../data/enemies";
+import { EPISODES, ENEMIES, CAMPAIGN_LORE } from "../data/enemies";
 import { EQUIPMENT } from "../data/equipment";
 import { FLOW_STATES, getFlowState } from "../data/flowStates";
 import { canTrain, effectiveStats, spendVoucher, train, trainCost, xpToNext } from "../systems/progression";
@@ -125,7 +125,7 @@ export function renderCampaign(app: App) {
     }).join("");
     return `<div class="episode"><div class="ep-name">${ep.name}</div><div class="ep-enemies">${enemies}</div></div>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Campaña")}<div class="scroll">${cards}</div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${topBar(app, "Luchar")}<div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p>${cards}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!, Number(b.dataset.ep)));
 }

@@ -8,7 +8,7 @@ import { applyFightResult, refreshChallenges } from "./game/systems/challenges";
 import { fightScore } from "./game/systems/ranking";
 import { createInput, type InputProvider } from "./game/systems/pose";
 import { DIFFICULTIES, DIFFICULTY_ORDER, isDifficultyUnlocked, unlockHint, type DifficultyId } from "./game/data/difficulty";
-import { listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
+import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
 import { icon } from "./game/ui/icons";
 import {
@@ -59,9 +59,10 @@ class Game implements App {
   async startFight(enemyId: string, episodeId?: number) {
     unlockSongAudio();
     const enemy = ENEMIES[enemyId];
-    const songs = await listSongs(enemyId); // this enemy's own music folder
+    // global song first, then any per-enemy tracks
+    const songs = [GLOBAL_SONG, ...(await listSongs(enemyId))];
     let useCamera = true;
-    let chosenSong: SongMeta | null = songs[0] ?? null; // default to the enemy's song if present
+    let chosenSong: SongMeta | null = songs[0]; // default = God Is Dead
     const unlocked = (d: DifficultyId) => isDifficultyUnlocked(d, this.save.level, this.save.difficultyWins);
     if (!unlocked(this.difficulty)) this.difficulty = "easy";
 
@@ -170,4 +171,33 @@ class Game implements App {
   }
 }
 
-new Game();
+const TIPS = [
+  "Empuja el puño hacia la cámara para golpear.",
+  "Inclina la cabeza para esquivar los ataques.",
+  "Encadena PERFECTs para activar tu Estado de Flujo.",
+  "Sube la guardia antes de cada asalto.",
+  "El portal no se cierra solo: contén la horda.",
+  "Practica puños y esquivas por separado en el menú Práctica.",
+  "Los Super Combos multiplican tu daño ×2.5.",
+];
+
+function showBoot(): Promise<void> {
+  return new Promise((resolve) => {
+    const root = document.getElementById("app")!;
+    let tip = Math.floor(Math.random() * TIPS.length);
+    root.innerHTML = `
+      <div class="boot">
+        <img class="boot-title" src="title.svg" alt="Beat the Monster" onerror="this.style.display='none'">
+        <div class="boot-bar"><i id="bootfill"></i></div>
+        <div class="boot-tip" id="boottip">${TIPS[tip]}</div>
+        <div class="boot-hint">Consejo</div>
+      </div>`;
+    const fill = root.querySelector<HTMLElement>("#bootfill")!;
+    const tipEl = root.querySelector<HTMLElement>("#boottip")!;
+    requestAnimationFrame(() => { fill.style.width = "100%"; });
+    const rot = setInterval(() => { tip = (tip + 1) % TIPS.length; tipEl.textContent = TIPS[tip]; }, 1500);
+    setTimeout(() => { clearInterval(rot); resolve(); }, 3200);
+  });
+}
+
+(async () => { await showBoot(); new Game(); })();

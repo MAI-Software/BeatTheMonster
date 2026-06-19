@@ -5,6 +5,9 @@ import { sfx } from "./audio";
 
 export interface SongMeta { id: string; name: string; file: string; bpm?: number }
 
+// Default track for every fight (long song; the fight ends when the enemy falls).
+export const GLOBAL_SONG: SongMeta = { id: "god_is_dead", name: "God Is Dead", file: "god-is-dead.mp3" };
+
 let _ctx: AudioContext | null = null;
 function ctx(): AudioContext {
   if (!_ctx) _ctx = new (window.AudioContext || (window as any).webkitAudioContext)();

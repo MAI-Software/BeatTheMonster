@@ -10,12 +10,12 @@ public/characters/
   coach/
     coach.png        -> retrato del entrenador (tutorial)
   enemies/
-    joe_mixen.png    -> cara de Joe Mixen (junto a su vida)
-    rciardo_noxin.png
-    vladi_pootin.png
-    kym_jongun.png
-    elon_tusk.png
-    doni_crump.png
+    goblin_scout.png    -> cara del Goblin Explorador (junto a su vida)
+    orc_grunt.png
+    troll_stone.png
+    orc_berserker.png
+    ogre_brute.png
+    portal_demon.png
 ```
 
 ## Reglas
