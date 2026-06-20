@@ -87,8 +87,9 @@ export class PoseInput implements InputProvider {
   private rawPrevR: Vec2 | null = null;
   private prevZL: number | null = null;
   private prevZR: number | null = null;
-  private prevExtL: number | null = null;
-  private prevExtR: number | null = null;
+  private restExtL = 0;
+  private restExtR = 0;
+  private armed: Record<Side, boolean> = { L: true, R: true };
 
   constructor() {
     this.videoEl = document.createElement("video");
@@ -157,26 +158,31 @@ export class PoseInput implements InputProvider {
     this.depthL += (dl - this.depthL) * 0.5;
     this.depthR += (dr - this.depthR) * 0.5;
 
-    // arm extension (wrist-shoulder distance) as a 2nd punch signal for noisy depth.
+    // arm extension (wrist-shoulder distance). Robust jab detection: fire when the
+    // extension spikes ABOVE the resting/guard baseline (state machine), re-arming
+    // only after the arm pulls back. Speed/fps-independent + depth as a backup.
     const extL = Math.hypot(mx(lm[L_WRIST]) - mx(lm[L_SH]), lm[L_WRIST].y - lm[L_SH].y);
     const extR = Math.hypot(mx(lm[R_WRIST]) - mx(lm[R_SH]), lm[R_WRIST].y - lm[R_SH].y);
+    this.restExtL = this.restExtL === 0 ? extL : this.restExtL + (extL - this.restExtL) * 0.05;
+    this.restExtR = this.restExtR === 0 ? extR : this.restExtR + (extR - this.restExtR) * 0.05;
 
-    // A jab fires when the hand thrusts toward the camera (depth rises) OR the arm
-    // extends quickly, while roughly at/above shoulder height. No guard gate so a
-    // forward jab (hands stay up) still counts; raising the guard barely changes depth.
-    const detect = (depth: number, prevDepth: number, ext: number, prevExt: number | null, side: Side, up: boolean) => {
-      if (prevExt == null) return;
+    const FIRE = 0.075, REARM = 0.03;
+    const fire = (ext: number, rest: number, depth: number, prevDepth: number, side: Side, up: boolean) => {
+      const out = ext - rest;
       const dDepth = (depth - prevDepth) / (dt / 1000);
-      const dExt = (ext - prevExt) / (dt / 1000);
-      if (up && nowMs > this.punchCooldown[side] && (dDepth > 1.1 || dExt > 0.9)) {
-        this.queued = side;
-        this.punchCooldown[side] = nowMs + 240;
+      if (this.armed[side]) {
+        if (up && nowMs > this.punchCooldown[side] && (out > FIRE || dDepth > 1.5)) {
+          this.queued = side;
+          this.punchCooldown[side] = nowMs + 220;
+          this.armed[side] = false;
+        }
+      } else if (out < REARM) {
+        this.armed[side] = true;
       }
     };
-    detect(this.depthL, prevDepthL, extL, this.prevExtL, "L", upL);
-    detect(this.depthR, prevDepthR, extR, this.prevExtR, "R", upR);
+    fire(extL, this.restExtL, this.depthL, prevDepthL, "L", upL);
+    fire(extR, this.restExtR, this.depthR, prevDepthR, "R", upR);
     this.prevZL = zL; this.prevZR = zR;
-    this.prevExtL = extL; this.prevExtR = extR;
   }
 
   stop(): void {
