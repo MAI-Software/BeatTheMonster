@@ -42,7 +42,7 @@ export function buildBeatmap(beats: number[], durationMs: number, enemy: Enemy, 
   for (const t of beats) {
     if (rand() > keep * diff.density) continue;
 
-    const isDodge = rand() < diff.dodgeRatio && t - lastDodge > 1600;
+    const isDodge = rand() < diff.dodgeRatio && t - lastDodge > 1200;
     const lead = isDodge ? DODGE_LEAD : PUNCH_LEAD;
     const holdMs = isDodge && rand() < 0.4 ? 400 + Math.floor(rand() * 500) : 0; // some dodges are sustained
     const tail = (isDodge ? diff.dodgeWindowMs : diff.goodMs) + holdMs;
@@ -59,6 +59,22 @@ export function buildBeatmap(beats: number[], durationMs: number, enemy: Enemy, 
       notes.push({ id: id++, kind: "punch", side, tHit: t, leadMs: lead });
     }
     resolveEnd = t + tail;
+  }
+  return { durationMs, notes };
+}
+
+// Practice: a steady stream of ONE kind so the player can drill it. Alternating
+// sides, comfortably spaced; dodges occasionally sustained.
+export function practiceBeatmap(beats: number[], durationMs: number, kind: NoteKind): Beatmap {
+  const notes: Note[] = [];
+  let id = 0; let side: Side = "R"; let last = -1e9;
+  const lead = kind === "dodge" ? DODGE_LEAD : PUNCH_LEAD;
+  for (const t of beats) {
+    if (t < 1500 || t - last < 950) continue;
+    side = side === "L" ? "R" : "L";
+    const holdMs = kind === "dodge" && Math.random() < 0.3 ? 500 : 0;
+    notes.push({ id: id++, kind, side, tHit: t, leadMs: lead, holdMs });
+    last = t;
   }
   return { durationMs, notes };
 }

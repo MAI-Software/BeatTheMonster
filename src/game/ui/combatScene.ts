@@ -3,7 +3,7 @@
 // appear on the outer rim (lean head to that side). Head shown as a dot sliding along
 // the horizontal diameter — horizontal only, never a crouch. Clock from the SongPlayer.
 import type { Enemy } from "../data/enemies";
-import { buildBeatmap } from "../data/beatmaps";
+import { buildBeatmap, practiceBeatmap } from "../data/beatmaps";
 import type { Difficulty } from "../data/difficulty";
 import type { EffectiveStats } from "../systems/progression";
 import { Combat, type CombatResult } from "../systems/combat";
@@ -24,8 +24,9 @@ export function runCombat(
   return new Promise((resolve) => {
     unlockAudio();
     const practice = !!opts.practiceKind;
-    const beatmap = buildBeatmap(song.beats, song.durationMs, enemy, diff, (enemy.bpm | 0) + 7);
-    if (opts.practiceKind) beatmap.notes = beatmap.notes.filter((n) => n.kind === opts.practiceKind);
+    const beatmap = opts.practiceKind
+      ? practiceBeatmap(song.beats, song.durationMs, opts.practiceKind)
+      : buildBeatmap(song.beats, song.durationMs, enemy, diff, (enemy.bpm | 0) + 7);
     const combat = new Combat(enemy, beatmap, stats, flow, diff, practice);
 
     root.innerHTML = `
@@ -145,6 +146,9 @@ export function runCombat(
       // centre divider (L/R fists)
       ctx.lineWidth = 2; ctx.strokeStyle = COL.guard + "88";
       ctx.beginPath(); ctx.moveTo(g.cx, g.baseY); ctx.lineTo(g.cx, g.apexY + g.R * 0.5); ctx.stroke();
+      // fixed apex node (the head's home corner) — anchors the triangle visually
+      ctx.fillStyle = COL.guard; ctx.shadowColor = COL.guard; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.arc(g.apex.x, g.apex.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
       // guard gloves at the base corners
       for (const corner of [g.BL, g.BR]) { ctx.fillStyle = "#0006"; ctx.beginPath(); ctx.arc(corner.x, corner.y, 9, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = COL.rim; ctx.lineWidth = 2; ctx.stroke(); }
       ctx.font = "600 12px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#9fb0c8";
@@ -155,8 +159,9 @@ export function runCombat(
     // the head marker slides horizontally with the lean; it can travel out past the
     // triangle edges to reach the dodge arrows.
     function drawHead(g: Tri, headLean: number, glow: boolean) {
+      const r = Math.max(20, g.R * 0.12);
       const x = g.cx + Math.max(-1, Math.min(1, headLean)) * g.baseHalf * 1.08;
-      const y = g.apexY - 4; const r = Math.max(20, g.R * 0.12);
+      const y = g.apexY - r - 14; // floats clearly ABOVE the (fixed) triangle
       ctx.save();
       ctx.shadowColor = glow ? COL.on : COL.head; ctx.shadowBlur = glow ? 32 : 16;
       ctx.fillStyle = glow ? COL.on : "#10131f"; ctx.strokeStyle = glow ? "#eaffe9" : COL.head; ctx.lineWidth = 4;
