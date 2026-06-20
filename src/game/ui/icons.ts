@@ -34,3 +34,29 @@ export function icon(name: IconName, s = 20): string {
 }
 
 export type { IconName };
+
+// ---- swappable game-icon placeholders ----
+// Each game icon tries an image at public/icons/<name>.(png) and falls back to an
+// emoji placeholder. Drop real icons later to replace them one by one.
+export type GIconName =
+  | "campaign" | "practice" | "tutorial" | "training" | "equip" | "gacha"
+  | "challenges" | "ranking" | "coin" | "gem" | "flow" | "vt" | "atk" | "def";
+
+const EMOJI: Record<GIconName, string> = {
+  campaign: "⚔️", practice: "🎯", tutorial: "🥊", training: "💪", equip: "🧤", gacha: "🎰",
+  challenges: "📅", ranking: "🏆", coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️",
+};
+
+// install the onerror fallback once
+if (typeof window !== "undefined" && !(window as any).__iconFail) {
+  (window as any).__iconFail = (el: HTMLElement, emoji: string) => {
+    const s = document.createElement("span");
+    s.className = "gi-emoji"; s.textContent = emoji;
+    s.style.fontSize = (el.getAttribute("width") || "20") + "px";
+    el.replaceWith(s);
+  };
+}
+
+export function gicon(name: GIconName, size = 24): string {
+  return `<img class="gi" width="${size}" height="${size}" src="icons/${name}.png" alt="" onerror="window.__iconFail(this,'${EMOJI[name]}')">`;
+}

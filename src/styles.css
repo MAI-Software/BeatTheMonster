@@ -1,9 +1,12 @@
 :root {
-  --bg: #07080f; --bg2: #0d0f1b; --panel: #151826; --panel2: #1d2133; --line: #2a2f45;
-  --txt: #eaf0ff; --dim: #8b96b4;
-  --green: #3bd28a; --pink: #ff5bd0; --gold: #ffd23b; --blue: #5db4ff; --orange: #ff8a4d; --red: #ff5b6e;
-  --r-common: #8a93a8; --r-rare: #4ea1ff; --r-epic: #b06bff; --r-legendary: #ffb13b;
-  --rad: 14px;
+  /* brand: black / white / red */
+  --bg: #0a0a0b; --bg2: #0f0f10; --panel: #141415; --panel2: #1c1c1e; --line: #2b2b2e;
+  --txt: #f4f4f5; --dim: #9a9aa0;
+  --red: #e7202b; --red-2: #ff3a44;
+  /* legacy accent names remapped onto the brand so all components recolor */
+  --green: #f4f4f5; --pink: #e7202b; --gold: #ffffff; --blue: #d0d0d4; --orange: #e7202b;
+  --r-common: #8a8a90; --r-rare: #d4d4d8; --r-epic: #e7202b; --r-legendary: #ffffff;
+  --rad: 13px;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt);
@@ -29,10 +32,11 @@ body { background:
 }
 .menu > * { position: relative; z-index: 1; }
 
-/* per-section background image (each menu shows its room) */
-.menu .section-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #07080f; }
-.menu .section-bg img { width: 100%; height: 100%; object-fit: cover; opacity: .42; }
-.menu .section-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #07080fe8 0%, #07080fbb 26%, #07080fcc 60%, #07080fee 100%); }
+/* per-section background image (each menu shows its room) — kept bright, only the
+   areas under text/buttons are darkened by the elements' own panels. */
+.menu .section-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #0a0a0b; }
+.menu .section-bg img { width: 100%; height: 100%; object-fit: cover; opacity: .92; }
+.menu .section-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #0a0a0bcc 0%, #0a0a0b33 22%, #0a0a0b22 55%, #0a0a0bcc 100%); }
 
 /* intro cinematic: coach full-bleed, no frame, story text at the bottom */
 .intro { position: absolute; inset: 0; background: #000; overflow: hidden; }
@@ -66,7 +70,24 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .home .gym-bg { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: #07080f; }
 .gym-layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.2); transition: opacity .55s ease, transform 3.6s cubic-bezier(.2,.6,.2,1); will-change: opacity, transform; }
 .gym-layer.show { opacity: 1; }
-.home .gym-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #07080fdd 0%, #07080f66 32%, #07080f55 55%, #07080fe6 100%); transition: background .4s ease; }
+.home .gym-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #0a0a0bcc 0%, #0a0a0b22 34%, #0a0a0b22 56%, #0a0a0be0 100%); transition: background .4s ease; }
+.gym-layer { opacity: 0; }
+.gym-layer.show { opacity: .95; }
+
+/* official title image replaces the text logo */
+.title-img { width: min(86%, 430px); max-height: 30vh; object-fit: contain; filter: drop-shadow(0 6px 22px #000) drop-shadow(0 0 16px #e7202b55); }
+.home .lvl, .home .statline { text-shadow: 0 2px 8px #000; }
+.home .hero-head { position: relative; }
+
+/* swappable game-icon placeholders (img) + emoji fallback */
+.gi { object-fit: contain; vertical-align: -0.2em; }
+.gi-emoji { display: inline-block; line-height: 1; vertical-align: -0.12em; }
+
+/* portal art on boot + behind the coach in the intro */
+.boot-portal { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .5; }
+.boot-portal ~ * { position: relative; }
+.intro-portal { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; }
+.intro-coach { z-index: 1; }
 /* "step into the ring" transition when an option is tapped */
 .home.stepping .gym-layer.show { transform: scale(1.85) !important; transition: transform .42s ease-in; }
 .home.stepping .gym-bg::after { background: #07080f; }

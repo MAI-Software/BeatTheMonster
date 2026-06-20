@@ -16,7 +16,7 @@ import {
   renderPractice, renderRanking, renderTraining, renderTutorial, type App,
 } from "./game/ui/menus";
 
-const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#5db4ff" };
+const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#e7202b", emoji: "🥊" };
 
 class Game implements App {
   root = document.getElementById("app")!;
@@ -187,6 +187,7 @@ function showBoot(): Promise<void> {
     let tip = Math.floor(Math.random() * TIPS.length);
     root.innerHTML = `
       <div class="boot">
+        <img class="boot-portal" src="portal.webp" alt="" onerror="this.style.display='none'">
         <img class="boot-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
         <div class="boot-bar"><i id="bootfill"></i></div>
         <div class="boot-tip" id="boottip">${TIPS[tip]}</div>

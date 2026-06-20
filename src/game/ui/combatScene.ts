@@ -13,7 +13,8 @@ import type { SongPlayer } from "../systems/song";
 import { unlockAudio } from "../systems/audio";
 import { icon } from "./icons";
 
-const COL = { L: "#5db4ff", R: "#ff8a4d", rim: "#2e3550", on: "#3bd28a", head: "#ffffff", danger: "#ff5b6e", ball: "#ff5bd0" };
+// neon palette: blue = left fist, red = right fist, yellow = the triangle/head
+const COL = { L: "#1fa2ff", R: "#ff2436", guard: "#ffe11a", rim: "#4a451c", on: "#37e09a", head: "#ffe11a", danger: "#ff2e7a", ball: "#ffe11a" };
 
 export function runCombat(
   root: HTMLElement, enemy: Enemy, stats: EffectiveStats, flow: FlowState | null,
@@ -36,7 +37,7 @@ export function runCombat(
           <div class="enemy-bar">
             <div class="enemy-face" style="--c:${enemy.color}">
               <img src="characters/enemies/${enemy.id}.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
-              <span style="display:none">${enemy.name[0]}</span>
+              <span style="display:none">${enemy.emoji}</span>
             </div>
             <div class="enemy-info">
               <div class="enemy-name">${enemy.name}<span>${enemy.title}</span></div>
@@ -136,8 +137,12 @@ export function runCombat(
     function triPath(g: Tri) { ctx.beginPath(); ctx.moveTo(g.apex.x, g.apex.y); ctx.lineTo(g.BR.x, g.BR.y); ctx.lineTo(g.BL.x, g.BL.y); ctx.closePath(); }
 
     function drawGuard(g: Tri) {
-      triPath(g); ctx.lineWidth = 3; ctx.strokeStyle = COL.rim; ctx.lineJoin = "round"; ctx.stroke();
+      ctx.save();
+      triPath(g); ctx.lineWidth = 4; ctx.strokeStyle = COL.guard; ctx.lineJoin = "round";
+      ctx.shadowColor = COL.guard; ctx.shadowBlur = 16; ctx.stroke();
+      ctx.restore();
       // centre divider (L/R fists)
+      ctx.lineWidth = 2; ctx.strokeStyle = COL.guard + "88";
       ctx.beginPath(); ctx.moveTo(g.cx, g.baseY); ctx.lineTo(g.cx, g.apexY + g.R * 0.5); ctx.stroke();
       // guard gloves at the base corners
       for (const corner of [g.BL, g.BR]) { ctx.fillStyle = "#0006"; ctx.beginPath(); ctx.arc(corner.x, corner.y, 9, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = COL.rim; ctx.lineWidth = 2; ctx.stroke(); }

@@ -8,7 +8,7 @@ import { PULL_COST, canPull, fragInfo, pull } from "../systems/gacha";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
-import { icon, type IconName } from "./icons";
+import { icon, gicon, type IconName, type GIconName } from "./icons";
 
 export interface App {
   root: HTMLElement; save: any;
@@ -31,8 +31,8 @@ function topBar(app: App, title: string): string {
     <button class="back" data-nav="home">${icon("back", 22)}</button>
     <h2>${title}</h2>
     <div class="currency">
-      <span>${icon("coin", 16)} ${s.coins}</span>
-      <span>${icon("gem", 16)} ${s.premium}</span>
+      <span>${gicon("coin", 16)} ${s.coins}</span>
+      <span>${gicon("gem", 16)} ${s.premium}</span>
     </div>
   </div>`;
 }
@@ -44,7 +44,7 @@ export function renderHome(app: App) {
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
       <div class="hero-head">
-        <div class="logo">BEAT THE<span>MONSTER</span></div>
+        <img class="title-img" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
         <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""}</div>
         <div class="bar xp"><i class="fill" style="width:${maxed ? 100 : (s.xp / need) * 100}%"></i></div>
         <div class="statline">
@@ -66,8 +66,8 @@ export function renderHome(app: App) {
   wireNav(app);
   setupGymWalk(app);
 }
-const tile = (nav: string, ic: IconName, label: string, big = false) =>
-  `<button data-nav="${nav}" class="${big ? "big" : ""}">${icon(ic, big ? 30 : 24)}<span>${label}</span></button>`;
+const tile = (nav: string, _ic: IconName, label: string, big = false) =>
+  `<button data-nav="${nav}" class="${big ? "big" : ""}">${gicon(nav as GIconName, big ? 38 : 28)}<span>${label}</span></button>`;
 
 // Walk through the gym: focusing/hovering an option pans + crossfades the background
 // toward that option's image (falling back to gym.svg), simulating moving around.
@@ -181,9 +181,9 @@ export function renderGacha(app: App) {
   const s = app.save;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Gacha")}<div class="scroll">
     <p class="hint">Tira para ganar <b>fragmentos</b>. Junta los suficientes y el objeto se crea. Común = 20 frags (~4-5 por tirada). Sin pagos reales.</p>
-    <div class="banner normal"><div class="banner-title">Banner Normal</div><div class="banner-sub">Accesorios · ${icon("coin", 14)} ${PULL_COST.normal}</div>
+    <div class="banner normal"><div class="banner-title">Banner Normal</div><div class="banner-sub">Accesorios · ${gicon("coin", 14)} ${PULL_COST.normal}</div>
       <button class="pull-btn" data-pull="normal" ${canPull(s, "normal") ? "" : "disabled"}>Tirar</button></div>
-    <div class="banner premium"><div class="banner-title">Banner Premium</div><div class="banner-sub">Mejores odds + Flow · ${icon("gem", 14)} ${PULL_COST.premium}</div>
+    <div class="banner premium"><div class="banner-title">Banner Premium</div><div class="banner-sub">Mejores odds + Flow · ${gicon("gem", 14)} ${PULL_COST.premium}</div>
       <button class="pull-btn" data-pull="premium" ${canPull(s, "premium") ? "" : "disabled"}>Tirar</button></div>
     <div id="pull-result"></div>
     <h3>Colección</h3>
@@ -196,7 +196,7 @@ export function renderGacha(app: App) {
     app.persist();
     app.root.querySelector<HTMLDivElement>("#pull-result")!.innerHTML =
       `<div class="pull-pop r-${res.rarity}"><div class="pp-name">${icon(res.isFlow ? "bolt" : "glove", 18)} <b>${res.itemName}</b> <i>${res.rarity}</i></div><div class="pp-sub">+${res.fragsGained} frags ${res.crafted ? "· <b class='crafted'>DESBLOQUEADO</b>" : ""}</div></div>`;
-    app.root.querySelector(".currency")!.innerHTML = `<span>${icon("coin", 16)} ${s.coins}</span><span>${icon("gem", 16)} ${s.premium}</span>`;
+    app.root.querySelector(".currency")!.innerHTML = `<span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("gem", 16)} ${s.premium}</span>`;
     b.disabled = !canPull(s, b.dataset.pull as any);
   });
 }
@@ -209,7 +209,7 @@ export function renderChallenges(app: App) {
       return `<div class="chal ${ch.claimed ? "claimed" : done ? "ready" : ""}">
         <div class="chal-text">${def.text}</div><div class="bar tiny"><i class="fill" style="width:${pct}%"></i></div>
         <div class="chal-foot"><span>${Math.min(ch.progress, def.goal)}/${def.goal}</span>
-          <span class="reward">${icon("coin", 13)}${def.rewardCoins}${def.rewardPremium ? ` ${icon("gem", 13)}${def.rewardPremium}` : ""}</span>
+          <span class="reward">${gicon("coin", 13)}${def.rewardCoins}${def.rewardPremium ? ` ${gicon("gem", 13)}${def.rewardPremium}` : ""}</span>
           ${ch.claimed ? icon("check", 18) : done ? `<button data-claim="${ch.id}" data-scope="${scope}">Cobrar</button>` : ""}
         </div></div>`;
     }).join("");
@@ -254,6 +254,7 @@ export function renderTutorial(app: App) {
     const step = TUTORIAL_STEPS[i];
     const last = i === TUTORIAL_STEPS.length - 1;
     app.root.innerHTML = `<div class="scene intro" id="introScene">
+      <img class="intro-portal" src="portal.webp" alt="" onerror="this.style.display='none'">
       <img class="intro-coach" src="characters/coach/coach.webp" alt="" onerror="this.style.display='none'">
       <div class="intro-skip"><button data-nav="home">Saltar</button></div>
       <div class="intro-bottom">
