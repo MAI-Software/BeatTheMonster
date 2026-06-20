@@ -67,48 +67,22 @@ export function renderHome(app: App) {
   setupGymWalk(app);
 }
 const tile = (nav: string, _ic: IconName, label: string, big = false) =>
-  `<button data-nav="${nav}" class="${big ? "big" : ""}">${gicon(nav as GIconName, big ? 38 : 28)}<span>${label}</span></button>`;
+  `<button data-nav="${nav}" class="tile ${big ? "big" : ""}">${gicon(nav as GIconName, big ? 34 : 26)}<span>${label}</span></button>`;
 
-// Walk through the gym: focusing/hovering an option pans + crossfades the background
-// toward that option's image (falling back to gym.svg), simulating moving around.
+// Home keeps the MAIN gym image fixed; tapping a section plays a brief "step in"
+// transition, then that section shows its own background.
 function setupGymWalk(app: App) {
   const layers = Array.from(app.root.querySelectorAll<HTMLImageElement>(".gym-layer"));
-  if (layers.length < 2) return;
-  let active = 0;
-  let current = "";
-  const tiles = Array.from(app.root.querySelectorAll<HTMLButtonElement>(".menu-grid [data-nav]"));
-  const N = Math.max(1, tiles.length - 1);
-
-  const setView = (base: string, idx: number) => {
-    if (base === current) return;
-    current = base;
-    const next = layers[active ^ 1];
-    next.onerror = () => { if (!next.src.endsWith("gym.webp")) next.src = "menu/gym.webp"; };
-    next.src = `menu/${base}.webp`;
-    const pan = (idx / N - 0.5) * 14; // % horizontal travel = walking
-    next.style.transform = `scale(1.2) translateX(${-pan}%)`;
-    next.classList.add("show");
-    layers[active].classList.remove("show");
-    active ^= 1;
-  };
-
+  if (layers.length) { layers[0].src = "menu/gym.webp"; layers[0].classList.add("show"); }
   const home = app.root.querySelector<HTMLElement>(".home");
   let stepping = false;
-  const stepInto = (nav: string, i: number) => {
-    if (stepping) return; stepping = true;
-    setView(nav, i);            // bring that room up
-    home?.classList.add("stepping"); // CSS pushes the camera into the ring + fades UI
-    setTimeout(() => app.go(nav), 380);
-  };
-
-  setView("gym", 0); // initial: enter the gym
-  tiles.forEach((t, i) => {
-    const base = t.dataset.nav!;
-    const preview = () => setView(base, i);
-    t.addEventListener("pointerenter", preview);
-    t.addEventListener("focus", preview);
-    t.addEventListener("touchstart", preview, { passive: true });
-    t.onclick = () => stepInto(base, i); // override default nav with a "walk in" transition
+  app.root.querySelectorAll<HTMLButtonElement>(".menu-grid [data-nav]").forEach((t) => {
+    const nav = t.dataset.nav!;
+    t.onclick = () => {
+      if (stepping) return; stepping = true;
+      home?.classList.add("stepping");
+      setTimeout(() => app.go(nav), 360);
+    };
   });
 }
 
@@ -247,25 +221,28 @@ export function renderPractice(app: App) {
   app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => app.startPractice(b.dataset.practice as "punch" | "dodge"));
 }
 
-// Choose the player skin (after the tutorial, first run).
+// Choose the player skin (after the tutorial). Gym backdrop, both fighters big,
+// male preselected & highlighted; selecting grows/illuminates + shifts focus.
 export function renderCharacterSelect(app: App) {
+  let sel: "male" | "female" = "male";
   app.root.innerHTML = `<div class="scene menu charsel">
+    <div class="section-bg"><img src="menu/gym.webp" alt="" onerror="this.style.display='none'"></div>
     <h2 class="cs-title">Elige tu luchador</h2>
-    <p class="hint">Quién contendrá la horda del portal.</p>
-    <div class="cs-grid">
-      <button class="cs-card" data-gender="male">
-        <img src="characters/player/male.webp" alt="" onerror="this.style.display='none'">
-        <span>Hombre</span>
-      </button>
-      <button class="cs-card" data-gender="female">
-        <img src="characters/player/female.webp" alt="" onerror="this.style.display='none'">
-        <span>Mujer</span>
-      </button>
+    <div class="cs-stage" id="csStage">
+      <button class="cs-fighter" data-sel="male"><img src="characters/player/male.webp" alt="" onerror="this.style.display='none'"><span>Hombre</span></button>
+      <button class="cs-fighter" data-sel="female"><img src="characters/player/female.webp" alt="" onerror="this.style.display='none'"><span>Mujer</span></button>
     </div>
+    <button class="primary cs-confirm">Elegir</button>
   </div>`;
-  app.root.querySelectorAll<HTMLButtonElement>("[data-gender]").forEach((b) => b.onclick = () => {
-    app.save.gender = b.dataset.gender as "male" | "female"; app.persist(); app.go("home");
-  });
+  const stage = app.root.querySelector<HTMLElement>("#csStage")!;
+  const apply = () => {
+    app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.classList.toggle("on", b.dataset.sel === sel));
+    stage.classList.toggle("focus-male", sel === "male");
+    stage.classList.toggle("focus-female", sel === "female");
+  };
+  apply();
+  app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.onclick = () => { sel = b.dataset.sel as "male" | "female"; apply(); });
+  app.root.querySelector<HTMLButtonElement>(".cs-confirm")!.onclick = () => { app.save.gender = sel; app.persist(); app.go("home"); };
 }
 
 // Cinematic intro: coach full-bleed (no frame), story text at the bottom, no voice.

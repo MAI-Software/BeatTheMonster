@@ -16,7 +16,7 @@ export interface CombatResult { won: boolean; perfects: number; goods: number; m
 export interface FillState { p: number; full: boolean; flash: number }
 export interface DodgeState { side: Side; p: number; inWindow: boolean; aligned: boolean; holdMs: number; holdProgress: number; holdFilled: number }
 
-const DODGE_TARGET = 0.18; // small head lean past this = dodged (head exits the triangle)
+const DODGE_TARGET = 0.15; // small head lean toward the arrow = dodged
 
 export class Combat {
   headX = 0;

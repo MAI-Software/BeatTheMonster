@@ -128,8 +128,9 @@ export function runCombat(
       const { w, h, cx, cy, R } = geom();
       const baseHalf = R * 1.0, baseY = cy + R * 0.8, apexY = cy - R * 1.0;
       const bobX = Math.sin(now / 700) * 2.5, bobY = Math.sin(now / 520) * 2;
-      // apex travels enough that a small lean visibly pushes the head out toward a side
-      const apex = { x: cx + lean * baseHalf * 0.7 + bobX, y: apexY + bobY };
+      // the triangle stays put (only a tiny idle bob); the HEAD marker moves, not the guard
+      void lean;
+      const apex = { x: cx + bobX, y: apexY + bobY };
       return { w, h, cx, cy, R, baseHalf, baseY, apexY, apex, BL: { x: cx - baseHalf, y: baseY }, BR: { x: cx + baseHalf, y: baseY } };
     }
     // hit target at the middle of each half — Perfect = the approach ring lands here
@@ -151,10 +152,13 @@ export function runCombat(
       ctx.fillText("DER", g.cx + g.baseHalf * 0.45, g.baseY + 22);
     }
 
-    function drawHead(g: Tri, glow: boolean) {
-      const { x, y } = g.apex; const r = Math.max(22, g.R * 0.13);
+    // the head marker slides horizontally with the lean; it can travel out past the
+    // triangle edges to reach the dodge arrows.
+    function drawHead(g: Tri, headLean: number, glow: boolean) {
+      const x = g.cx + Math.max(-1, Math.min(1, headLean)) * g.baseHalf * 1.08;
+      const y = g.apexY - 4; const r = Math.max(20, g.R * 0.12);
       ctx.save();
-      ctx.shadowColor = glow ? COL.on : COL.head; ctx.shadowBlur = glow ? 30 : 16;
+      ctx.shadowColor = glow ? COL.on : COL.head; ctx.shadowBlur = glow ? 32 : 16;
       ctx.fillStyle = glow ? COL.on : "#10131f"; ctx.strokeStyle = glow ? "#eaffe9" : COL.head; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.restore();
@@ -189,7 +193,7 @@ export function runCombat(
       // centre guide line for aligning the head
       ctx.setLineDash([6, 6]); ctx.strokeStyle = "#9fb0c8"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(g.cx, g.apexY - 20); ctx.lineTo(g.cx, g.apexY + 20); ctx.stroke(); ctx.setLineDash([]);
-      drawHead(g, Math.abs(headX()) < 0.22);
+      drawHead(g, headX(), Math.abs(headX()) < 0.22);
     }
 
     // Guitar-Hero style: a target ring sits at the middle of each half; an approach
@@ -261,7 +265,7 @@ export function runCombat(
       drawGuard(g);
       drawDodge(g, songMs);
       const d = combat.dodgeState(songMs);
-      drawHead(g, !!d?.aligned);
+      drawHead(g, combat.headX, !!d?.aligned);
     }
 
     function sync() {
