@@ -12,7 +12,7 @@ import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudi
 import { runCombat } from "./game/ui/combatScene";
 import { icon } from "./game/ui/icons";
 import {
-  renderCampaign, renderChallenges, renderEquip, renderGacha, renderHome,
+  renderCampaign, renderCharacterSelect, renderChallenges, renderEquip, renderGacha, renderHome,
   renderPractice, renderRanking, renderTraining, renderTutorial, type App,
 } from "./game/ui/menus";
 
@@ -26,7 +26,7 @@ class Game implements App {
 
   constructor() {
     refreshChallenges(this.save); this.persist();
-    this.go(this.save.tutorialDone ? "home" : "tutorial");
+    this.go(!this.save.tutorialDone ? "tutorial" : !this.save.gender ? "charselect" : "home");
   }
   persist() { writeSave(this.save); }
 
@@ -34,7 +34,7 @@ class Game implements App {
     const map: Record<string, (a: App) => void> = {
       campaign: renderCampaign, training: renderTraining, equip: renderEquip,
       gacha: renderGacha, challenges: renderChallenges, ranking: renderRanking,
-      tutorial: renderTutorial, practice: renderPractice,
+      tutorial: renderTutorial, practice: renderPractice, charselect: renderCharacterSelect,
     };
     (map[screen] ?? renderHome)(this);
   }

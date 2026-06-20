@@ -128,8 +128,8 @@ export function runCombat(
       const { w, h, cx, cy, R } = geom();
       const baseHalf = R * 1.0, baseY = cy + R * 0.8, apexY = cy - R * 1.0;
       const bobX = Math.sin(now / 700) * 2.5, bobY = Math.sin(now / 520) * 2;
-      // limited apex travel keeps the head "locked" near the top centre
-      const apex = { x: cx + lean * baseHalf * 0.5 + bobX, y: apexY + bobY };
+      // apex travels enough that a small lean visibly pushes the head out toward a side
+      const apex = { x: cx + lean * baseHalf * 0.7 + bobX, y: apexY + bobY };
       return { w, h, cx, cy, R, baseHalf, baseY, apexY, apex, BL: { x: cx - baseHalf, y: baseY }, BR: { x: cx + baseHalf, y: baseY } };
     }
     // hit target at the middle of each half — Perfect = the approach ring lands here
@@ -215,32 +215,40 @@ export function runCombat(
       }
     }
 
+    // a chevron arrow ABOVE the triangle pointing up-and-out. Lean the head a little
+    // toward it (head exits the triangle on that side) to dodge.
+    function arrow(ax: number, ay: number, dir: -1 | 1, size: number, col: string, glow: number) {
+      ctx.save(); ctx.translate(ax, ay); ctx.strokeStyle = col; ctx.fillStyle = col;
+      ctx.lineWidth = 8; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      ctx.shadowColor = col; ctx.shadowBlur = glow;
+      ctx.beginPath();
+      ctx.moveTo(dir * -size, size * 0.7);
+      ctx.lineTo(dir * size, 0);
+      ctx.lineTo(dir * -size, -size * 0.7);
+      ctx.stroke(); ctx.restore();
+    }
+
     function drawDodge(g: Tri, songMs: number) {
       const d = combat.dodgeState(songMs); if (!d) return;
-      // threat sphere sits OUTSIDE the triangle on that side; lean head toward it.
-      const sx = g.cx + (d.side === "L" ? -g.baseHalf * 1.25 : g.baseHalf * 1.25);
-      const sy = g.cy - g.R * 0.15;
+      const dir = d.side === "L" ? -1 : 1;
       const col = d.aligned ? COL.on : COL.danger;
-      // incoming telegraph ring
-      const rr = 16 + (1 - d.p) * 64;
-      ctx.strokeStyle = col; ctx.lineWidth = 6; ctx.globalAlpha = 0.5 + d.p * 0.5;
-      ctx.shadowColor = col; ctx.shadowBlur = 18;
-      ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
-      // the sphere
-      ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = d.inWindow ? 32 : 16;
-      ctx.beginPath(); ctx.arc(sx, sy, 20, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-      // sustained note: ring arc filling as you hold the lean (follow it)
+      // arrow sits just OUTSIDE the triangle's top corner on that side
+      const ax = g.cx + dir * g.baseHalf * 0.95;
+      const ay = g.apexY + g.R * 0.05;
+      const glow = d.inWindow ? 30 : 14;
+      arrow(ax, ay, dir as -1 | 1, 22 + (1 - d.p) * 10, col, glow);
+      // incoming telegraph ring closing onto the arrow
+      const rr = 18 + (1 - d.p) * 56;
+      ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.globalAlpha = 0.4 + d.p * 0.6;
+      ctx.shadowColor = col; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(ax, ay, rr, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      // sustained note: arc fills while you hold the lean out
       if (d.holdMs > 0) {
-        ctx.lineWidth = 5; ctx.strokeStyle = "#0008";
-        ctx.beginPath(); ctx.arc(sx, sy, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2); ctx.stroke();
-        ctx.strokeStyle = COL.on;
-        ctx.beginPath(); ctx.arc(sx, sy, 28, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * d.holdFilled); ctx.stroke();
+        ctx.lineWidth = 5; ctx.strokeStyle = "#0009";
+        ctx.beginPath(); ctx.arc(ax, ay, 34, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = COL.on; ctx.shadowColor = COL.on; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(ax, ay, 34, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * d.holdFilled); ctx.stroke(); ctx.shadowBlur = 0;
       }
-      // direction arrow on the triangle edge
-      ctx.font = "900 30px system-ui"; ctx.fillStyle = col; ctx.textAlign = "center";
-      ctx.shadowColor = "#000"; ctx.shadowBlur = 8;
-      ctx.fillText(d.side === "L" ? "‹" : "›", g.cx + (d.side === "L" ? -g.baseHalf * 0.7 : g.baseHalf * 0.7), g.apexY + g.R * 0.4);
-      ctx.shadowBlur = 0;
     }
 
     function draw(songMs: number, now: number) {

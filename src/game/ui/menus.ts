@@ -247,6 +247,27 @@ export function renderPractice(app: App) {
   app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => app.startPractice(b.dataset.practice as "punch" | "dodge"));
 }
 
+// Choose the player skin (after the tutorial, first run).
+export function renderCharacterSelect(app: App) {
+  app.root.innerHTML = `<div class="scene menu charsel">
+    <h2 class="cs-title">Elige tu luchador</h2>
+    <p class="hint">Quién contendrá la horda del portal.</p>
+    <div class="cs-grid">
+      <button class="cs-card" data-gender="male">
+        <img src="characters/player/male.webp" alt="" onerror="this.style.display='none'">
+        <span>Hombre</span>
+      </button>
+      <button class="cs-card" data-gender="female">
+        <img src="characters/player/female.webp" alt="" onerror="this.style.display='none'">
+        <span>Mujer</span>
+      </button>
+    </div>
+  </div>`;
+  app.root.querySelectorAll<HTMLButtonElement>("[data-gender]").forEach((b) => b.onclick = () => {
+    app.save.gender = b.dataset.gender as "male" | "female"; app.persist(); app.go("home");
+  });
+}
+
 // Cinematic intro: coach full-bleed (no frame), story text at the bottom, no voice.
 export function renderTutorial(app: App) {
   let i = 0;
@@ -266,7 +287,7 @@ export function renderTutorial(app: App) {
     </div>`;
     app.save.tutorialDone = true; app.persist();
     wireNav(app);
-    const advance = () => { if (last) app.go("home"); else { i++; draw(); } };
+    const advance = () => { if (last) app.go(app.save.gender ? "home" : "charselect"); else { i++; draw(); } };
     app.root.querySelector<HTMLButtonElement>(".intro-next")!.onclick = advance;
     // tapping the scene (not the buttons) also advances
     app.root.querySelector<HTMLElement>("#introScene")!.addEventListener("click", (e) => {

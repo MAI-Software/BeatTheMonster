@@ -34,6 +34,7 @@ export interface SaveState {
   equippedGear: Partial<Record<string, string>>; // slot -> equipId
   episodeProgress: number; // index of furthest cleared enemy across episodes
   tutorialDone: boolean;
+  gender: "male" | "female" | null; // chosen player skin
   difficultyWins: Record<string, number>; // wins per difficulty id (gates harder modes)
   bestScore: number;
   totalPerfects: number;
@@ -62,6 +63,7 @@ export function defaultSave(): SaveState {
     equippedGear: {},
     episodeProgress: 0,
     tutorialDone: false,
+    gender: null,
     difficultyWins: {},
     bestScore: 0,
     totalPerfects: 0,
