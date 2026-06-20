@@ -167,6 +167,19 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .ic-state { font-size: 11px; font-weight: 800; color: var(--dim); flex: none; }
 .item-card.equipped .ic-state { color: var(--green); }
 
+/* ---------- equip slots ---------- */
+.equip-scroll { display: flex; flex-direction: column; align-items: center; }
+.equip-hero { width: 100%; display: flex; justify-content: center; margin-bottom: 6px; }
+.equip-hero img { max-height: 32vh; width: auto; object-fit: contain; filter: drop-shadow(0 8px 22px #000) drop-shadow(0 0 18px #e7202b33); }
+.slot-list { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 8px; }
+.slot-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #141415e0; border: 1px solid var(--line); border-radius: 12px; color: var(--txt); text-align: left; }
+.slot-row.flow { border-color: var(--red); }
+.sl-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--bg2); color: var(--red); flex: none; }
+.sl-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sl-meta b { font-size: 14px; } .sl-meta small { color: var(--dim); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-go { color: var(--dim); flex: none; }
+.slot-row:active { border-color: var(--red); transform: scale(.99); }
+
 /* ---------- gacha ---------- */
 .banner { padding: 16px; border-radius: var(--rad); margin-bottom: 12px; border: 1px solid var(--line); }
 .banner.normal { background: linear-gradient(120deg, #16243e, var(--panel)); }

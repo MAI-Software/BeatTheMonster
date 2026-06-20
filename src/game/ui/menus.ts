@@ -1,7 +1,7 @@
 // All non-combat screens. SVG icons only (no emoji). Render-to-HTML + wire buttons.
 import { CAPS } from "../data/balance";
 import { EPISODES, ENEMIES, CAMPAIGN_LORE } from "../data/enemies";
-import { EQUIPMENT } from "../data/equipment";
+import { EQUIPMENT, SLOT_LABEL, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
 import { FLOW_STATES, getFlowState } from "../data/flowStates";
 import { canTrain, effectiveStats, spendVoucher, train, trainCost, xpToNext } from "../systems/progression";
 import { PULL_COST, canPull, fragInfo, pull } from "../systems/gacha";
@@ -23,7 +23,15 @@ function sectionBg(key: string): string {
   return `<div class="section-bg"><img src="menu/${key}.webp" alt="" onerror="this.onerror=null;this.src='menu/gym.webp'"></div>`;
 }
 
-const slotIcon: Record<string, IconName> = { gloves: "glove", boots: "boot", headband: "headband", charm: "charm" };
+const slotIcon: Record<string, IconName> = { head: "headband", gloves: "glove", body: "charm", shins: "boot" };
+
+function equipCard(rarity: string, owned: boolean, eq: boolean, ic: IconName, name: string, desc: string, pick: string): string {
+  return `<button class="item-card r-${rarity} ${owned ? "" : "locked"} ${eq ? "equipped" : ""}" ${pick} ${owned ? "" : "disabled"}>
+    <span class="ic-lead">${icon(ic, 22)}</span>
+    <div class="ic-body"><div class="ic-top"><span class="ic-name">${name}</span><span class="ic-rar">${rarity}</span></div><div class="ic-desc">${desc}</div></div>
+    <span class="ic-state">${eq ? "EQUIPADO" : owned ? "Equipar" : icon("lock", 16)}</span>
+  </button>`;
+}
 
 function topBar(app: App, title: string): string {
   const s = app.save;
@@ -128,27 +136,61 @@ export function renderTraining(app: App) {
 
 export function renderEquip(app: App) {
   const s = app.save;
-  const flows = FLOW_STATES.map((f) => {
-    const owned = s.ownedFlow.includes(f.id); const eq = s.equippedFlow === f.id;
-    return `<button class="item-card r-${f.rarity} ${owned ? "" : "locked"} ${eq ? "equipped" : ""}" data-flow="${owned ? f.id : ""}" ${owned ? "" : "disabled"}>
-      <span class="ic-lead">${icon("bolt", 22)}</span>
-      <div class="ic-body"><div class="ic-top"><span class="ic-name">${f.name}</span><span class="ic-rar">${f.rarity}</span></div><div class="ic-desc">${f.desc}</div></div>
-      <span class="ic-state">${eq ? "EQUIPADO" : owned ? "Equipar" : icon("lock", 16)}</span>
-    </button>`;
-  }).join("");
-  const gear = EQUIPMENT.map((e) => {
-    const owned = s.ownedEquipment.includes(e.id); const eq = s.equippedGear[e.slot] === e.id; const b = e.bonus;
-    const bonus = [b.atk && `ATK+${b.atk}`, b.def && `DEF+${b.def}`, b.vt && `VT+${b.vt}`, b.flowGainMult && `Flow×${b.flowGainMult}`].filter(Boolean).join("  ");
-    return `<button class="item-card r-${e.rarity} ${owned ? "" : "locked"} ${eq ? "equipped" : ""}" data-gear="${owned ? e.id : ""}" data-slot="${e.slot}" ${owned ? "" : "disabled"}>
-      <span class="ic-lead">${icon(slotIcon[e.slot], 22)}</span>
-      <div class="ic-body"><div class="ic-top"><span class="ic-name">${e.name}</span><span class="ic-rar">${e.rarity}</span></div><div class="ic-desc">${e.slot} · ${bonus}</div></div>
-      <span class="ic-state">${eq ? "EQUIPADO" : owned ? "Equipar" : icon("lock", 16)}</span>
-    </button>`;
-  }).join("");
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("equip")}${topBar(app, "Equipo & Flow")}<div class="scroll"><h3>Estados de Flujo</h3>${flows}<h3>Accesorios</h3>${gear}</div></div>`;
-  wireNav(app);
-  app.root.querySelectorAll<HTMLButtonElement>("[data-flow]").forEach((b) => { if (b.dataset.flow) b.onclick = () => { s.equippedFlow = b.dataset.flow!; app.persist(); renderEquip(app); }; });
-  app.root.querySelectorAll<HTMLButtonElement>("[data-gear]").forEach((b) => { if (b.dataset.gear) b.onclick = () => { const sl = b.dataset.slot!; s.equippedGear[sl] = s.equippedGear[sl] === b.dataset.gear ? undefined : b.dataset.gear; app.persist(); renderEquip(app); }; });
+  const gender = s.gender ?? "male";
+  const SLOTS: { key: string; label: string; ic: IconName }[] = [
+    { key: "head", label: "Cabeza", ic: "headband" },
+    { key: "gloves", label: "Puños", ic: "glove" },
+    { key: "body", label: "Ropa", ic: "charm" },
+    { key: "shins", label: "Espinilleras", ic: "boot" },
+    { key: "flow", label: "Estado de Flujo", ic: "bolt" },
+  ];
+  const equippedName = (key: string) => {
+    if (key === "flow") return getFlowState(s.equippedFlow)?.name ?? "—";
+    const id = s.equippedGear[key]; return id ? getEquipment(id)?.name ?? "Vacío" : "Vacío";
+  };
+
+  const slotsView = () => {
+    app.root.innerHTML = `<div class="scene menu">${sectionBg("equip")}${topBar(app, "Equipo & Flow")}
+      <div class="scroll equip-scroll">
+        <div class="equip-hero"><img src="characters/player/${gender}.webp" alt="" onerror="this.style.display='none'"></div>
+        <div class="slot-list">${SLOTS.map((sl) => `
+          <button class="slot-row ${sl.key === "flow" ? "flow" : ""}" data-open="${sl.key}">
+            <span class="sl-ic">${icon(sl.ic, 22)}</span>
+            <span class="sl-meta"><b>${sl.label}</b><small>${equippedName(sl.key)}</small></span>
+            <span class="sl-go">${icon("play", 13)}</span>
+          </button>`).join("")}</div>
+      </div></div>`;
+    wireNav(app);
+    app.root.querySelectorAll<HTMLButtonElement>("[data-open]").forEach((b) => b.onclick = () => subView(b.dataset.open!));
+  };
+
+  const subView = (slot: string) => {
+    const isFlow = slot === "flow";
+    const label = isFlow ? "Estado de Flujo" : SLOT_LABEL[slot as Slot];
+    const cards = isFlow
+      ? FLOW_STATES.map((f) => {
+          const owned = s.ownedFlow.includes(f.id); const eq = s.equippedFlow === f.id;
+          return equipCard(f.rarity, owned, eq, "bolt", f.name, f.desc, owned ? `data-pick="${f.id}"` : "");
+        }).join("")
+      : equipmentForSlot(slot as Slot).map((e) => {
+          const owned = s.ownedEquipment.includes(e.id); const eq = s.equippedGear[slot] === e.id; const b = e.bonus;
+          const bonus = [b.atk && `ATK+${b.atk}`, b.def && `DEF+${b.def}`, b.vt && `VT+${b.vt}`, b.flowGainMult && `Flow×${b.flowGainMult}`].filter(Boolean).join("  ");
+          return equipCard(e.rarity, owned, eq, slotIcon[slot], e.name, bonus, owned ? `data-pick="${e.id}"` : "");
+        }).join("");
+    app.root.innerHTML = `<div class="scene menu">${sectionBg("equip")}
+      <div class="topbar"><button class="back" id="eqBack">${icon("back", 22)}</button><h2>${label}</h2>
+        <div class="currency"><span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("gem", 16)} ${s.premium}</span></div></div>
+      <div class="scroll">${cards || `<p class="hint">Nada en este slot todavía. Consíguelo en el Gacha.</p>`}</div></div>`;
+    app.root.querySelector<HTMLButtonElement>("#eqBack")!.onclick = () => slotsView();
+    app.root.querySelectorAll<HTMLButtonElement>("[data-pick]").forEach((b) => b.onclick = () => {
+      const id = b.dataset.pick!;
+      if (isFlow) s.equippedFlow = id;
+      else s.equippedGear[slot] = s.equippedGear[slot] === id ? undefined : id;
+      app.persist(); subView(slot);
+    });
+  };
+
+  slotsView();
 }
 
 export function renderGacha(app: App) {
