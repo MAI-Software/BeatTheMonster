@@ -58,5 +58,5 @@ if (typeof window !== "undefined" && !(window as any).__iconFail) {
 }
 
 export function gicon(name: GIconName, size = 24): string {
-  return `<img class="gi" width="${size}" height="${size}" src="icons/${name}.png" alt="" onerror="window.__iconFail(this,'${EMOJI[name]}')">`;
+  return `<img class="gi" width="${size}" height="${size}" src="icons/${name}.webp" alt="" onerror="window.__iconFail(this,'${EMOJI[name]}')">`;
 }
