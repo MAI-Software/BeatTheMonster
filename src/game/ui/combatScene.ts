@@ -55,6 +55,8 @@ export function runCombat(
         <div id="prephint" class="prep-hint"></div>
         <div id="countdown" class="countdown"></div>
         <button id="quit" class="quit">${icon("close", 18)}</button>
+        <button id="dbgtoggle" style="position:absolute;top:12px;right:64px;z-index:21;width:34px;height:34px;border-radius:50%;border:0;background:#0007;color:#9fffce;font:700 15px system-ui">i</button>
+        <div id="dbg" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:21;font:700 11px/1.3 system-ui;color:#9fffce;background:#000a;padding:4px 9px;border-radius:10px;pointer-events:none;white-space:nowrap"></div>
       </div>`;
 
     const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
@@ -66,6 +68,7 @@ export function runCombat(
     const ehp = $<HTMLElement>("#ehp"), php = $<HTMLElement>("#php"), phptext = $<HTMLElement>("#phptext");
     const infoEl = $<HTMLElement>("#info"), judgeEl = $<HTMLElement>("#judge"), flowfill = $<HTMLElement>("#flowfill"), flowlabel = $<HTMLElement>("#flowlabel");
     const countdown = $<HTMLElement>("#countdown"), prephint = $<HTMLElement>("#prephint");
+    const dbgEl = $<HTMLElement>("#dbg");
 
     function resize() {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -78,7 +81,14 @@ export function runCombat(
     let raf = 0, quit = false;
     let phase: "prep" | "countdown" | "play" = "prep";
     let countStart = 0, holdStart = 0;
+    let dbgOn = true, frames = 0, lastFpsT = 0, fps = 0;
     $<HTMLButtonElement>("#quit").onclick = () => { quit = true; };
+    $<HTMLButtonElement>("#dbgtoggle").onclick = () => { dbgOn = !dbgOn; dbgEl.style.display = dbgOn ? "block" : "none"; };
+    const updateDbg = () => {
+      if (!dbgOn) return;
+      const hz = Math.round(input.inferenceHz?.() ?? 0);
+      dbgEl.textContent = `${fps} fps · ${input.mode ?? "?"} ${hz}Hz · lat ${Math.round(combat.lastPunchLatencyMs)}ms`;
+    };
 
     function beginCountdown() { if (phase !== "prep") return; phase = "countdown"; countStart = performance.now(); prephint.textContent = ""; }
 
@@ -86,6 +96,8 @@ export function runCombat(
 
     function loop(now: number) {
       input.update(now);
+      frames++;
+      if (now - lastFpsT >= 500) { fps = Math.round((frames * 1000) / (now - lastFpsT)); frames = 0; lastFpsT = now; updateDbg(); }
       if (phase === "prep") {
         // start automatically once in guard + head aligned (camera). No instructions box.
         const centered = Math.abs(headX()) < 0.26;

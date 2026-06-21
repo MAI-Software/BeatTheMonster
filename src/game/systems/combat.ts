@@ -17,6 +17,10 @@ export interface FillState { p: number; full: boolean; flash: number }
 export interface DodgeState { side: Side; p: number; inWindow: boolean; aligned: boolean; holdMs: number; holdProgress: number; holdFilled: number }
 
 const DODGE_TARGET = 0.15; // small head lean toward the arrow = dodged
+// Residual camera-sensor latency only. The variable inference/frame delay is measured
+// per-punch via its capture timestamp (see update()), so this fixed part is small.
+// Raise if punches still feel late, lower if they feel early. Camera input only.
+const PUNCH_LATENCY_MS = 30;
 
 export class Combat {
   headX = 0;
@@ -25,6 +29,7 @@ export class Combat {
   enemyHp: number; enemyMaxHp: number; playerHp: number; playerMaxHp: number;
   popups: Popup[] = [];
   score = 0;
+  lastPunchLatencyMs = 0; // applied input-latency compensation, for the debug overlay
   finished = false; result: CombatResult | null = null;
 
   private notes: Note[];
@@ -158,9 +163,17 @@ export class Combat {
     const target = Math.max(-1, Math.min(1, (input.head().x - 0.5) * 2 * 1.3));
     this.headX += (target - this.headX) * 0.35;
 
-    // punches
+    // punches — each carries its capture timestamp, so we back-date it to the instant it
+    // actually happened (measuring the real pipeline delay) plus a small fixed camera-
+    // sensor latency. The engine forgives "early" and punishes "late".
+    const sensor = input.kind === "camera" ? PUNCH_LATENCY_MS : 0;
     let p = input.consumePunch();
-    while (p) { this.judgePunch(p, songMs, now); p = input.consumePunch(); }
+    while (p) {
+      const age = Math.max(0, now - p.tMs);
+      this.lastPunchLatencyMs = age + sensor;
+      this.judgePunch(p.side, songMs - age - sensor, now);
+      p = input.consumePunch();
+    }
 
     const dt = this.lastNow ? Math.min(60, now - this.lastNow) : 16;
     this.lastNow = now;
