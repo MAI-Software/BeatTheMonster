@@ -37,6 +37,7 @@ export interface SaveState {
   gender: "male" | "female" | null; // chosen player skin
   seals: Record<string, number>; // boss id -> collected seals (collection ranks)
   defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
+  cassettes: Record<string, boolean>; // cassette id -> unlocked (collectible songs)
   difficultyWins: Record<string, number>; // wins per difficulty id (gates harder modes)
   bestScore: number;
   totalPerfects: number;
@@ -68,6 +69,7 @@ export function defaultSave(): SaveState {
     gender: null,
     seals: {},
     defeated: {},
+    cassettes: {},
     difficultyWins: {},
     bestScore: 0,
     totalPerfects: 0,

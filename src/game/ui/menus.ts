@@ -9,6 +9,7 @@ import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
 import { rankLabel, rankProgress } from "../data/collection";
+import { CASSETTES } from "../data/cassettes";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
 export interface App {
@@ -16,6 +17,7 @@ export interface App {
   persist(): void; go(screen: string): void;
   startFight(enemyId: string, episodeId?: number): void;
   startPractice(kind: "punch" | "dodge"): void;
+  startSong(cassetteId: string): void;
   toast(msg: string): void;
 }
 
@@ -69,6 +71,7 @@ export function renderHome(app: App) {
         ${tile("equip", "glove", "Equipo & Flow")}
         ${tile("gacha", "star", "Gacha")}
         ${tile("challenges", "calendar", "Desafíos")}
+        ${tile("songs", "note", "Canciones")}
         ${tile("collection", "trophy", "Colección")}
       </div>
       <div class="foot">Sin micropagos · monedas se ganan jugando</div>
@@ -320,6 +323,26 @@ export function renderTutorial(app: App) {
   draw();
 }
 
+export function renderSongs(app: App) {
+  const s = app.save;
+  const owned = CASSETTES.filter((c) => s.cassettes[c.id]);
+  const rows = CASSETTES.map((c) => {
+    const has = !!s.cassettes[c.id];
+    return `<button class="song-row ${has ? "" : "locked"}" ${has ? `data-song="${c.id}"` : "disabled"}>
+      <span class="sr-ic">${icon("note", 22)}</span>
+      <span class="sr-meta"><b>${has ? c.name : "???"}</b><small>${has ? `${c.bpm} BPM` : `Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}`}</small></span>
+      <span class="sr-go">${has ? icon("play", 16) : icon("lock", 14)}</span>
+    </button>`;
+  }).join("");
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Canciones")}<div class="scroll">
+    <p class="hint">Toca canciones que hayas conseguido. Los jefes sueltan su <b>cassette</b> (10%). Juego libre, sin derrota. Tocar canciones cuenta para misiones.</p>
+    <h3>Cassettes · ${owned.length}/${CASSETTES.length}</h3>
+    ${rows}
+  </div></div>`;
+  wireNav(app);
+  app.root.querySelectorAll<HTMLButtonElement>("[data-song]").forEach((b) => b.onclick = () => app.startSong(b.dataset.song!));
+}
+
 export function renderCollection(app: App) {
   const s = app.save;
   const bosses = Object.values(ENEMIES).map((e) => {
@@ -341,8 +364,13 @@ export function renderCollection(app: App) {
     const owned = s.ownedFlow.includes(f.id);
     return `<div class="col-mini r-${f.rarity} ${owned ? "" : "locked"}"><span>${owned ? f.name : "???"}</span><i>${f.rarity}</i></div>`;
   }).join("");
+  const cassettes = CASSETTES.map((c) => {
+    const has = !!s.cassettes[c.id];
+    return `<div class="col-mini r-rare ${has ? "" : "locked"}"><span>${has ? c.name : "???"}</span><i>cassette</i></div>`;
+  }).join("");
   const ownedGear = EQUIPMENT.filter((e) => s.ownedEquipment.includes(e.id)).length;
   const ownedFlow = FLOW_STATES.filter((f) => s.ownedFlow.includes(f.id)).length;
+  const ownedCas = CASSETTES.filter((c) => s.cassettes[c.id]).length;
   const defeatedN = Object.values(ENEMIES).filter((e) => s.defeated[e.id]).length;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección")}<div class="scroll">
     <p class="hint">Derrota jefes para conseguir sus <b>sellos</b> (5% por victoria). Cada 5 sellos sube el rango (F→SSS) y da un <b>ticket de stat</b>.</p>
@@ -352,6 +380,8 @@ export function renderCollection(app: App) {
     <div class="col-grid">${gear}</div>
     <h3>Estados de Flujo · ${ownedFlow}/${FLOW_STATES.length}</h3>
     <div class="col-grid">${flows}</div>
+    <h3>Canciones · ${ownedCas}/${CASSETTES.length}</h3>
+    <div class="col-grid">${cassettes}</div>
   </div></div>`;
   wireNav(app);
 }

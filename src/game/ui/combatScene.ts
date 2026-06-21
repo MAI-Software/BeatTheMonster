@@ -19,11 +19,11 @@ const COL = { L: "#1fa2ff", R: "#ff2436", guard: "#ffe11a", rim: "#4a451c", on: 
 export function runCombat(
   root: HTMLElement, enemy: Enemy, stats: EffectiveStats, flow: FlowState | null,
   input: InputProvider, song: SongPlayer, diff: Difficulty,
-  opts: { practiceKind?: "punch" | "dodge" } = {}
+  opts: { practiceKind?: "punch" | "dodge"; freeplay?: boolean } = {}
 ): Promise<CombatResult> {
   return new Promise((resolve) => {
     unlockAudio();
-    const practice = !!opts.practiceKind;
+    const practice = !!opts.practiceKind || !!opts.freeplay; // no death in practice/freeplay
     const beatmap = opts.practiceKind
       ? practiceBeatmap(song.beats, song.durationMs, opts.practiceKind)
       : buildBeatmap(song.beats, song.durationMs, enemy, diff, (enemy.bpm | 0) + 7);

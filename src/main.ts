@@ -12,9 +12,11 @@ import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudi
 import { runCombat } from "./game/ui/combatScene";
 import { icon } from "./game/ui/icons";
 import { SEAL_DROP_CHANCE, SEALS_PER_RANK } from "./game/data/collection";
+import { cassetteForBoss, getCassette } from "./game/data/cassettes";
+import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
-  renderPractice, renderRanking, renderTraining, renderTutorial, type App,
+  renderPractice, renderRanking, renderSongs, renderTraining, renderTutorial, type App,
 } from "./game/ui/menus";
 
 const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#e7202b", emoji: "🥊" };
@@ -36,7 +38,7 @@ class Game implements App {
       campaign: renderCampaign, training: renderTraining, equip: renderEquip,
       gacha: renderGacha, challenges: renderChallenges, ranking: renderRanking,
       tutorial: renderTutorial, practice: renderPractice, charselect: renderCharacterSelect,
-      collection: renderCollection,
+      collection: renderCollection, songs: renderSongs,
     };
     (map[screen] ?? renderHome)(this);
   }
@@ -50,6 +52,23 @@ class Game implements App {
     const eff = effectiveStats(this.save);
     await runCombat(this.root, TRAINING_ENEMY, eff, null, this.input, song, DIFFICULTIES.easy, { practiceKind: kind });
     this.go("practice");
+  }
+
+  async startSong(cassetteId: string) {
+    const cas = getCassette(cassetteId); if (!cas) return;
+    const enemy = ENEMIES[cas.enemyId] ?? TRAINING_ENEMY;
+    this.root.innerHTML = `<div class="scene menu loading"><div class="spinner"></div><p>Cargando ${cas.name}…</p></div>`;
+    if (this.input) this.input.stop();
+    this.input = await createInput(true);
+    if (this.input.kind !== "camera") this.toast("Sin cámara — teclado (A/D, ratón)");
+    let song: SongPlayer;
+    try { song = cas.file ? await loadSongPlayer({ id: cas.id, name: cas.name, file: cas.file }) : synthSongPlayer(cas.bpm); }
+    catch { song = synthSongPlayer(cas.bpm); }
+    const eff = effectiveStats(this.save);
+    const flow = this.save.equippedFlow ? getFlowState(this.save.equippedFlow) : undefined;
+    await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty], { freeplay: true });
+    applySongPlay(this.save); this.persist();
+    this.go("songs");
   }
 
   toast(msg: string) {
@@ -149,6 +168,8 @@ class Game implements App {
         this.toast(`¡Sello de ${enemy.name}!`);
         if (s.seals[enemyId] % SEALS_PER_RANK === 0) { s.statVouchers += 1; this.toast("¡Rango de colección + Ticket de stat!"); }
       }
+      const cas = cassetteForBoss(enemyId);
+      if (cas && !s.cassettes[cas.id] && Math.random() < 0.10) { s.cassettes[cas.id] = true; this.toast(`¡Cassette: ${cas.name}! (Canciones)`); }
     }
     applyFightResult(s, { perfects: r.perfects, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won });
     let frontier = 0;
