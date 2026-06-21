@@ -50,6 +50,16 @@ export function trainCost(stat: "atk" | "def" | "vt", current: number): number {
   return Math.floor(base * (1 + current * 0.06));
 }
 
+// Player rank by level.
+export function playerRank(level: number): string {
+  if (level >= 700) return "Maestro";
+  if (level >= 350) return "Experto";
+  if (level >= 150) return "Profesional";
+  if (level >= 50) return "Avanzado";
+  if (level >= 10) return "Novato";
+  return "Inútil";
+}
+
 export function clampStat(stat: "atk" | "def" | "vt", v: number): number {
   const max = stat === "vt" ? CAPS.VT : stat === "atk" ? CAPS.ATK : CAPS.DEF;
   return Math.max(stat === "vt" ? 1 : 0, Math.min(max, v));

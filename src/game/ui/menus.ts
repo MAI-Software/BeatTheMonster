@@ -1,5 +1,5 @@
 // All non-combat screens. SVG icons only (no emoji). Render-to-HTML + wire buttons.
-import { CAPS } from "../data/balance";
+import { CAPS, playerRank } from "../data/balance";
 import { LEVELS, ENEMIES, BOSS_IDS, CAMPAIGN_LORE } from "../data/enemies";
 import { EQUIPMENT, SLOT_LABEL, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
 import { FLOW_STATES, getFlowState } from "../data/flowStates";
@@ -63,11 +63,11 @@ export function renderHome(app: App) {
       </div>
       <div class="hero-head">
         <img class="title-img" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
-        <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""}</div>
+        <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""} · <span class="rank">${playerRank(s.level)}</span></div>
         <div class="bar xp"><i class="fill" style="width:${maxed ? 100 : (s.xp / need) * 100}%"></i></div>
-        <div class="statline">
-          <span class="vt">${gicon("vt", 28)} ${eff.vt}</span><span class="atk">${gicon("atk", 28)} ${eff.atk}</span><span class="def">${gicon("def", 28)} ${eff.def}</span>
-          <span class="flow">${gicon("flow", 28)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
+        <div class="statline oneline">
+          <span class="vt">${gicon("vt", 24)} ${eff.vt}</span><span class="atk">${gicon("atk", 24)} ${eff.atk}</span><span class="def">${gicon("def", 24)} ${eff.def}</span>
+          <span class="flow">${gicon("flow", 24)} <em>${getFlowState(s.equippedFlow)?.name ?? "—"}</em></span>
         </div>
       </div>
       <div class="menu-grid">

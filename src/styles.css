@@ -115,6 +115,9 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .statline span { display: inline-flex; align-items: center; gap: 5px; }
 .statline .vt { color: var(--green); font-weight: 700; } .statline .flow { color: #ffe11a; font-weight: 800; }
 .statline .atk { color: #ff3a44; font-weight: 700; } .statline .def { color: #2e9bff; font-weight: 700; }
+.statline.oneline { flex-wrap: nowrap; gap: 10px; overflow: hidden; max-width: 100%; }
+.statline.oneline .flow em { font-style: normal; display: inline-block; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.rank { color: var(--gold); font-weight: 800; letter-spacing: .5px; }
 .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 480px; }
 .tile { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
   background: #141415e0; border: 1px solid var(--line); border-radius: var(--rad); font-weight: 700;
