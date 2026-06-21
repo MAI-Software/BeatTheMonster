@@ -111,7 +111,8 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
   background: linear-gradient(95deg, var(--pink), var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .logo span { display: block; font-size: 16px; letter-spacing: 8px; color: var(--blue); -webkit-text-fill-color: var(--blue); margin-top: 2px; }
 .lvl { margin-top: 14px; font-weight: 700; font-size: 14px; }
-.statline { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 10px; font-size: 13px; color: var(--dim); }
+.statline { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 10px; font-size: 15px; color: var(--dim); }
+.statline span { display: inline-flex; align-items: center; gap: 5px; }
 .statline .vt { color: var(--green); font-weight: 700; } .statline .flow { color: var(--gold); }
 .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 480px; }
 .tile { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
@@ -120,7 +121,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .tile .gi, .tile .gi-emoji { flex: none; }
 .tile span { font-size: 14px; }
 .tile:active { transform: scale(.97); border-color: var(--red); }
-.tile.big { grid-column: 1 / -1; padding: 16px; background: linear-gradient(100deg, #e7202b22, #141415e0); border-color: var(--red); }
+.tile.big { grid-column: 1 / -1; padding: 16px; justify-content: center; background: linear-gradient(100deg, #e7202b22, #141415e0); border-color: var(--red); }
 .tile.big span { font-size: 17px; font-weight: 900; letter-spacing: .5px; }
 .foot { color: var(--dim); font-size: 11px; }
 .home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 14px; z-index: 3; display: flex; gap: 10px; }
