@@ -61,8 +61,17 @@ export function runCombat(
 
     const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
     const video = $<HTMLVideoElement>("#cam");
-    const isCam = input.kind === "camera" && !!input.videoEl;
-    if (isCam) video.srcObject = (input.videoEl!.srcObject as MediaStream) ?? null; else video.style.display = "none";
+    const nativePreview = !!input.usesNativePreview;
+    const isCam = input.kind === "camera";
+    if (nativePreview) {
+      // Native camera renders behind a transparent WebView — hide the web <video> and let it through.
+      video.style.display = "none";
+      document.documentElement.classList.add("native-cam");
+    } else if (isCam && input.videoEl) {
+      video.srcObject = (input.videoEl.srcObject as MediaStream) ?? null;
+    } else {
+      video.style.display = "none";
+    }
 
     const canvas = $<HTMLCanvasElement>("#ring"), ctx = canvas.getContext("2d")!;
     const ehp = $<HTMLElement>("#ehp"), php = $<HTMLElement>("#php"), phptext = $<HTMLElement>("#phptext");
@@ -87,7 +96,8 @@ export function runCombat(
     const updateDbg = () => {
       if (!dbgOn) return;
       const hz = Math.round(input.inferenceHz?.() ?? 0);
-      dbgEl.textContent = `${fps} fps · ${input.mode ?? "?"} ${hz}Hz · lat ${Math.round(combat.lastPunchLatencyMs)}ms`;
+      const ems = Math.round(input.engineMs?.() ?? 0);
+      dbgEl.textContent = `${fps}fps · ${input.mode ?? "?"} ${hz}Hz/${ems}ms · lat ${Math.round(combat.lastPunchLatencyMs)}ms`;
     };
 
     function beginCountdown() { if (phase !== "prep") return; phase = "countdown"; countStart = performance.now(); prephint.textContent = ""; }
@@ -128,6 +138,7 @@ export function runCombat(
     }
 
     function finish(r: CombatResult) {
+      document.documentElement.classList.remove("native-cam");
       cancelAnimationFrame(raf); window.removeEventListener("resize", resize); song.stop();
       resolve(combat.result ?? r);
     }

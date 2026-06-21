@@ -10,6 +10,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(NativePosePlugin.class);
         super.onCreate(savedInstanceState);
         // Request camera at runtime so the WebView getUserMedia() pose tracking can run.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
