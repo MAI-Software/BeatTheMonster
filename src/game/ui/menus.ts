@@ -67,7 +67,7 @@ export function renderHome(app: App) {
         <div class="bar xp"><i class="fill" style="width:${maxed ? 100 : (s.xp / need) * 100}%"></i></div>
         <div class="statline">
           <span class="vt">${gicon("vt", 16)} ${eff.vt}</span><span>${gicon("atk", 16)} ${eff.atk}</span><span>${gicon("def", 16)} ${eff.def}</span>
-          <span class="flow">${gicon("flow", 16)} FLX: ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
+          <span class="flow">${gicon("flow", 16)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
         </div>
       </div>
       <div class="menu-grid">
