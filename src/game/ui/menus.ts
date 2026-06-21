@@ -163,21 +163,19 @@ export function renderEquip(app: App) {
     { key: "shins", label: "Espinilleras", ic: "boot" },
     { key: "flow", label: "Estado de Flujo", ic: "bolt" },
   ];
-  const equippedName = (key: string) => {
-    if (key === "flow") return getFlowState(s.equippedFlow)?.name ?? "—";
-    const id = s.equippedGear[key]; return id ? getEquipment(id)?.name ?? "Vacío" : "Vacío";
+  const slotRarity = (key: string): string => {
+    if (key === "flow") return getFlowState(s.equippedFlow)?.rarity ?? "";
+    const id = s.equippedGear[key]; return id ? getEquipment(id)?.rarity ?? "" : "";
   };
-
   const slotsView = () => {
     app.root.innerHTML = `<div class="scene menu">${sectionBg("equip")}${topBar(app, "Equipo & Flow")}
       <div class="scroll equip-scroll">
         <div class="equip-hero"><img src="characters/player/${gender}.webp" alt="" onerror="this.style.display='none'"></div>
-        <div class="slot-list">${SLOTS.map((sl) => `
-          <button class="slot-row ${sl.key === "flow" ? "flow" : ""}" data-open="${sl.key}">
-            <span class="sl-ic">${icon(sl.ic, 22)}</span>
-            <span class="sl-meta"><b>${sl.label}</b><small>${equippedName(sl.key)}</small></span>
-            <span class="sl-go">${icon("play", 13)}</span>
-          </button>`).join("")}</div>
+        <div class="slot-chips">${SLOTS.map((sl) => {
+          const eq = sl.key === "flow" ? !!s.equippedFlow : !!s.equippedGear[sl.key];
+          const rar = slotRarity(sl.key);
+          return `<button class="slot-chip ${eq ? "equipped" : ""} ${rar ? "r-" + rar : ""} ${sl.key === "flow" ? "flow" : ""}" data-open="${sl.key}" title="${sl.label}">${icon(sl.ic, 28)}</button>`;
+        }).join("")}</div>
       </div></div>`;
     wireNav(app);
     app.root.querySelectorAll<HTMLButtonElement>("[data-open]").forEach((b) => b.onclick = () => subView(b.dataset.open!));
