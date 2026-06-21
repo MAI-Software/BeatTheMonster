@@ -66,8 +66,8 @@ export function renderHome(app: App) {
         <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""}</div>
         <div class="bar xp"><i class="fill" style="width:${maxed ? 100 : (s.xp / need) * 100}%"></i></div>
         <div class="statline">
-          <span class="vt">${gicon("vt", 22)} ${eff.vt}</span><span>${gicon("atk", 22)} ${eff.atk}</span><span>${gicon("def", 22)} ${eff.def}</span>
-          <span class="flow">${gicon("flow", 22)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
+          <span class="vt">${gicon("vt", 28)} ${eff.vt}</span><span>${gicon("atk", 28)} ${eff.atk}</span><span>${gicon("def", 28)} ${eff.def}</span>
+          <span class="flow">${gicon("flow", 28)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
         </div>
       </div>
       <div class="menu-grid">
@@ -168,14 +168,19 @@ export function renderEquip(app: App) {
     const id = s.equippedGear[key]; return id ? getEquipment(id)?.rarity ?? "" : "";
   };
   const slotsView = () => {
+    const eff = effectiveStats(s);
     app.root.innerHTML = `<div class="scene menu">${sectionBg("equip")}${topBar(app, "Equipo & Flow")}
       <div class="scroll equip-scroll">
         <div class="equip-hero"><img src="characters/player/${gender}.webp" alt="" onerror="this.style.display='none'"></div>
         <div class="slot-chips">${SLOTS.map((sl) => {
           const eq = sl.key === "flow" ? !!s.equippedFlow : !!s.equippedGear[sl.key];
           const rar = slotRarity(sl.key);
-          return `<button class="slot-chip ${eq ? "equipped" : ""} ${rar ? "r-" + rar : ""} ${sl.key === "flow" ? "flow" : ""}" data-open="${sl.key}" title="${sl.label}">${icon(sl.ic, 28)}</button>`;
+          return `<button class="slot-chip ${eq ? "equipped" : ""} ${rar ? "r-" + rar : ""} ${sl.key === "flow" ? "flow" : ""}" data-open="${sl.key}" title="${sl.label}">${icon(sl.ic, 26)}</button>`;
         }).join("")}</div>
+        <div class="statline equip-stats">
+          <span class="vt">${gicon("vt", 24)} ${eff.vt}</span><span>${gicon("atk", 24)} ${eff.atk}</span><span>${gicon("def", 24)} ${eff.def}</span>
+          <span class="flow">${gicon("flow", 24)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
+        </div>
       </div></div>`;
     wireNav(app);
     app.root.querySelectorAll<HTMLButtonElement>("[data-open]").forEach((b) => b.onclick = () => subView(b.dataset.open!));

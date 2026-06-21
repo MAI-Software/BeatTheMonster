@@ -113,7 +113,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .lvl { margin-top: 14px; font-weight: 700; font-size: 14px; }
 .statline { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 10px; font-size: 15px; color: var(--dim); }
 .statline span { display: inline-flex; align-items: center; gap: 5px; }
-.statline .vt { color: var(--green); font-weight: 700; } .statline .flow { color: var(--gold); }
+.statline .vt { color: var(--green); font-weight: 700; } .statline .flow { color: #ffe11a; font-weight: 800; }
 .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 480px; }
 .tile { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
   background: #141415e0; border: 1px solid var(--line); border-radius: var(--rad); font-weight: 700;
@@ -201,9 +201,10 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 /* ---------- equip slots ---------- */
 .equip-scroll { display: flex; flex-direction: column; align-items: center; }
 .equip-hero { width: 100%; display: flex; justify-content: center; margin-bottom: 6px; }
-.equip-hero img { max-height: 50vh; width: auto; object-fit: contain; filter: drop-shadow(0 10px 26px #000) drop-shadow(0 0 22px #e7202b40); }
-.slot-chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
-.slot-chip { width: 60px; height: 60px; border-radius: 14px; background: var(--bg2); border: 1px solid var(--line); color: #66666e; display: grid; place-items: center; }
+.equip-hero img { max-height: 56vh; width: auto; object-fit: contain; filter: drop-shadow(0 10px 26px #000) drop-shadow(0 0 22px #e7202b40); }
+.slot-chips { display: flex; gap: 8px; justify-content: center; flex-wrap: nowrap; margin-top: 4px; width: 100%; }
+.slot-chip { width: 56px; height: 56px; flex: 0 1 56px; border-radius: 13px; background: var(--bg2); border: 1px solid var(--line); color: #66666e; display: grid; place-items: center; }
+.equip-stats { margin-top: 12px; }
 .slot-chip.equipped { color: var(--txt); border-color: var(--red); box-shadow: 0 0 14px #e7202b44; }
 .slot-chip.equipped.r-rare { border-color: var(--r-rare); box-shadow: 0 0 14px #4ea1ff44; }
 .slot-chip.equipped.r-epic { border-color: var(--r-epic); box-shadow: 0 0 14px #b06bff44; }
