@@ -58,16 +58,16 @@ export function renderHome(app: App) {
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
       <div class="home-top">
-        <button class="home-icon" id="profileBtn" title="Perfil">${icon("user", 20)}</button>
-        <button class="home-icon" data-nav="options" title="Opciones">${icon("cog", 20)}</button>
+        <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 26)}</button>
+        <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 26)}</button>
       </div>
       <div class="hero-head">
         <img class="title-img" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
         <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""}</div>
         <div class="bar xp"><i class="fill" style="width:${maxed ? 100 : (s.xp / need) * 100}%"></i></div>
         <div class="statline">
-          <span class="vt">VT ${eff.vt}</span><span>ATK ${eff.atk}</span><span>DEF ${eff.def}</span>
-          <span class="flow">${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
+          <span class="vt">${gicon("vt", 16)} ${eff.vt}</span><span>${gicon("atk", 16)} ${eff.atk}</span><span>${gicon("def", 16)} ${eff.def}</span>
+          <span class="flow">${gicon("flow", 16)} FLX: ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
         </div>
       </div>
       <div class="menu-grid">
