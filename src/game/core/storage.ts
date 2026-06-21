@@ -35,6 +35,8 @@ export interface SaveState {
   episodeProgress: number; // index of furthest cleared enemy across episodes
   tutorialDone: boolean;
   gender: "male" | "female" | null; // chosen player skin
+  seals: Record<string, number>; // boss id -> collected seals (collection ranks)
+  defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
   difficultyWins: Record<string, number>; // wins per difficulty id (gates harder modes)
   bestScore: number;
   totalPerfects: number;
@@ -64,6 +66,8 @@ export function defaultSave(): SaveState {
     episodeProgress: 0,
     tutorialDone: false,
     gender: null,
+    seals: {},
+    defeated: {},
     difficultyWins: {},
     bestScore: 0,
     totalPerfects: 0,

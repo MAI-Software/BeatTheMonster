@@ -11,8 +11,9 @@ import { DIFFICULTIES, DIFFICULTY_ORDER, isDifficultyUnlocked, unlockHint, type 
 import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
 import { icon } from "./game/ui/icons";
+import { SEAL_DROP_CHANCE, SEALS_PER_RANK } from "./game/data/collection";
 import {
-  renderCampaign, renderCharacterSelect, renderChallenges, renderEquip, renderGacha, renderHome,
+  renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
   renderPractice, renderRanking, renderTraining, renderTutorial, type App,
 } from "./game/ui/menus";
 
@@ -35,6 +36,7 @@ class Game implements App {
       campaign: renderCampaign, training: renderTraining, equip: renderEquip,
       gacha: renderGacha, challenges: renderChallenges, ranking: renderRanking,
       tutorial: renderTutorial, practice: renderPractice, charselect: renderCharacterSelect,
+      collection: renderCollection,
     };
     (map[screen] ?? renderHome)(this);
   }
@@ -139,7 +141,15 @@ class Game implements App {
     s.coins += coins; s.premium += premium;
     const lv = grantXp(s, xpGain);
     s.bestScore = Math.max(s.bestScore, score);
-    if (r.won) s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
+    if (r.won) {
+      s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
+      s.defeated[enemyId] = true;
+      if (Math.random() < SEAL_DROP_CHANCE) {
+        s.seals[enemyId] = (s.seals[enemyId] ?? 0) + 1;
+        this.toast(`¡Sello de ${enemy.name}!`);
+        if (s.seals[enemyId] % SEALS_PER_RANK === 0) { s.statVouchers += 1; this.toast("¡Rango de colección + Ticket de stat!"); }
+      }
+    }
     applyFightResult(s, { perfects: r.perfects, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won });
     let frontier = 0;
     for (const ep of EPISODES) for (const id of ep.enemies) { if (id === enemyId && frontier === s.episodeProgress && r.won) s.episodeProgress++; frontier++; }

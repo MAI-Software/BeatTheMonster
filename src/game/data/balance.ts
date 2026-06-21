@@ -2,9 +2,9 @@
 
 export const CAPS = {
   PLAYER_LEVEL: 100,
-  ATK: 99,
-  DEF: 99,
-  VT: 999,
+  ATK: 9999,
+  DEF: 9999,
+  VT: 99999,
 } as const;
 
 // Timing windows in milliseconds (half-width around the beat).

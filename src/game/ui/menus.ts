@@ -8,6 +8,7 @@ import { PULL_COST, canPull, fragInfo, pull } from "../systems/gacha";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
+import { rankLabel, rankProgress } from "../data/collection";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
 export interface App {
@@ -68,6 +69,7 @@ export function renderHome(app: App) {
         ${tile("equip", "glove", "Equipo & Flow")}
         ${tile("gacha", "star", "Gacha")}
         ${tile("challenges", "calendar", "Desafíos")}
+        ${tile("collection", "trophy", "Colección")}
       </div>
       <div class="foot">Sin micropagos · monedas se ganan jugando</div>
     </div>`;
@@ -316,6 +318,42 @@ export function renderTutorial(app: App) {
     });
   };
   draw();
+}
+
+export function renderCollection(app: App) {
+  const s = app.save;
+  const bosses = Object.values(ENEMIES).map((e) => {
+    const defeated = !!s.defeated[e.id];
+    const seals = s.seals[e.id] ?? 0;
+    const rp = rankProgress(seals);
+    if (!defeated) return `<div class="col-card locked"><div class="cc-face">?</div><div class="cc-body"><b>???</b><small>Sin derrotar</small></div></div>`;
+    return `<div class="col-card">
+      <div class="cc-face">${e.emoji}</div>
+      <div class="cc-body"><b>${e.name}</b><small>Sellos: ${seals}${rp.maxed ? " · MAX" : ` · ${rp.have}/${rp.need} al siguiente`}</small></div>
+      <div class="cc-rank">${rankLabel(seals)}</div>
+    </div>`;
+  }).join("");
+  const gear = EQUIPMENT.map((e) => {
+    const owned = s.ownedEquipment.includes(e.id);
+    return `<div class="col-mini r-${e.rarity} ${owned ? "" : "locked"}"><span>${owned ? e.name : "???"}</span><i>${e.rarity}</i></div>`;
+  }).join("");
+  const flows = FLOW_STATES.map((f) => {
+    const owned = s.ownedFlow.includes(f.id);
+    return `<div class="col-mini r-${f.rarity} ${owned ? "" : "locked"}"><span>${owned ? f.name : "???"}</span><i>${f.rarity}</i></div>`;
+  }).join("");
+  const ownedGear = EQUIPMENT.filter((e) => s.ownedEquipment.includes(e.id)).length;
+  const ownedFlow = FLOW_STATES.filter((f) => s.ownedFlow.includes(f.id)).length;
+  const defeatedN = Object.values(ENEMIES).filter((e) => s.defeated[e.id]).length;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección")}<div class="scroll">
+    <p class="hint">Derrota jefes para conseguir sus <b>sellos</b> (5% por victoria). Cada 5 sellos sube el rango (F→SSS) y da un <b>ticket de stat</b>.</p>
+    <h3>Jefes · ${defeatedN}/${Object.keys(ENEMIES).length}</h3>
+    <div class="col-list">${bosses}</div>
+    <h3>Equipo · ${ownedGear}/${EQUIPMENT.length}</h3>
+    <div class="col-grid">${gear}</div>
+    <h3>Estados de Flujo · ${ownedFlow}/${FLOW_STATES.length}</h3>
+    <div class="col-grid">${flows}</div>
+  </div></div>`;
+  wireNav(app);
 }
 
 function wireNav(app: App) {

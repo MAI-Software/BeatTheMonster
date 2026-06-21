@@ -40,11 +40,11 @@ export type { IconName };
 // emoji placeholder. Drop real icons later to replace them one by one.
 export type GIconName =
   | "campaign" | "practice" | "tutorial" | "training" | "equip" | "gacha"
-  | "challenges" | "ranking" | "coin" | "gem" | "flow" | "vt" | "atk" | "def";
+  | "challenges" | "ranking" | "collection" | "coin" | "gem" | "flow" | "vt" | "atk" | "def";
 
 const EMOJI: Record<GIconName, string> = {
   campaign: "⚔️", practice: "🎯", tutorial: "🥊", training: "💪", equip: "🧤", gacha: "🎰",
-  challenges: "📅", ranking: "🏆", coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️",
+  challenges: "📅", ranking: "🏆", collection: "📖", coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️",
 };
 
 // install the onerror fallback once
