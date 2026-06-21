@@ -66,7 +66,7 @@ export function renderHome(app: App) {
         <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""}</div>
         <div class="bar xp"><i class="fill" style="width:${maxed ? 100 : (s.xp / need) * 100}%"></i></div>
         <div class="statline">
-          <span class="vt">${gicon("vt", 28)} ${eff.vt}</span><span>${gicon("atk", 28)} ${eff.atk}</span><span>${gicon("def", 28)} ${eff.def}</span>
+          <span class="vt">${gicon("vt", 28)} ${eff.vt}</span><span class="atk">${gicon("atk", 28)} ${eff.atk}</span><span class="def">${gicon("def", 28)} ${eff.def}</span>
           <span class="flow">${gicon("flow", 28)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
         </div>
       </div>
@@ -178,7 +178,7 @@ export function renderEquip(app: App) {
           return `<button class="slot-chip ${eq ? "equipped" : ""} ${rar ? "r-" + rar : ""} ${sl.key === "flow" ? "flow" : ""}" data-open="${sl.key}" title="${sl.label}">${icon(sl.ic, 26)}</button>`;
         }).join("")}</div>
         <div class="statline equip-stats">
-          <span class="vt">${gicon("vt", 24)} ${eff.vt}</span><span>${gicon("atk", 24)} ${eff.atk}</span><span>${gicon("def", 24)} ${eff.def}</span>
+          <span class="vt">${gicon("vt", 24)} ${eff.vt}</span><span class="atk">${gicon("atk", 24)} ${eff.atk}</span><span class="def">${gicon("def", 24)} ${eff.def}</span>
           <span class="flow">${gicon("flow", 24)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
         </div>
       </div></div>`;
