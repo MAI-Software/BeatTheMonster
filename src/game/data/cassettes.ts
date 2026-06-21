@@ -1,22 +1,27 @@
-// Cassettes = collectible songs. Each boss can drop its cassette (10%) on defeat.
-// Unlocked cassettes are playable in the "Canciones" section (free play to the beat).
-// `file` (in /public/songs) plays real audio; without it, a synth track at `bpm`.
+// Cassettes = collectible songs, one per chapter boss. A boss can drop its cassette
+// (10%) on defeat; unlocked cassettes are playable in "Canciones" (free play).
+// `file` plays real audio from /public/songs. Only "God Is Dead" exists for now, so
+// every block currently points to it (swap files in when new songs arrive).
+import { BOSS_IDS } from "./enemies";
+
 export interface Cassette {
   id: string;
   name: string;
   enemyId: string; // boss that drops it
   bpm: number;
-  file?: string; // optional real audio in public/songs
+  file?: string;
 }
 
-export const CASSETTES: Cassette[] = [
-  { id: "cs_goblin",  name: "Ritmo del Goblin",   enemyId: "goblin_scout",  bpm: 90 },
-  { id: "cs_orc",     name: "Marcha Orca",         enemyId: "orc_grunt",     bpm: 104 },
-  { id: "cs_troll",   name: "Tambores de Piedra",  enemyId: "troll_stone",   bpm: 116 },
-  { id: "cs_berserk", name: "Furia Berserker",     enemyId: "orc_berserker", bpm: 128 },
-  { id: "cs_ogre",    name: "Pisadas del Ogro",    enemyId: "ogre_brute",    bpm: 140 },
-  { id: "cs_demon",   name: "God Is Dead",         enemyId: "portal_demon",  bpm: 150, file: "god-is-dead.mp3" },
-];
+const BLOCK_BPM = [92, 104, 116, 128, 140, 150];
+const NAMES = ["Marcha Orca", "Tambores de Guerra", "Horda Imparable", "Furia Verde", "Asedio del Portal", "God Is Dead"];
+
+export const CASSETTES: Cassette[] = BOSS_IDS.map((enemyId, i) => ({
+  id: `cs_${i + 1}`,
+  name: NAMES[i] ?? `Tema ${i + 1}`,
+  enemyId,
+  bpm: BLOCK_BPM[i] ?? 120,
+  file: "god-is-dead.mp3", // only track available right now
+}));
 
 export function cassetteForBoss(enemyId: string): Cassette | undefined {
   return CASSETTES.find((c) => c.enemyId === enemyId);

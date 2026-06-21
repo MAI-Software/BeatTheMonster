@@ -1,6 +1,7 @@
 // App bootstrap + screen router + fight orchestration (control + song selection).
 import "./styles.css";
-import { ENEMIES, EPISODES, type Enemy } from "./game/data/enemies";
+import { ENEMIES, levelByEnemy, isBoss, type Enemy } from "./game/data/enemies";
+import { spendEnergy } from "./game/systems/stamina";
 import { getFlowState } from "./game/data/flowStates";
 import { loadSave, writeSave, resetSave, type SaveState } from "./game/core/storage";
 import { setVolumes } from "./game/systems/audio";
@@ -133,6 +134,9 @@ class Game implements App {
     };
 
     const begin = async () => {
+      const cost = levelByEnemy(enemyId)?.cost ?? 1;
+      if (!spendEnergy(this.save, cost)) { this.toast("Sin energía (batido de proteínas)"); this.go("campaign"); return; }
+      this.persist();
       this.root.innerHTML = `<div class="scene menu loading"><div class="spinner"></div><p>Preparando combate…</p></div>`;
       if (this.input) this.input.stop();
       this.input = await createInput(useCamera);
@@ -167,17 +171,20 @@ class Game implements App {
     if (r.won) {
       s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
       s.defeated[enemyId] = true;
-      if (Math.random() < SEAL_DROP_CHANCE) {
-        s.seals[enemyId] = (s.seals[enemyId] ?? 0) + 1;
-        this.toast(`¡Sello de ${enemy.name}!`);
-        if (s.seals[enemyId] % SEALS_PER_RANK === 0) { s.statVouchers += 1; this.toast("¡Rango de colección + Ticket de stat!"); }
+      if (isBoss(enemyId)) {
+        if (Math.random() < SEAL_DROP_CHANCE) {
+          s.seals[enemyId] = (s.seals[enemyId] ?? 0) + 1;
+          this.toast(`¡Sello de ${enemy.name}!`);
+          if (s.seals[enemyId] % SEALS_PER_RANK === 0) { s.statVouchers += 1; this.toast("¡Rango de colección + Ticket de stat!"); }
+        }
+        const cas = cassetteForBoss(enemyId);
+        if (cas && !s.cassettes[cas.id] && Math.random() < 0.10) { s.cassettes[cas.id] = true; this.toast(`¡Cassette: ${cas.name}! (Canciones)`); }
       }
-      const cas = cassetteForBoss(enemyId);
-      if (cas && !s.cassettes[cas.id] && Math.random() < 0.10) { s.cassettes[cas.id] = true; this.toast(`¡Cassette: ${cas.name}! (Canciones)`); }
+      // advance the chapter frontier (episodeProgress = furthest level index cleared)
+      const lvl = levelByEnemy(enemyId);
+      if (lvl && lvl.n - 1 === s.episodeProgress) s.episodeProgress = lvl.n;
     }
     applyFightResult(s, { perfects: r.perfects, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won });
-    let frontier = 0;
-    for (const ep of EPISODES) for (const id of ep.enemies) { if (id === enemyId && frontier === s.episodeProgress && r.won) s.episodeProgress++; frontier++; }
     this.persist();
 
     this.root.innerHTML = `

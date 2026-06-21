@@ -44,11 +44,37 @@ export function canPull(s: SaveState, banner: "normal" | "premium"): boolean {
   return banner === "normal" ? s.coins >= PULL_COST.normal : s.premium >= PULL_COST.premium;
 }
 
+// Watch-ad free pulls: 1 basic pull, recharges 1 every 2h up to 5. Placeholder for
+// a real rewarded ad (Google/Apple) — for now it grants the pull instantly.
+export const AD_REGEN_MS = 2 * 60 * 60 * 1000;
+export const AD_MAX = 5;
+export function refreshAds(s: SaveState): number {
+  if (s.ads >= AD_MAX) { s.ads = AD_MAX; s.adsTs = Date.now(); return s.ads; }
+  const now = Date.now();
+  const gained = Math.floor((now - s.adsTs) / AD_REGEN_MS);
+  if (gained > 0) { s.ads = Math.min(AD_MAX, s.ads + gained); s.adsTs = s.ads >= AD_MAX ? now : s.adsTs + gained * AD_REGEN_MS; }
+  return s.ads;
+}
+export function adMsToNext(s: SaveState): number {
+  refreshAds(s);
+  return s.ads >= AD_MAX ? 0 : Math.max(0, AD_REGEN_MS - (Date.now() - s.adsTs));
+}
+export function watchAd(s: SaveState): PullResult | null {
+  if (refreshAds(s) <= 0) return null;
+  const wasFull = s.ads >= AD_MAX;
+  s.ads -= 1;
+  if (wasFull) s.adsTs = Date.now();
+  return rollPull(s, "normal"); // free basic (normal) pull
+}
+
 export function pull(s: SaveState, banner: "normal" | "premium"): PullResult | null {
   if (!canPull(s, banner)) return null;
   if (banner === "normal") s.coins -= PULL_COST.normal;
   else s.premium -= PULL_COST.premium;
+  return rollPull(s, banner);
+}
 
+function rollPull(s: SaveState, banner: "normal" | "premium"): PullResult {
   const odds = banner === "normal" ? NORMAL_ODDS : PREMIUM_ODDS;
   const rarity = pickRarity(odds);
 

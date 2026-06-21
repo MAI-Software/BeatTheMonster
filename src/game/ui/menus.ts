@@ -1,10 +1,11 @@
 // All non-combat screens. SVG icons only (no emoji). Render-to-HTML + wire buttons.
 import { CAPS } from "../data/balance";
-import { EPISODES, ENEMIES, CAMPAIGN_LORE } from "../data/enemies";
+import { LEVELS, ENEMIES, BOSS_IDS, CAMPAIGN_LORE } from "../data/enemies";
 import { EQUIPMENT, SLOT_LABEL, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
 import { FLOW_STATES, getFlowState } from "../data/flowStates";
 import { canTrain, effectiveStats, spendVoucher, train, trainCost, xpToNext } from "../systems/progression";
-import { PULL_COST, canPull, fragInfo, pull } from "../systems/gacha";
+import { AD_MAX, PULL_COST, adMsToNext, canPull, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
+import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../systems/stamina";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
@@ -107,21 +108,27 @@ function setupGymWalk(app: App) {
 }
 
 export function renderCampaign(app: App) {
-  const s = app.save; let idx = 0;
-  const cards = EPISODES.map((ep) => {
-    const enemies = ep.enemies.map((id) => {
-      const e = ENEMIES[id]; const unlocked = idx <= s.episodeProgress; const beaten = idx < s.episodeProgress; idx++;
-      return `<button class="enemy-card ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${id}" data-ep="${ep.id}" ${unlocked ? "" : "disabled"} style="--c:${e.color}">
-        <div class="ec-name">${e.name}</div><div class="ec-title">${e.title}</div>
-        <div class="ec-stats">VT ${e.hp} · ATK ${e.atk} · ${e.bpm} BPM</div>
-        <div class="ec-badge">${beaten ? icon("check", 18) : unlocked ? icon("play", 16) : icon("lock", 16)}</div>
-      </button>`;
-    }).join("");
-    return `<div class="episode"><div class="ep-name">${ep.name}</div><div class="ep-enemies">${enemies}</div></div>`;
+  const s = app.save;
+  const energy = refreshEnergy(s); const eMax = maxEnergy(s); const eNext = msToNext(s);
+  const cards = LEVELS.map((lv) => {
+    const e = ENEMIES[lv.enemyId];
+    const unlocked = lv.n - 1 <= s.episodeProgress;
+    const beaten = lv.n - 1 < s.episodeProgress;
+    const afford = energy >= lv.cost;
+    const cls = lv.finalBoss ? "final" : lv.boss ? "boss" : "";
+    return `<button class="lvl-card ${cls} ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${lv.enemyId}" ${unlocked && afford ? "" : "disabled"} style="--c:${e.color}">
+      <span class="lc-n">${lv.n}</span>
+      <span class="lc-body"><b>${unlocked ? e.name : "???"}</b><small>${lv.finalBoss ? "JEFE FINAL" : lv.boss ? "JEFE" : e.title}</small></span>
+      <span class="lc-cost ${afford ? "" : "no"}">🥤${lv.cost}</span>
+      <span class="lc-badge">${beaten ? icon("check", 16) : unlocked ? icon("play", 14) : icon("lock", 14)}</span>
+    </button>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar")}<div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p>${cards}</div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}
+    <div class="topbar"><button class="back" data-nav="home">${icon("back", 22)}</button><h2>Capítulo 1</h2>
+      <div class="energy-pill">🥤 ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div></div>
+    <div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p><div class="lvl-list">${cards}</div></div></div>`;
   wireNav(app);
-  app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!, Number(b.dataset.ep)));
+  app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!));
 }
 
 export function renderTraining(app: App) {
@@ -207,8 +214,11 @@ export function renderEquip(app: App) {
 
 export function renderGacha(app: App) {
   const s = app.save;
+  const ads = refreshAds(s); const adNext = adMsToNext(s);
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Gacha")}<div class="scroll">
     <p class="hint">Tira para ganar <b>fragmentos</b>. Junta los suficientes y el objeto se crea. Común = 20 frags (~4-5 por tirada). Sin pagos reales.</p>
+    <div class="banner ad"><div class="banner-title">Ver anuncio</div><div class="banner-sub">Tirada básica gratis · ${ads}/${AD_MAX}${ads < AD_MAX ? ` · +1 en ${fmtTime(adNext)}` : ""}</div>
+      <button class="pull-btn" data-ad ${ads > 0 ? "" : "disabled"}>${ads > 0 ? "Ver anuncio (gratis)" : "Sin anuncios"}</button></div>
     <div class="banner normal"><div class="banner-title">Banner Normal</div><div class="banner-sub">Accesorios · ${gicon("coin", 14)} ${PULL_COST.normal}</div>
       <button class="pull-btn" data-pull="normal" ${canPull(s, "normal") ? "" : "disabled"}>Tirar</button></div>
     <div class="banner premium"><div class="banner-title">Banner Premium</div><div class="banner-sub">Mejores odds + Flow · ${gicon("gem", 14)} ${PULL_COST.premium}</div>
@@ -227,6 +237,16 @@ export function renderGacha(app: App) {
     app.root.querySelector(".currency")!.innerHTML = `<span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("gem", 16)} ${s.premium}</span>`;
     b.disabled = !canPull(s, b.dataset.pull as any);
   });
+  const adBtn = app.root.querySelector<HTMLButtonElement>("[data-ad]");
+  if (adBtn) adBtn.onclick = () => {
+    // placeholder: a real rewarded ad (Google/Apple) goes here; for now grant instantly
+    const res = watchAd(s);
+    if (!res) { app.toast("Sin anuncios disponibles"); return; }
+    app.persist();
+    app.root.querySelector<HTMLDivElement>("#pull-result")!.innerHTML =
+      `<div class="pull-pop r-${res.rarity}"><div class="pp-name">${icon(res.isFlow ? "bolt" : "glove", 18)} <b>${res.itemName}</b> <i>${res.rarity}</i></div><div class="pp-sub">+${res.fragsGained} frags (anuncio) ${res.crafted ? "· <b class='crafted'>DESBLOQUEADO</b>" : ""}</div></div>`;
+    adBtn.disabled = refreshAds(s) <= 0;
+  };
 }
 
 export function renderChallenges(app: App) {
@@ -378,7 +398,7 @@ export function renderSongs(app: App) {
 
 export function renderCollection(app: App) {
   const s = app.save;
-  const bosses = Object.values(ENEMIES).map((e) => {
+  const bosses = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => {
     const defeated = !!s.defeated[e.id];
     const seals = s.seals[e.id] ?? 0;
     const rp = rankProgress(seals);
@@ -404,10 +424,10 @@ export function renderCollection(app: App) {
   const ownedGear = EQUIPMENT.filter((e) => s.ownedEquipment.includes(e.id)).length;
   const ownedFlow = FLOW_STATES.filter((f) => s.ownedFlow.includes(f.id)).length;
   const ownedCas = CASSETTES.filter((c) => s.cassettes[c.id]).length;
-  const defeatedN = Object.values(ENEMIES).filter((e) => s.defeated[e.id]).length;
+  const defeatedN = BOSS_IDS.filter((id) => s.defeated[id]).length;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección")}<div class="scroll">
     <p class="hint">Derrota jefes para conseguir sus <b>sellos</b> (5% por victoria). Cada 5 sellos sube el rango (F→SSS) y da un <b>ticket de stat</b>.</p>
-    <h3>Jefes · ${defeatedN}/${Object.keys(ENEMIES).length}</h3>
+    <h3>Jefes · ${defeatedN}/${BOSS_IDS.length}</h3>
     <div class="col-list">${bosses}</div>
     <h3>Equipo · ${ownedGear}/${EQUIPMENT.length}</h3>
     <div class="col-grid">${gear}</div>

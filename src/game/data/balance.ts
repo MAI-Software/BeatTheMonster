@@ -1,7 +1,7 @@
 // Central balance constants + formulas. Single source of truth for caps.
 
 export const CAPS = {
-  PLAYER_LEVEL: 100,
+  PLAYER_LEVEL: 999,
   ATK: 9999,
   DEF: 9999,
   VT: 99999,

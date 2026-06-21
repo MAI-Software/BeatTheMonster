@@ -1,5 +1,7 @@
-// Roster: a portal to another dimension tore open in the gym. Monsters pour through
-// and you contain them with rhythm and fists. Fantasy creatures with variations.
+// Chapter 1: a portal opened in the gym. 30 phases, all ORCS (different names/looks
+// to be drawn later — emoji placeholders for now). A boss every 5th phase (costs 2
+// energy), the chapter's final boss at phase 30 (costs 3). Normal phases cost 1.
+// The battle song changes every 5 phases (only "God Is Dead" exists for now).
 export interface Enemy {
   id: string;
   name: string;
@@ -8,34 +10,61 @@ export interface Enemy {
   atk: number;
   def: number;
   bpm: number;
-  intensity: number; // 0..1 note density / aggression
+  intensity: number;
   color: string;
-  emoji: string; // placeholder face until a square image is provided
+  emoji: string;
 }
 
-export interface Episode {
-  id: number;
-  name: string;
-  enemies: string[]; // enemy ids in order
-  rewardCoins: number;
-  rewardPremium: number;
+export interface Level {
+  n: number; // 1..30
+  enemyId: string;
+  cost: number; // energy cost
+  boss: boolean;
+  finalBoss: boolean;
+  songBlock: number; // 0..5 (song changes per block)
 }
 
-// Short premise shown on the campaign screen.
 export const CAMPAIGN_LORE =
-  "Un portal a otra dimensión se ha abierto en el gimnasio. Contén a los monstruos a base de ritmo y puños.";
+  "Un portal a otra dimensión se ha abierto en el gimnasio. Una horda de orcos cruza. Contenlos a ritmo y puños, fase a fase.";
 
-export const ENEMIES: Record<string, Enemy> = {
-  goblin_scout:  { id: "goblin_scout",  name: "Goblin Explorador", title: "El primero en cruzar", hp: 220, atk: 14, def: 6,  bpm: 90,  intensity: 0.40, color: "#6abf4b", emoji: "👺" },
-  orc_grunt:     { id: "orc_grunt",     name: "Orco Recluta",      title: "Puños como mazas",     hp: 320, atk: 20, def: 12, bpm: 104, intensity: 0.55, color: "#3f8f5a", emoji: "👹" },
-  troll_stone:   { id: "troll_stone",   name: "Trol de Piedra",    title: "Piel de roca",         hp: 480, atk: 28, def: 18, bpm: 116, intensity: 0.65, color: "#7b8a99", emoji: "🧌" },
-  orc_berserker: { id: "orc_berserker", name: "Orco Berserker",    title: "Furia ciega",          hp: 600, atk: 34, def: 22, bpm: 128, intensity: 0.72, color: "#b5462f", emoji: "😡" },
-  ogre_brute:    { id: "ogre_brute",    name: "Ogro Brutal",       title: "Montaña de músculo",   hp: 760, atk: 40, def: 26, bpm: 140, intensity: 0.80, color: "#9a6b3f", emoji: "👿" },
-  portal_demon:  { id: "portal_demon",  name: "Demonio del Portal",title: "El Guardián del Umbral", hp: 1100, atk: 52, def: 34, bpm: 150, intensity: 0.92, color: "#b23bd0", emoji: "😈" },
-};
-
-export const EPISODES: Episode[] = [
-  { id: 1, name: "Episodio 1: El Portal se Abre",   enemies: ["goblin_scout", "orc_grunt"],     rewardCoins: 300, rewardPremium: 10 },
-  { id: 2, name: "Episodio 2: La Horda Cruza",      enemies: ["troll_stone", "orc_berserker"],  rewardCoins: 500, rewardPremium: 15 },
-  { id: 3, name: "Episodio 3: El Guardián del Umbral", enemies: ["ogre_brute", "portal_demon"], rewardCoins: 900, rewardPremium: 30 },
+const ORC_NAMES = [
+  "Grok", "Brak", "Mog", "Zugg", "Thok", "Gnar", "Urok", "Drez", "Skab", "Vrak",
+  "Korg", "Hruk", "Marsh", "Nokk", "Gutt", "Rokk", "Snag", "Drok", "Bolg", "Grish",
+  "Murg", "Yagol", "Kron", "Ozul", "Throg", "Garm", "Uzguk", "Lugdush", "Gothmog", "Azog",
 ];
+const BLOCK_BPM = [92, 104, 116, 128, 140, 150];
+const ORC_EMOJI = ["👺", "👹", "🧌", "👿"];
+const ORC_COLORS = ["#6abf4b", "#3f8f5a", "#7b8a5a", "#5a8f3f", "#8a9a4b", "#4b8f6a"];
+
+export const ENEMIES: Record<string, Enemy> = {};
+export const LEVELS: Level[] = [];
+
+for (let n = 1; n <= 30; n++) {
+  const id = `orc_${String(n).padStart(2, "0")}`;
+  const boss = n % 5 === 0;
+  const finalBoss = n === 30;
+  const block = Math.floor((n - 1) / 5); // 0..5
+  const bossMul = finalBoss ? 2.2 : boss ? 1.6 : 1;
+  ENEMIES[id] = {
+    id,
+    name: `Orco ${ORC_NAMES[n - 1]}`,
+    title: finalBoss ? "Señor de la Horda" : boss ? "Jefe Orco" : "Guerrero Orco",
+    hp: Math.round((160 + n * 48) * bossMul),
+    atk: Math.round((10 + n * 1.4) * (finalBoss ? 1.6 : boss ? 1.3 : 1)),
+    def: Math.round((4 + n * 1.0) * (boss ? 1.3 : 1)),
+    bpm: BLOCK_BPM[block],
+    intensity: Math.min(0.95, 0.34 + n * 0.02),
+    color: ORC_COLORS[block],
+    emoji: ORC_EMOJI[boss ? 1 : n % ORC_EMOJI.length],
+  };
+  LEVELS.push({ n, enemyId: id, cost: finalBoss ? 3 : boss ? 2 : 1, boss, finalBoss, songBlock: block });
+}
+
+// Bosses (every 5th phase) — used for collection, seals and cassettes.
+export const BOSS_IDS = LEVELS.filter((l) => l.boss).map((l) => l.enemyId);
+export function isBoss(enemyId: string): boolean {
+  return BOSS_IDS.includes(enemyId);
+}
+export function levelByEnemy(enemyId: string): Level | undefined {
+  return LEVELS.find((l) => l.enemyId === enemyId);
+}

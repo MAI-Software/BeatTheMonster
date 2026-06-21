@@ -38,6 +38,10 @@ export interface SaveState {
   seals: Record<string, number>; // boss id -> collected seals (collection ranks)
   defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
   cassettes: Record<string, boolean>; // cassette id -> unlocked (collectible songs)
+  energy: number; // stamina for the adventure
+  energyTs: number; // last regen timestamp
+  ads: number; // watch-ad free pulls available
+  adsTs: number; // last ad recharge timestamp
   settings: { musicVol: number; sfxVol: number };
   difficultyWins: Record<string, number>; // wins per difficulty id (gates harder modes)
   bestScore: number;
@@ -71,6 +75,10 @@ export function defaultSave(): SaveState {
     seals: {},
     defeated: {},
     cassettes: {},
+    energy: 10,
+    energyTs: Date.now(),
+    ads: 5,
+    adsTs: Date.now(),
     settings: { musicVol: 0.85, sfxVol: 0.8 },
     difficultyWins: {},
     bestScore: 0,
