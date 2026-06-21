@@ -38,6 +38,7 @@ export interface SaveState {
   seals: Record<string, number>; // boss id -> collected seals (collection ranks)
   defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
   cassettes: Record<string, boolean>; // cassette id -> unlocked (collectible songs)
+  settings: { musicVol: number; sfxVol: number };
   difficultyWins: Record<string, number>; // wins per difficulty id (gates harder modes)
   bestScore: number;
   totalPerfects: number;
@@ -70,6 +71,7 @@ export function defaultSave(): SaveState {
     seals: {},
     defeated: {},
     cassettes: {},
+    settings: { musicVol: 0.85, sfxVol: 0.8 },
     difficultyWins: {},
     bestScore: 0,
     totalPerfects: 0,

@@ -11,13 +11,18 @@ export function unlockAudio(): void {
   ac();
 }
 
+// global volumes (0..1), set from save settings
+export const volumes = { music: 0.85, sfx: 0.8 };
+export function setVolumes(music: number, sfx: number) { volumes.music = music; volumes.sfx = sfx; }
+
 function blip(freq: number, dur: number, type: OscillatorType, gain = 0.2): void {
+  if (volumes.sfx <= 0) return;
   const c = ac();
   const osc = c.createOscillator();
   const g = c.createGain();
   osc.type = type;
   osc.frequency.value = freq;
-  g.gain.setValueAtTime(gain, c.currentTime);
+  g.gain.setValueAtTime(gain * volumes.sfx, c.currentTime);
   g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
   osc.connect(g).connect(c.destination);
   osc.start();

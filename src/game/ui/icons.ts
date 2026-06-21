@@ -4,7 +4,7 @@
 type IconName =
   | "coin" | "gem" | "glove" | "boot" | "headband" | "charm"
   | "bolt" | "trophy" | "calendar" | "dumbbell" | "fist" | "target"
-  | "play" | "back" | "close" | "lock" | "check" | "star" | "note" | "swords";
+  | "play" | "back" | "close" | "lock" | "check" | "star" | "note" | "swords" | "cog" | "user";
 
 const P: Record<IconName, string> = {
   coin: `<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>`,
@@ -27,6 +27,8 @@ const P: Record<IconName, string> = {
   star: `<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`,
   note: `<path d="M9 18V6l10-2v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/>`,
   swords: `<path d="M14 4h6v6M20 4l-8 8M10 4H4v6M4 4l16 16M14 14l6 6h-6v-6M10 14l-6 6h6v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
+  cog: `<circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  user: `<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
 };
 
 export function icon(name: IconName, s = 20): string {

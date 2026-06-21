@@ -10,6 +10,7 @@ import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
 import { rankLabel, rankProgress } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
+import { setVolumes } from "../systems/audio";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
 export interface App {
@@ -18,6 +19,7 @@ export interface App {
   startFight(enemyId: string, episodeId?: number): void;
   startPractice(kind: "punch" | "dodge"): void;
   startSong(cassetteId: string): void;
+  resetAll(): void;
   toast(msg: string): void;
 }
 
@@ -54,6 +56,10 @@ export function renderHome(app: App) {
   app.root.innerHTML = `
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
+      <div class="home-top">
+        <button class="home-icon" id="profileBtn" title="Perfil">${icon("user", 20)}</button>
+        <button class="home-icon" data-nav="options" title="Opciones">${icon("cog", 20)}</button>
+      </div>
       <div class="hero-head">
         <img class="title-img" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
         <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""}</div>
@@ -78,6 +84,7 @@ export function renderHome(app: App) {
     </div>`;
   wireNav(app);
   setupGymWalk(app);
+  app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast("Perfil: próximamente (login con Google Play)");
 }
 const tile = (nav: string, _ic: IconName, label: string, big = false) =>
   `<button data-nav="${nav}" class="tile ${big ? "big" : ""}">${gicon(nav as GIconName, big ? 34 : 26)}<span>${label}</span></button>`;
@@ -321,6 +328,32 @@ export function renderTutorial(app: App) {
     });
   };
   draw();
+}
+
+export function renderOptions(app: App) {
+  const s = app.save;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Opciones")}<div class="scroll">
+    <h3>Volumen</h3>
+    <div class="opt-row"><label>Música</label><input type="range" id="volMusic" min="0" max="100" value="${Math.round(s.settings.musicVol * 100)}"><b id="volMusicV">${Math.round(s.settings.musicVol * 100)}</b></div>
+    <div class="opt-row"><label>Efectos</label><input type="range" id="volSfx" min="0" max="100" value="${Math.round(s.settings.sfxVol * 100)}"><b id="volSfxV">${Math.round(s.settings.sfxVol * 100)}</b></div>
+    <h3>Sesión</h3>
+    <div class="opt-card">
+      <div><b>No has iniciado sesión</b><small>El inicio de sesión con Google Play llegará pronto.</small></div>
+      <button class="opt-btn ghostbtn" disabled>Conectar (próximamente)</button>
+    </div>
+    <button class="opt-btn danger" id="resetBtn">Reiniciar progreso</button>
+    <p class="hint small">Versión de pruebas. Reiniciar borra todo tu avance en este dispositivo.</p>
+  </div></div>`;
+  wireNav(app);
+  const m = app.root.querySelector<HTMLInputElement>("#volMusic")!;
+  const sf = app.root.querySelector<HTMLInputElement>("#volSfx")!;
+  const mv = app.root.querySelector<HTMLElement>("#volMusicV")!;
+  const sv = app.root.querySelector<HTMLElement>("#volSfxV")!;
+  const applyVol = () => { s.settings.musicVol = +m.value / 100; s.settings.sfxVol = +sf.value / 100; mv.textContent = m.value; sv.textContent = sf.value; setVolumes(s.settings.musicVol, s.settings.sfxVol); app.persist(); };
+  m.oninput = applyVol; sf.oninput = applyVol;
+  let confirm = false;
+  const rb = app.root.querySelector<HTMLButtonElement>("#resetBtn")!;
+  rb.onclick = () => { if (!confirm) { confirm = true; rb.textContent = "¿Seguro? Pulsa otra vez"; } else app.resetAll(); };
 }
 
 export function renderSongs(app: App) {

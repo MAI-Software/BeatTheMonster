@@ -123,6 +123,20 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .tile.big { grid-column: 1 / -1; padding: 16px; background: linear-gradient(100deg, #e7202b22, #141415e0); border-color: var(--red); }
 .tile.big span { font-size: 17px; font-weight: 900; letter-spacing: .5px; }
 .foot { color: var(--dim); font-size: 11px; }
+.home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 14px; z-index: 3; display: flex; gap: 10px; }
+.home-icon { width: 42px; height: 42px; border-radius: 50%; background: #141415cc; border: 1px solid var(--line); color: var(--txt); display: grid; place-items: center; backdrop-filter: blur(2px); }
+.home-icon:active { border-color: var(--red); transform: scale(.95); }
+
+/* options */
+.opt-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.opt-row label { width: 78px; font-weight: 700; font-size: 14px; }
+.opt-row input[type="range"] { flex: 1; accent-color: var(--red); }
+.opt-row b { width: 34px; text-align: right; color: var(--dim); }
+.opt-card { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin: 8px 0 12px; }
+.opt-card small { display: block; color: var(--dim); font-size: 12px; margin-top: 2px; }
+.opt-btn { width: 100%; padding: 14px; border-radius: 11px; font-weight: 800; border: 1px solid var(--line); background: var(--panel); color: var(--txt); }
+.opt-btn.ghostbtn { width: auto; opacity: .55; }
+.opt-btn.danger { border-color: var(--red); color: var(--red); }
 
 /* ---------- bars ---------- */
 .bar { background: #0009; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }

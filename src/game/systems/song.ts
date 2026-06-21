@@ -1,7 +1,7 @@
 // Song system: loads the player's own audio files, detects beats offline, and
 // drives combat with an audio-locked clock so the fight stays in sync with music.
 // Falls back to a synthesized metronome track when no song is selected.
-import { sfx } from "./audio";
+import { sfx, volumes } from "./audio";
 
 export interface SongMeta { id: string; name: string; file: string; bpm?: number }
 
@@ -99,7 +99,7 @@ export async function loadSongPlayer(meta: SongMeta): Promise<SongPlayer> {
       src = c.createBufferSource();
       src.buffer = buf;
       const g = c.createGain();
-      g.gain.value = 0.85;
+      g.gain.value = volumes.music;
       src.connect(g).connect(c.destination);
       startedAt = c.currentTime + 0.05;
       src.start(startedAt);

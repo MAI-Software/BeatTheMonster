@@ -2,7 +2,8 @@
 import "./styles.css";
 import { ENEMIES, EPISODES, type Enemy } from "./game/data/enemies";
 import { getFlowState } from "./game/data/flowStates";
-import { loadSave, writeSave, type SaveState } from "./game/core/storage";
+import { loadSave, writeSave, resetSave, type SaveState } from "./game/core/storage";
+import { setVolumes } from "./game/systems/audio";
 import { effectiveStats, grantXp } from "./game/systems/progression";
 import { applyFightResult, refreshChallenges } from "./game/systems/challenges";
 import { fightScore } from "./game/systems/ranking";
@@ -16,7 +17,7 @@ import { cassetteForBoss, getCassette } from "./game/data/cassettes";
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
-  renderPractice, renderRanking, renderSongs, renderTraining, renderTutorial, type App,
+  renderOptions, renderPractice, renderRanking, renderSongs, renderTraining, renderTutorial, type App,
 } from "./game/ui/menus";
 
 const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#e7202b", emoji: "🥊" };
@@ -28,17 +29,20 @@ class Game implements App {
   difficulty: DifficultyId = "normal";
 
   constructor() {
-    refreshChallenges(this.save); this.persist();
+    refreshChallenges(this.save);
+    setVolumes(this.save.settings.musicVol, this.save.settings.sfxVol);
+    this.persist();
     this.go(!this.save.tutorialDone ? "tutorial" : !this.save.gender ? "charselect" : "home");
   }
   persist() { writeSave(this.save); }
+  resetAll() { resetSave(); location.reload(); }
 
   go(screen: string) {
     const map: Record<string, (a: App) => void> = {
       campaign: renderCampaign, training: renderTraining, equip: renderEquip,
       gacha: renderGacha, challenges: renderChallenges, ranking: renderRanking,
       tutorial: renderTutorial, practice: renderPractice, charselect: renderCharacterSelect,
-      collection: renderCollection, songs: renderSongs,
+      collection: renderCollection, songs: renderSongs, options: renderOptions,
     };
     (map[screen] ?? renderHome)(this);
   }
