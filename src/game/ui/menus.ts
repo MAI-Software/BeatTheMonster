@@ -328,9 +328,10 @@ export function renderTutorial(app: App) {
   const draw = () => {
     const step = TUTORIAL_STEPS[i];
     const last = i === TUTORIAL_STEPS.length - 1;
-    app.root.innerHTML = `<div class="scene intro" id="introScene">
+    app.root.innerHTML = `<div class="scene intro ${step.img ? "has-illus" : ""}" id="introScene">
       <img class="intro-portal" src="portal.webp" alt="" onerror="this.style.display='none'">
       <img class="intro-coach" src="characters/coach/coach.webp" alt="" onerror="this.style.display='none'">
+      ${step.img ? `<img class="intro-illus" src="${step.img}" alt="" onerror="this.style.display='none'">` : ""}
       <div class="intro-skip"><button data-nav="home">Saltar</button></div>
       <div class="intro-bottom">
         <div class="intro-name">${COACH_NAME}</div>
