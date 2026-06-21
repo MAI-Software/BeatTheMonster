@@ -128,7 +128,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .tile.big { grid-column: 1 / -1; padding: 16px; justify-content: center; background: linear-gradient(100deg, #e7202b22, #141415e0); border-color: var(--red); }
 .tile.big span { font-size: 17px; font-weight: 900; letter-spacing: .5px; }
 .foot { color: var(--dim); font-size: 11px; }
-.home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 14px; z-index: 3; display: flex; gap: 10px; }
+.home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 14px; z-index: 3; display: flex; flex-direction: column; gap: 12px; }
 .home-icon { width: 42px; height: 42px; background: none; border: none; color: var(--txt); display: grid; place-items: center; }
 .home-icon .gi, .home-icon .gi-emoji { filter: drop-shadow(0 0 5px #e7202baa) drop-shadow(0 1px 3px #000); }
 .home-icon:active { transform: scale(.92); }
