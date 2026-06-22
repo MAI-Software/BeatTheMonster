@@ -13,6 +13,14 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overscroll-behavior: none; user-select: none; }
 #app { position: fixed; inset: 0; overflow: hidden; }
 button { font-family: inherit; cursor: pointer; color: inherit; border: none; background: none; }
+
+/* Mobile-only game: on a wide screen (PC) clamp to a phone frame so dev matches mobile */
+@media (min-width: 700px) {
+  html, body { background: #050507; }
+  body { display: grid; place-items: center; }
+  #app { position: relative; inset: auto; height: 94vh; aspect-ratio: 9 / 19.5; max-width: 96vw; width: auto;
+    border-radius: 26px; overflow: hidden; box-shadow: 0 0 0 9px #161618, 0 24px 70px #000; }
+}
 .ic { display: inline-block; vertical-align: -0.18em; flex: none; }
 .scene { position: absolute; inset: 0; display: flex; flex-direction: column; }
 
@@ -135,7 +143,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .home { display: block; padding: 0; text-align: center; }
 .home-title { position: absolute; top: calc(env(safe-area-inset-top) + 8px); left: 50%; transform: translateX(-50%); width: auto; max-width: 72%; max-height: 12vh; object-fit: contain; z-index: 3; filter: drop-shadow(0 0 16px #e7202b66); }
 .hero-art { position: absolute; inset: 0; z-index: 1; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
-.ha-coach { position: absolute; bottom: 0; right: -2%; height: 62%; width: auto; object-fit: contain; z-index: 1; filter: drop-shadow(0 0 16px #000); }
+.ha-coach { position: absolute; bottom: 16%; right: 2%; height: 58%; width: auto; object-fit: contain; z-index: 1; filter: drop-shadow(0 0 16px #000); }
 .ha-player { position: relative; height: 88%; width: auto; object-fit: contain; object-position: bottom; z-index: 2; filter: drop-shadow(0 12px 30px #000); }
 .home-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; padding: 8px 12px calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(transparent, #07080f 60%); display: flex; flex-direction: column; gap: 9px; }
 .home-info { display: flex; flex-direction: column; align-items: center; gap: 3px; }
