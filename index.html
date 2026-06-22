@@ -7,8 +7,21 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#0a0a12" />
-    <title>Monsters Boxing Hero</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>Beat the Monster Hero</title>
     <link rel="stylesheet" href="/src/styles.css" />
+    <script>
+      // Self-heal: if a cached index.html points to a deleted (404) asset after a new
+      // deploy, the module script fails to load -> reload once with a cache-bust param.
+      window.addEventListener("error", function (e) {
+        var t = e && e.target;
+        if (t && t.tagName === "SCRIPT" && /\/assets\//.test(t.src || "") && !sessionStorage.getItem("cbReload")) {
+          sessionStorage.setItem("cbReload", "1");
+          location.replace(location.pathname + "?cb=" + Date.now());
+        }
+      }, true);
+      window.addEventListener("load", function () { setTimeout(function () { sessionStorage.removeItem("cbReload"); }, 4000); });
+    </script>
   </head>
   <body>
     <div id="app"></div>
