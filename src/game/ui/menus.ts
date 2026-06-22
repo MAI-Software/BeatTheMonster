@@ -59,9 +59,9 @@ export function renderHome(app: App) {
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
       <div class="home-top">
-        <button class="home-icon" id="profileBtn" title="Perfil">${emj("👤")}</button>
-        <button class="home-icon" data-nav="options" title="Opciones">${emj("⚙️")}</button>
-        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${emj("🧥")}</button>
+        <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 28)}</button>
+        <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 28)}</button>
+        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 28)}</button>
         <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${emj("🧩")}</button>
       </div>
       <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
