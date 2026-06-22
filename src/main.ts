@@ -37,6 +37,9 @@ class Game implements App {
   }
   persist() { writeSave(this.save); }
   resetAll() { resetSave(); location.reload(); }
+  private loadingHTML(text: string) {
+    return `<div class="scene loading"><img class="load-bg" src="portal.webp" alt="" onerror="this.style.display='none'"><div class="spinner"></div><p>${text}</p></div>`;
+  }
 
   go(screen: string) {
     const map: Record<string, (a: App) => void> = {
@@ -49,7 +52,7 @@ class Game implements App {
   }
 
   async startPractice(kind: "punch" | "dodge") {
-    this.root.innerHTML = `<div class="scene menu loading"><div class="spinner"></div><p>Preparando práctica…</p></div>`;
+    this.root.innerHTML = this.loadingHTML("Preparando práctica…");
     if (this.input) this.input.stop();
     this.input = await createInput(true);
     if (this.input.kind !== "camera") this.toast("Sin cámara — practica con teclado (A/D, ratón)");
@@ -62,7 +65,7 @@ class Game implements App {
   async startSong(cassetteId: string) {
     const cas = getCassette(cassetteId); if (!cas) return;
     const enemy = ENEMIES[cas.enemyId] ?? TRAINING_ENEMY;
-    this.root.innerHTML = `<div class="scene menu loading"><div class="spinner"></div><p>Cargando ${cas.name}…</p></div>`;
+    this.root.innerHTML = this.loadingHTML(`Cargando ${cas.name}…`);
     if (this.input) this.input.stop();
     this.input = await createInput(true);
     if (this.input.kind !== "camera") this.toast("Sin cámara — teclado (A/D, ratón)");
@@ -137,7 +140,7 @@ class Game implements App {
       const cost = levelByEnemy(enemyId)?.cost ?? 1;
       if (!spendEnergy(this.save, cost)) { this.toast("Sin energía (batido de proteínas)"); this.go("campaign"); return; }
       this.persist();
-      this.root.innerHTML = `<div class="scene menu loading"><div class="spinner"></div><p>Preparando combate…</p></div>`;
+      this.root.innerHTML = this.loadingHTML("Preparando combate…");
       if (this.input) this.input.stop();
       this.input = await createInput(useCamera);
       if (useCamera && this.input.kind !== "camera") this.toast("Cámara no disponible — uso teclado");

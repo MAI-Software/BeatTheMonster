@@ -310,7 +310,9 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .boot-hint { color: var(--gold); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
 
 /* ---------- loading ---------- */
-.loading { align-items: center; justify-content: center; gap: 16px; color: var(--dim); }
+.loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #cfd6ea; background: #07080f; }
+.load-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .45; z-index: 0; }
+.loading .spinner, .loading p { position: relative; z-index: 1; }
 .spinner { width: 44px; height: 44px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--pink); animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
