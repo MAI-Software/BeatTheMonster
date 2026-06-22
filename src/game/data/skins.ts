@@ -15,6 +15,7 @@ export const PLAYER_SKINS: Skin[] = [
 
 export const COACH_SKINS: Skin[] = [
   { id: "coach_vega", name: "Entrenador Vega", kind: "coach", img: "characters/coach/coach_body.webp" },
+  { id: "coach_vega_f", name: "Entrenadora Vega", kind: "coach", img: "characters/coach/coach_female.webp" },
 ];
 
 export const ALL_SKINS = [...PLAYER_SKINS, ...COACH_SKINS];

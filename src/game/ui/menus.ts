@@ -124,7 +124,7 @@ export function renderLuchar(app: App) {
 export function renderWardrobe(app: App) {
   const s = app.save;
   const card = (skin: { id: string; name: string; img: string; gender?: "male" | "female" }, kind: "player" | "coach") => {
-    const owned = !!s.ownedSkins[skin.id];
+    const owned = s.ownedSkins[skin.id] ?? true;
     const active = kind === "player" ? (s.gender ?? "male") === skin.gender : s.coachSkin === skin.id;
     return `<button class="skin-card ${active ? "on" : ""} ${owned ? "" : "locked"}" data-skin="${skin.id}" data-kind="${kind}" ${owned ? "" : "disabled"}>
       <img src="${skin.img}" alt="" onerror="this.style.display='none'">
@@ -466,10 +466,10 @@ export function renderCollection(app: App) {
   const ownedGear = EQUIPMENT.filter((e) => s.ownedEquipment.includes(e.id)).length;
   const ownedFlow = FLOW_STATES.filter((f) => s.ownedFlow.includes(f.id)).length;
   const skins = ALL_SKINS.map((sk) => {
-    const owned = !!s.ownedSkins[sk.id]; const copies = s.skinCopies[sk.id] ?? 0;
+    const owned = s.ownedSkins[sk.id] ?? true; const copies = s.skinCopies[sk.id] ?? 0;
     return `<div class="col-mini r-epic ${owned ? "" : "locked"}"><span>${owned ? sk.name : "???"}</span><i>${copies > 0 ? "×" + (copies + 1) : "skin"}</i></div>`;
   }).join("");
-  const ownedSkins = ALL_SKINS.filter((sk) => s.ownedSkins[sk.id]).length;
+  const ownedSkins = ALL_SKINS.filter((sk) => s.ownedSkins[sk.id] ?? true).length;
   const ownedCas = CASSETTES.filter((c) => s.cassettes[c.id]).length;
   const defeatedN = BOSS_IDS.filter((id) => s.defeated[id]).length;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección")}<div class="scroll">
