@@ -12,6 +12,7 @@ import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
 import { rankLabel, rankProgress } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
 import { setVolumes } from "../systems/audio";
+import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg } from "../data/skins";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
 export interface App {
@@ -60,35 +61,33 @@ export function renderHome(app: App) {
       <div class="home-top">
         <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 26)}</button>
         <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 26)}</button>
+        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 26)}</button>
       </div>
-      <div class="hero-head">
-        <img class="title-img" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
-        <div class="lvl">Nivel ${s.level}${maxed ? " · MAX" : ""} · <span class="rank">${playerRank(s.level)}</span></div>
-        <div class="bar xp"><i class="fill" style="width:${maxed ? 100 : (s.xp / need) * 100}%"></i></div>
-        <div class="statline oneline">
-          <span class="vt">${gicon("vt", 24)} ${eff.vt}</span><span class="atk">${gicon("atk", 24)} ${eff.atk}</span><span class="def">${gicon("def", 24)} ${eff.def}</span>
-          <span class="flow">${gicon("flow", 24)} <em>${getFlowState(s.equippedFlow)?.name ?? "—"}</em></span>
+      <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
+      <div class="hero-art">
+        <img class="ha-coach" src="${coachSkinImg(s.coachSkin)}" alt="" onerror="this.style.display='none'">
+        <img class="ha-player" src="${playerSkinImg(s.gender)}" alt="" onerror="this.style.display='none'">
+      </div>
+      <div class="home-bottom">
+        <div class="home-info">
+          <span class="lvl">Nv ${s.level}${maxed ? " MAX" : ""} · <span class="rank">${playerRank(s.level)}</span></span>
+          <div class="statline oneline">
+            <span class="vt">${gicon("vt", 20)} ${eff.vt}</span><span class="atk">${gicon("atk", 20)} ${eff.atk}</span><span class="def">${gicon("def", 20)} ${eff.def}</span>
+            <span class="flow">${gicon("flow", 20)} <em>${getFlowState(s.equippedFlow)?.name ?? "—"}</em></span>
+          </div>
+        </div>
+        <button class="nav-main" data-nav="luchar">${gicon("campaign", 30)}<span>LUCHAR</span></button>
+        <div class="nav-row">
+          ${navBtn("training", "Entrenar")}${navBtn("equip", "Equipo")}${navBtn("gacha", "Gacha")}${navBtn("challenges", "Desafíos")}${navBtn("collection", "Colección")}
         </div>
       </div>
-      <div class="menu-grid">
-        ${tile("campaign", "swords", "Luchar", true)}
-        ${tile("practice", "target", "Práctica")}
-        ${tile("tutorial", "fist", "Tutorial")}
-        ${tile("training", "dumbbell", "Entrenar")}
-        ${tile("equip", "glove", "Equipo & Flow")}
-        ${tile("gacha", "star", "Gacha")}
-        ${tile("challenges", "calendar", "Desafíos")}
-        ${tile("songs", "note", "Canciones")}
-        ${tile("collection", "trophy", "Colección")}
-      </div>
-      <div class="foot">Sin micropagos · monedas se ganan jugando</div>
     </div>`;
   wireNav(app);
   setupGymWalk(app);
   app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast("Perfil: próximamente (login con Google Play)");
 }
-const tile = (nav: string, _ic: IconName, label: string, big = false) =>
-  `<button data-nav="${nav}" class="tile ${big ? "big" : ""}">${gicon(nav as GIconName, big ? 34 : 26)}<span>${label}</span></button>`;
+const navBtn = (nav: string, label: string) =>
+  `<button class="nav-chip" data-nav="${nav}">${gicon(nav as GIconName, 24)}<span>${label}</span></button>`;
 
 // Home keeps the MAIN gym image fixed; tapping a section plays a brief "step in"
 // transition, then that section shows its own background.
@@ -97,13 +96,52 @@ function setupGymWalk(app: App) {
   if (layers.length) { layers[0].src = "menu/gym.webp"; layers[0].classList.add("show"); }
   const home = app.root.querySelector<HTMLElement>(".home");
   let stepping = false;
-  app.root.querySelectorAll<HTMLButtonElement>(".menu-grid [data-nav]").forEach((t) => {
+  app.root.querySelectorAll<HTMLButtonElement>(".home-bottom [data-nav]").forEach((t) => {
     const nav = t.dataset.nav!;
     t.onclick = () => {
       if (stepping) return; stepping = true;
       home?.classList.add("stepping");
       setTimeout(() => app.go(nav), 360);
     };
+  });
+}
+
+// "Luchar" hub: the play modes.
+export function renderLuchar(app: App) {
+  const modes: { nav: string; ic: GIconName; label: string; sub: string }[] = [
+    { nav: "campaign", ic: "campaign", label: "Historia", sub: "Capítulo 1 · contén la horda" },
+    { nav: "practice", ic: "practice", label: "Práctica", sub: "Entrena puños o esquivas" },
+    { nav: "tutorial", ic: "tutorial", label: "Tutorial", sub: "Cómo se juega" },
+    { nav: "songs", ic: "songs", label: "Canciones", sub: "Juego libre con tus temas" },
+  ];
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar")}<div class="scroll">
+    ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 30)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span>${icon("play", 16)}</button>`).join("")}
+  </div></div>`;
+  wireNav(app);
+}
+
+// Wardrobe: change player + coach appearance (cosmetic).
+export function renderWardrobe(app: App) {
+  const s = app.save;
+  const card = (skin: { id: string; name: string; img: string; gender?: "male" | "female" }, kind: "player" | "coach") => {
+    const owned = !!s.ownedSkins[skin.id];
+    const active = kind === "player" ? (s.gender ?? "male") === skin.gender : s.coachSkin === skin.id;
+    return `<button class="skin-card ${active ? "on" : ""} ${owned ? "" : "locked"}" data-skin="${skin.id}" data-kind="${kind}" ${owned ? "" : "disabled"}>
+      <img src="${skin.img}" alt="" onerror="this.style.display='none'">
+      <span>${owned ? skin.name : "???"}</span>${active ? `<i class="sk-on">${icon("check", 16)}</i>` : ""}
+    </button>`;
+  };
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Vestuario")}<div class="scroll">
+    <p class="hint">Cambia la apariencia. Solo estético — las copias repetidas dan puntos de álbum.</p>
+    <h3>Protagonista</h3><div class="skin-grid">${PLAYER_SKINS.map((sk) => card(sk, "player")).join("")}</div>
+    <h3>Entrenador</h3><div class="skin-grid">${COACH_SKINS.map((sk) => card(sk, "coach")).join("")}</div>
+  </div></div>`;
+  wireNav(app);
+  app.root.querySelectorAll<HTMLButtonElement>("[data-skin]").forEach((b) => b.onclick = () => {
+    const id = b.dataset.skin!; const kind = b.dataset.kind!;
+    if (kind === "player") { const sk = PLAYER_SKINS.find((x) => x.id === id); if (sk) s.gender = sk.gender ?? "male"; }
+    else s.coachSkin = id;
+    app.persist(); renderWardrobe(app);
   });
 }
 
@@ -427,6 +465,11 @@ export function renderCollection(app: App) {
   }).join("");
   const ownedGear = EQUIPMENT.filter((e) => s.ownedEquipment.includes(e.id)).length;
   const ownedFlow = FLOW_STATES.filter((f) => s.ownedFlow.includes(f.id)).length;
+  const skins = ALL_SKINS.map((sk) => {
+    const owned = !!s.ownedSkins[sk.id]; const copies = s.skinCopies[sk.id] ?? 0;
+    return `<div class="col-mini r-epic ${owned ? "" : "locked"}"><span>${owned ? sk.name : "???"}</span><i>${copies > 0 ? "×" + (copies + 1) : "skin"}</i></div>`;
+  }).join("");
+  const ownedSkins = ALL_SKINS.filter((sk) => s.ownedSkins[sk.id]).length;
   const ownedCas = CASSETTES.filter((c) => s.cassettes[c.id]).length;
   const defeatedN = BOSS_IDS.filter((id) => s.defeated[id]).length;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección")}<div class="scroll">
@@ -439,6 +482,8 @@ export function renderCollection(app: App) {
     <div class="col-grid">${flows}</div>
     <h3>Canciones · ${ownedCas}/${CASSETTES.length}</h3>
     <div class="col-grid">${cassettes}</div>
+    <h3>Apariencias · ${ownedSkins}/${ALL_SKINS.length}</h3>
+    <div class="col-grid">${skins}</div>
   </div></div>`;
   wireNav(app);
 }

@@ -34,7 +34,10 @@ export interface SaveState {
   equippedGear: Partial<Record<string, string>>; // slot -> equipId
   episodeProgress: number; // index of furthest cleared enemy across episodes
   tutorialDone: boolean;
-  gender: "male" | "female" | null; // chosen player skin
+  gender: "male" | "female" | null; // chosen player skin id
+  coachSkin: string; // chosen coach skin id
+  ownedSkins: Record<string, boolean>; // skin id -> owned (album / wardrobe)
+  skinCopies: Record<string, number>; // skin id -> dup count (album points)
   seals: Record<string, number>; // boss id -> collected seals (collection ranks)
   defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
   cassettes: Record<string, boolean>; // cassette id -> unlocked (collectible songs)
@@ -72,6 +75,9 @@ export function defaultSave(): SaveState {
     episodeProgress: 0,
     tutorialDone: false,
     gender: null,
+    coachSkin: "coach_vega",
+    ownedSkins: { player_male: true, player_female: true, coach_vega: true },
+    skinCopies: {},
     seals: {},
     defeated: {},
     cassettes: {},
