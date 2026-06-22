@@ -18,7 +18,7 @@ import { cassetteForBoss, getCassette } from "./game/data/cassettes";
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
-  renderFragments, renderLuchar, renderOptions, renderPractice, renderRanking, renderSongs, renderTraining, renderTutorial, renderWardrobe, type App,
+  renderFragments, renderLuchar, renderNickname, renderOptions, renderPractice, renderRanking, renderSongs, renderTraining, renderTutorial, renderWardrobe, type App,
 } from "./game/ui/menus";
 
 const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#e7202b", emoji: "🥊" };
@@ -33,7 +33,7 @@ class Game implements App {
     refreshChallenges(this.save);
     setVolumes(this.save.settings.musicVol, this.save.settings.sfxVol);
     this.persist();
-    this.go(!this.save.tutorialDone ? "tutorial" : !this.save.gender ? "charselect" : "home");
+    this.go(!this.save.tutorialDone ? "tutorial" : !this.save.gender ? "charselect" : !this.save.nick ? "nickname" : "home");
   }
   persist() { writeSave(this.save); }
   resetAll() { resetSave(); location.reload(); }
@@ -47,7 +47,7 @@ class Game implements App {
       gacha: renderGacha, challenges: renderChallenges, ranking: renderRanking,
       tutorial: renderTutorial, practice: renderPractice, charselect: renderCharacterSelect,
       collection: renderCollection, songs: renderSongs, options: renderOptions,
-      luchar: renderLuchar, wardrobe: renderWardrobe, fragments: renderFragments,
+      luchar: renderLuchar, wardrobe: renderWardrobe, fragments: renderFragments, nickname: renderNickname,
     };
     (map[screen] ?? renderHome)(this);
   }

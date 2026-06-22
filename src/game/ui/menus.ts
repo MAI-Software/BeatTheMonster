@@ -85,7 +85,7 @@ export function renderHome(app: App) {
     </div>`;
   wireNav(app);
   setupGymWalk(app);
-  app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast("Perfil: próximamente (login con Google Play)");
+  app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast(`${s.nick || "Luchador"} · Nivel ${s.level} · ${playerRank(s.level)}`);
 }
 const emj = (e: string) => `<span class="gi-emoji" style="font-size:24px">${e}</span>`;
 const navBtn = (nav: string, label: string) =>
@@ -359,6 +359,23 @@ export function renderPractice(app: App) {
   app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => app.startPractice(b.dataset.practice as "punch" | "dodge"));
 }
 
+// First-run nickname (stored locally only).
+export function renderNickname(app: App) {
+  const s = app.save;
+  app.root.innerHTML = `<div class="scene menu nick-scene">${sectionBg("gym")}
+    <div class="nick-box">
+      <h2 class="cs-title">Tu nombre de luchador</h2>
+      <p class="hint">Elige tu apodo. Se guarda solo en este dispositivo.</p>
+      <input id="nickInput" class="nick-input" type="text" maxlength="14" placeholder="Tu apodo" value="${s.nick}" autocomplete="off">
+      <button class="primary" id="nickOk">Continuar</button>
+    </div></div>`;
+  const inp = app.root.querySelector<HTMLInputElement>("#nickInput")!;
+  inp.focus();
+  app.root.querySelector<HTMLButtonElement>("#nickOk")!.onclick = () => {
+    s.nick = (inp.value.trim() || "Luchador").slice(0, 14); app.persist(); app.go("home");
+  };
+}
+
 // Choose the player skin (after the tutorial). Gym backdrop, both fighters big,
 // male preselected & highlighted; selecting grows/illuminates + shifts focus.
 export function renderCharacterSelect(app: App) {
@@ -380,7 +397,7 @@ export function renderCharacterSelect(app: App) {
   };
   apply();
   app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.onclick = () => { sel = b.dataset.sel as "male" | "female"; apply(); });
-  app.root.querySelector<HTMLButtonElement>(".cs-confirm")!.onclick = () => { app.save.gender = sel; app.persist(); app.go("home"); };
+  app.root.querySelector<HTMLButtonElement>(".cs-confirm")!.onclick = () => { app.save.gender = sel; app.persist(); app.go(app.save.nick ? "home" : "nickname"); };
 }
 
 // Cinematic intro: coach full-bleed (no frame), story text at the bottom, no voice.
@@ -418,6 +435,8 @@ export function renderTutorial(app: App) {
 export function renderOptions(app: App) {
   const s = app.save;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Opciones")}<div class="scroll">
+    <h3>Nombre</h3>
+    <div class="opt-row"><input id="nickEdit" class="nick-input" type="text" maxlength="14" value="${s.nick}" placeholder="Tu apodo"><button class="opt-btn ghostbtn" id="nickSave">Guardar</button></div>
     <h3>Volumen</h3>
     <div class="opt-row"><label>Música</label><input type="range" id="volMusic" min="0" max="100" value="${Math.round(s.settings.musicVol * 100)}"><b id="volMusicV">${Math.round(s.settings.musicVol * 100)}</b></div>
     <div class="opt-row"><label>Efectos</label><input type="range" id="volSfx" min="0" max="100" value="${Math.round(s.settings.sfxVol * 100)}"><b id="volSfxV">${Math.round(s.settings.sfxVol * 100)}</b></div>
@@ -436,6 +455,8 @@ export function renderOptions(app: App) {
   const sv = app.root.querySelector<HTMLElement>("#volSfxV")!;
   const applyVol = () => { s.settings.musicVol = +m.value / 100; s.settings.sfxVol = +sf.value / 100; mv.textContent = m.value; sv.textContent = sf.value; setVolumes(s.settings.musicVol, s.settings.sfxVol); app.persist(); };
   m.oninput = applyVol; sf.oninput = applyVol;
+  const ne = app.root.querySelector<HTMLInputElement>("#nickEdit")!;
+  app.root.querySelector<HTMLButtonElement>("#nickSave")!.onclick = () => { s.nick = (ne.value.trim() || "Luchador").slice(0, 14); app.persist(); app.toast("Nombre guardado"); };
   let confirm = false;
   const rb = app.root.querySelector<HTMLButtonElement>("#resetBtn")!;
   rb.onclick = () => { if (!confirm) { confirm = true; rb.textContent = "¿Seguro? Pulsa otra vez"; } else app.resetAll(); };

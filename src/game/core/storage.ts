@@ -34,6 +34,7 @@ export interface SaveState {
   equippedGear: Partial<Record<string, string>>; // slot -> equipId
   episodeProgress: number; // index of furthest cleared enemy across episodes
   tutorialDone: boolean;
+  nick: string; // player nickname (local only)
   gender: "male" | "female" | null; // chosen player skin id
   coachSkin: string; // chosen coach skin id
   ownedSkins: Record<string, boolean>; // skin id -> owned (album / wardrobe)
@@ -74,6 +75,7 @@ export function defaultSave(): SaveState {
     equippedGear: {},
     episodeProgress: 0,
     tutorialDone: false,
+    nick: "",
     gender: null,
     coachSkin: "coach_vega",
     ownedSkins: { player_male: true, player_female: true, coach_vega: true },

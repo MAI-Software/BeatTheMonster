@@ -32,7 +32,7 @@ export function fightScore(opts: {
 }
 
 export function leaderboard(s: SaveState): RankEntry[] {
-  const me: RankEntry = { name: "TÚ", score: s.bestScore, you: true };
+  const me: RankEntry = { name: s.nick || "TÚ", score: s.bestScore, you: true };
   return [...GHOSTS, me].sort((a, b) => b.score - a.score);
 }
 
