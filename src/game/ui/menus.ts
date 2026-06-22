@@ -59,10 +59,10 @@ export function renderHome(app: App) {
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
       <div class="home-top">
-        <button class="home-icon" id="profileBtn" title="Perfil">${icon("user", 24)}</button>
-        <button class="home-icon" data-nav="options" title="Opciones">${icon("cog", 24)}</button>
-        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${icon("hanger", 24)}</button>
-        <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${icon("puzzle", 24)}</button>
+        <button class="home-icon" id="profileBtn" title="Perfil">${emj("👤")}</button>
+        <button class="home-icon" data-nav="options" title="Opciones">${emj("⚙️")}</button>
+        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${emj("🧥")}</button>
+        <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${emj("🧩")}</button>
       </div>
       <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
       <div class="hero-art">
@@ -87,6 +87,7 @@ export function renderHome(app: App) {
   setupGymWalk(app);
   app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast("Perfil: próximamente (login con Google Play)");
 }
+const emj = (e: string) => `<span class="gi-emoji" style="font-size:24px">${e}</span>`;
 const navBtn = (nav: string, label: string) =>
   `<button class="nav-chip" data-nav="${nav}">${gicon(nav as GIconName, 24)}<span>${label}</span></button>`;
 
