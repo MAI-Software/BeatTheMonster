@@ -136,7 +136,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .home-title { width: auto; max-width: 72%; max-height: 13vh; object-fit: contain; margin: calc(env(safe-area-inset-top) + 8px) auto 0; position: relative; z-index: 1; filter: drop-shadow(0 0 16px #e7202b66); }
 .hero-art { position: relative; z-index: 1; flex: 1; display: flex; align-items: flex-end; justify-content: center; min-height: 0; overflow: hidden; }
 .ha-coach { position: absolute; bottom: 0; right: -4%; height: 72%; width: auto; object-fit: contain; z-index: 1; filter: drop-shadow(0 0 16px #000); }
-.ha-player { position: relative; height: 100%; width: auto; object-fit: contain; z-index: 2; filter: drop-shadow(0 12px 30px #000); }
+.ha-player { position: relative; height: 150%; width: auto; object-fit: contain; z-index: 2; margin-bottom: -16%; filter: drop-shadow(0 12px 30px #000); }
 .home-bottom { position: relative; z-index: 2; padding: 8px 12px calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(transparent, #07080f 28%); display: flex; flex-direction: column; gap: 9px; }
 .home-info { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .home-info .lvl { font-size: 13px; font-weight: 700; }
