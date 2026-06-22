@@ -4,7 +4,7 @@
 type IconName =
   | "coin" | "gem" | "glove" | "boot" | "headband" | "charm"
   | "bolt" | "trophy" | "calendar" | "dumbbell" | "fist" | "target"
-  | "play" | "back" | "close" | "lock" | "check" | "star" | "note" | "swords" | "cog" | "user";
+  | "play" | "back" | "close" | "lock" | "check" | "star" | "note" | "swords" | "cog" | "user" | "hanger" | "puzzle";
 
 const P: Record<IconName, string> = {
   coin: `<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>`,
@@ -29,6 +29,8 @@ const P: Record<IconName, string> = {
   swords: `<path d="M14 4h6v6M20 4l-8 8M10 4H4v6M4 4l16 16M14 14l6 6h-6v-6M10 14l-6 6h6v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
   cog: `<circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
   user: `<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  hanger: `<path d="M12 8a2 2 0 1 1 2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 8 4 15.5a1 1 0 0 0 .6 1.8h14.8a1 1 0 0 0 .6-1.8L12 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`,
+  puzzle: `<path d="M9.5 4.2a1.7 1.7 0 0 1 3.4 0c0 .5-.2.9-.4 1.3.4-.1.8-.1 1.1-.1H16a1 1 0 0 1 1 1v2.6c0 .3 0 .7-.1 1.1.4-.2.8-.4 1.3-.4a1.7 1.7 0 0 1 0 3.4c-.5 0-.9-.2-1.3-.4.1.4.1.8.1 1.1V17a1 1 0 0 1-1 1h-2.4c-.3 0-.7 0-1.1-.1.2.4.4.8.4 1.3a1.7 1.7 0 0 1-3.4 0c0-.5.2-.9.4-1.3-.4.1-.8.1-1.1.1H6a1 1 0 0 1-1-1v-2.4c0-.3 0-.7.1-1.1-.4.2-.8.4-1.3.4a1.7 1.7 0 0 1 0-3.4c.5 0 .9.2 1.3.4C5 9.5 5 9.1 5 8.8V6a1 1 0 0 1 1-1h2.8c.3 0 .7 0 1.1.1-.2-.4-.4-.8-.4-1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>`,
 };
 
 export function icon(name: IconName, s = 20): string {

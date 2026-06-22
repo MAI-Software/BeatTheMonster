@@ -99,20 +99,11 @@ function rollPull(s: SaveState, banner: "normal" | "premium"): PullResult {
     threshold = chosen.fragsToCraft;
   }
 
-  const before = s.fragments[itemId] ?? 0;
+  // fragments only accumulate here; the player CRAFTS the item manually later.
   const gained = fragsForRarity(rarity);
-  const after = before + gained;
-  s.fragments[itemId] = after;
-
-  const alreadyOwned = isFlow ? s.ownedFlow.includes(itemId) : s.ownedEquipment.includes(itemId);
-  let crafted = false;
-  if (!alreadyOwned && after >= threshold) {
-    crafted = true;
-    if (isFlow) s.ownedFlow.push(itemId);
-    else s.ownedEquipment.push(itemId);
-  }
-
-  return { itemId, itemName, rarity, fragsGained: gained, crafted, isFlow };
+  s.fragments[itemId] = (s.fragments[itemId] ?? 0) + gained;
+  void threshold;
+  return { itemId, itemName, rarity, fragsGained: gained, crafted: false, isFlow };
 }
 
 export function fragInfo(s: SaveState, id: string): { have: number; need: number; owned: boolean } {
@@ -121,4 +112,21 @@ export function fragInfo(s: SaveState, id: string): { have: number; need: number
   const need = flow ? FRAGS_TO_CRAFT[flow.rarity] : eq ? eq.fragsToCraft : 20;
   const owned = flow ? s.ownedFlow.includes(id) : s.ownedEquipment.includes(id);
   return { have: s.fragments[id] ?? 0, need, owned };
+}
+
+// can an item be crafted now (enough fragments, not yet owned)?
+function isFlowId(id: string) { return !!getFlowState(id); }
+export function canCraft(s: SaveState, id: string): boolean {
+  const fi = fragInfo(s, id);
+  return !fi.owned && fi.have >= fi.need;
+}
+export function anyCraftable(s: SaveState): boolean {
+  return [...EQUIPMENT, ...FLOW_STATES].some((it) => canCraft(s, it.id));
+}
+export function craftItem(s: SaveState, id: string): boolean {
+  if (!canCraft(s, id)) return false;
+  const fi = fragInfo(s, id);
+  s.fragments[id] = (s.fragments[id] ?? 0) - fi.need;
+  if (isFlowId(id)) s.ownedFlow.push(id); else s.ownedEquipment.push(id);
+  return true;
 }

@@ -4,7 +4,7 @@ import { LEVELS, ENEMIES, BOSS_IDS, CAMPAIGN_LORE } from "../data/enemies";
 import { EQUIPMENT, SLOT_LABEL, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
 import { FLOW_STATES, getFlowState } from "../data/flowStates";
 import { canTrain, effectiveStats, spendVoucher, train, trainCost, xpToNext } from "../systems/progression";
-import { AD_MAX, PULL_COST, adMsToNext, canPull, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
+import { AD_MAX, PULL_COST, adMsToNext, anyCraftable, canPull, craftItem, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
 import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../systems/stamina";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
@@ -59,9 +59,10 @@ export function renderHome(app: App) {
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
       <div class="home-top">
-        <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 26)}</button>
-        <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 26)}</button>
-        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 26)}</button>
+        <button class="home-icon" id="profileBtn" title="Perfil">${icon("user", 24)}</button>
+        <button class="home-icon" data-nav="options" title="Opciones">${icon("cog", 24)}</button>
+        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${icon("hanger", 24)}</button>
+        <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${icon("puzzle", 24)}</button>
       </div>
       <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
       <div class="hero-art">
@@ -257,11 +258,9 @@ export function renderGacha(app: App) {
   const s = app.save;
   const ads = refreshAds(s); const adNext = adMsToNext(s);
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Gacha")}
-    <div class="scroll">
-      <p class="hint">Tira para ganar <b>fragmentos</b>. Junta los suficientes y el objeto se crea. Común = 20 frags. Sin pagos reales.</p>
+    <div class="scroll gacha-scroll">
+      <p class="hint">Tira para ganar <b>fragmentos</b>. Júntalos y crea el objeto en ${icon("puzzle", 13)} Fragmentos. Sin pagos reales.</p>
       <div id="pull-result"></div>
-      <h3>Colección</h3>
-      <div class="frag-grid">${[...EQUIPMENT, ...FLOW_STATES].map((it) => { const fi = fragInfo(s, it.id); return `<div class="frag ${fi.owned ? "owned" : ""}"><span>${(it as any).name}</span><b>${fi.have}/${fi.need}</b></div>`; }).join("")}</div>
     </div>
     <div class="gacha-bottom">
       <div class="gbanner ad"><b>GRATIS</b><small>${ads}/${AD_MAX}${ads < AD_MAX ? ` · ${Math.max(1, Math.ceil(adNext / 60000))}m` : ""}</small>
@@ -292,6 +291,25 @@ export function renderGacha(app: App) {
       `<div class="pull-pop r-${res.rarity}"><div class="pp-name">${icon(res.isFlow ? "bolt" : "glove", 18)} <b>${res.itemName}</b> <i>${res.rarity}</i></div><div class="pp-sub">+${res.fragsGained} frags (anuncio) ${res.crafted ? "· <b class='crafted'>DESBLOQUEADO</b>" : ""}</div></div>`;
     adBtn.disabled = refreshAds(s) <= 0;
   };
+}
+
+// Fragments: craft items once you have enough fragments from the gacha.
+export function renderFragments(app: App) {
+  const s = app.save;
+  const rows = [...EQUIPMENT, ...FLOW_STATES].map((it) => {
+    const fi = fragInfo(s, it.id); const pct = Math.min(100, (fi.have / fi.need) * 100);
+    const craft = !fi.owned && fi.have >= fi.need;
+    return `<div class="frag-row ${fi.owned ? "owned" : ""} ${craft ? "ready" : ""} r-${(it as any).rarity}">
+      <div class="fr-body"><b>${(it as any).name}</b><div class="bar tiny"><i class="fill" style="width:${pct}%"></i></div></div>
+      <div class="fr-side">${fi.owned ? `<span class="fr-have">${icon("check", 18)}</span>` : craft ? `<button class="fr-craft" data-craft="${it.id}">Crear</button>` : `<span class="fr-n">${fi.have}/${fi.need}</span>`}</div>
+    </div>`;
+  }).join("");
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Fragmentos")}<div class="scroll">
+    <p class="hint">Consigue fragmentos en el Gacha y crea el objeto al superar el máximo.</p>${rows}</div></div>`;
+  wireNav(app);
+  app.root.querySelectorAll<HTMLButtonElement>("[data-craft]").forEach((b) => b.onclick = () => {
+    if (craftItem(s, b.dataset.craft!)) { app.persist(); app.toast("¡Objeto creado!"); renderFragments(app); }
+  });
 }
 
 export function renderChallenges(app: App) {
