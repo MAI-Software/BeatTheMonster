@@ -258,7 +258,7 @@ export function renderGacha(app: App) {
   const ads = refreshAds(s); const adNext = adMsToNext(s);
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Gacha")}<div class="scroll">
     <p class="hint">Tira para ganar <b>fragmentos</b>. Junta los suficientes y el objeto se crea. Común = 20 frags (~4-5 por tirada). Sin pagos reales.</p>
-    <div class="banner ad"><div class="banner-title">Ver anuncio</div><div class="banner-sub">Tirada básica gratis · ${ads}/${AD_MAX}${ads < AD_MAX ? ` · +1 en ${fmtTime(adNext)}` : ""}</div>
+    <div class="banner ad"><div class="banner-title">Ver anuncio</div><div class="banner-sub">Tirada básica gratis · ${ads}/${AD_MAX}${ads < AD_MAX ? ` · +1 en ${Math.max(1, Math.ceil(adNext / 60000))}m` : ""}</div>
       <button class="pull-btn" data-ad ${ads > 0 ? "" : "disabled"}>${ads > 0 ? "Ver anuncio (gratis)" : "Sin anuncios"}</button></div>
     <div class="banner normal"><div class="banner-title">Banner Normal</div><div class="banner-sub">Accesorios · ${gicon("coin", 14)} ${PULL_COST.normal}</div>
       <button class="pull-btn" data-pull="normal" ${canPull(s, "normal") ? "" : "disabled"}>Tirar</button></div>
