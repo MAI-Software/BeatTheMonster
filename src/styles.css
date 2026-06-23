@@ -171,7 +171,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .skin-card.locked { opacity: .5; }
 .sk-on { position: absolute; top: 8px; right: 8px; color: var(--green); }
 
-.home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 24px); right: 22px; z-index: 5; display: flex; flex-direction: row-reverse; align-items: center; gap: 11px; }
+.home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 24px); right: 22px; z-index: 5; display: flex; flex-direction: row-reverse; align-items: center; gap: 4px; }
 /* red light streak that grows to the left when open and retracts into the menu icon */
 .home-top::before { content: ""; position: absolute; top: 50%; right: 0; transform: translateY(-50%); height: 50px; width: 18px; border-radius: 26px; background: linear-gradient(270deg, #e7202bcc, #e7202b22 55%, #e7202b00 100%); opacity: 0; transition: width .42s cubic-bezier(.34,.9,.3,1), opacity .32s ease; z-index: 0; pointer-events: none; filter: blur(2px); }
 .home-top.open::before { width: 252px; opacity: 1; }
