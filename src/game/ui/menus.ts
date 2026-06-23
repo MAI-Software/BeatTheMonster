@@ -61,10 +61,10 @@ export function renderHome(app: App) {
       <div class="home-top" id="homeTop">
         <button class="menu-toggle" id="menuToggle" title="Menú"><img src="buttons/menu.webp" alt="Menú"></button>
         <div class="home-icons">
-          <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 28)}</button>
-          <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 28)}</button>
-          <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 28)}</button>
-          <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${gicon("fragments", 28)}</button>
+          <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 32)}</button>
+          <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 32)}</button>
+          <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 32)}</button>
+          <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${gicon("fragments", 32)}</button>
         </div>
       </div>
       <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
