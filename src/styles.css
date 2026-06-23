@@ -147,10 +147,9 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .home-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; padding: 8px 12px calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(transparent, #07080f 60%); display: flex; flex-direction: column; gap: 9px; }
 .home-info { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .home-info .lvl { font-size: 13px; font-weight: 700; }
-.nav-main { width: 100%; padding: 15px; border-radius: 14px; background: linear-gradient(100deg, var(--red), #a8141d); color: #fff; font-weight: 900; font-size: 18px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 6px 22px #e7202b55; border: 1px solid #ff5a62; }
-.nav-main.btn-img { background: none; border: none; box-shadow: none; padding: 0; display: flex; justify-content: center; }
-.nav-main.btn-img img { width: auto; max-width: 90%; max-height: 92px; object-fit: contain; filter: drop-shadow(0 6px 18px #000); }
-.nav-main.btn-img:active img { transform: scale(.96); }
+.nav-main { width: 100%; height: 104px; border: none; background: url("../buttons/fight.webp") center / auto 104px no-repeat; color: #fff; font-weight: 900; font-size: 19px; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 10px; filter: drop-shadow(0 6px 16px #000); transition: transform .07s ease, filter .07s ease; text-shadow: 0 2px 4px #000, 0 0 10px #0008; }
+.nav-main .gi, .nav-main .gi-emoji { filter: drop-shadow(0 2px 3px #000); }
+.nav-main:active { transform: translateY(3px) scale(.97); filter: drop-shadow(0 2px 6px #000) brightness(.9); }
 .nav-row { display: flex; gap: 7px; }
 .nav-chip { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 3px; border-radius: 11px; background: #141415e6; border: 1px solid var(--line); color: var(--txt); }
 .nav-chip span { font-size: 10px; font-weight: 700; white-space: nowrap; }
