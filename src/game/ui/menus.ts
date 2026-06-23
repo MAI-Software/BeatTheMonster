@@ -56,6 +56,7 @@ export function renderHome(app: App) {
   const s = app.save;
   const need = xpToNext(s.level); const maxed = s.level >= CAPS.PLAYER_LEVEL;
   const energy = refreshEnergy(s); const eMax = maxEnergy(s);
+  const ads = refreshAds(s);
   app.root.innerHTML = `
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
@@ -80,6 +81,7 @@ export function renderHome(app: App) {
             <span class="r-coin">${gicon("coin", 22)} ${s.coins}</span>
             <span class="r-gem">${gicon("gem", 22)} ${s.premium}</span>
             <span class="r-energy">${gicon("stamina", 22)} ${energy}/${eMax}</span>
+            <span class="r-ads">${gicon("ads", 22)} ${ads}/${AD_MAX}</span>
           </div>
         </div>
         <button class="nav-main" data-nav="luchar"><img class="nav-bg" src="buttons/fight.webp" alt=""><span class="nav-label">${gicon("campaign", 44)} LUCHAR</span></button>
@@ -274,7 +276,7 @@ export function renderGacha(app: App) {
       <div id="pull-result"></div>
     </div>
     <div class="gacha-bottom">
-      <div class="gbanner ad"><b>GRATIS</b><small>${ads}/${AD_MAX}${ads < AD_MAX ? ` · ${Math.max(1, Math.ceil(adNext / 60000))}m` : ""}</small>
+      <div class="gbanner ad"><b>GRATIS</b><small id="ad-count">${gicon("ads", 13)} ${ads}/${AD_MAX}${ads < AD_MAX ? ` · ${Math.max(1, Math.ceil(adNext / 60000))}m` : ""}</small>
         <button class="pull-btn" data-ad ${ads > 0 ? "" : "disabled"}>Anuncio</button></div>
       <div class="gbanner basic"><b>BÁSICO</b><small>${gicon("coin", 13)} ${PULL_COST.normal}</small>
         <button class="pull-btn" data-pull="normal" ${canPull(s, "normal") ? "" : "disabled"}>Tirar</button></div>
@@ -300,7 +302,10 @@ export function renderGacha(app: App) {
     app.persist();
     app.root.querySelector<HTMLDivElement>("#pull-result")!.innerHTML =
       `<div class="pull-pop r-${res.rarity}"><div class="pp-name">${icon(res.isFlow ? "bolt" : "glove", 18)} <b>${res.itemName}</b> <i>${res.rarity}</i></div><div class="pp-sub">+${res.fragsGained} frags (anuncio) ${res.crafted ? "· <b class='crafted'>DESBLOQUEADO</b>" : ""}</div></div>`;
-    adBtn.disabled = refreshAds(s) <= 0;
+    const nowAds = refreshAds(s); const nextMs = adMsToNext(s);
+    const adCount = app.root.querySelector<HTMLElement>("#ad-count");
+    if (adCount) adCount.innerHTML = `${gicon("ads", 13)} ${nowAds}/${AD_MAX}${nowAds < AD_MAX ? ` · ${Math.max(1, Math.ceil(nextMs / 60000))}m` : ""}`;
+    adBtn.disabled = nowAds <= 0;
   };
 }
 

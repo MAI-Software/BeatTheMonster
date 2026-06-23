@@ -129,7 +129,8 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .rank { color: var(--gold); font-weight: 800; letter-spacing: .5px; }
 .hnick { color: #fff; font-weight: 800; }
 .statline.res { font-size: 16px; font-weight: 700; }
-.statline.res .r-coin { color: var(--gold); } .statline.res .r-gem { color: #2e9bff; } .statline.res .r-energy { color: #ff5b6e; }
+.statline.oneline.res { flex-wrap: wrap; overflow: visible; }
+.statline.res .r-coin { color: var(--gold); } .statline.res .r-gem { color: #2e9bff; } .statline.res .r-energy { color: #ff5b6e; } .statline.res .r-ads { color: #e0b048; }
 .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 480px; }
 .tile { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
   background: #141415e0; border: 1px solid var(--line); border-radius: var(--rad); font-weight: 700;
