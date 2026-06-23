@@ -117,6 +117,8 @@ function setupGymWalk(app: App) {
 
 // "Luchar" hub: the play modes.
 export function renderLuchar(app: App) {
+  const s = app.save;
+  const energy = refreshEnergy(s); const eMax = maxEnergy(s); const eNext = msToNext(s);
   const modes: { nav: string; ic: GIconName; label: string; sub: string }[] = [
     { nav: "campaign", ic: "campaign", label: "Historia", sub: "Capítulo 1 · contén la horda" },
     { nav: "practice", ic: "practice", label: "Práctica", sub: "Entrena puños o esquivas" },
@@ -124,6 +126,7 @@ export function renderLuchar(app: App) {
     { nav: "songs", ic: "songs", label: "Canciones", sub: "Juego libre con tus temas" },
   ];
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar")}<div class="scroll">
+    <div class="energy-pill">${gicon("stamina", 20)} ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div>
     ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 30)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span>${icon("play", 16)}</button>`).join("")}
   </div></div>`;
   wireNav(app);
