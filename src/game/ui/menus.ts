@@ -53,8 +53,9 @@ function topBar(app: App, title: string): string {
 }
 
 export function renderHome(app: App) {
-  const s = app.save; const eff = effectiveStats(s);
+  const s = app.save;
   const need = xpToNext(s.level); const maxed = s.level >= CAPS.PLAYER_LEVEL;
+  const energy = refreshEnergy(s); const eMax = maxEnergy(s);
   app.root.innerHTML = `
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
@@ -74,10 +75,11 @@ export function renderHome(app: App) {
       </div>
       <div class="home-bottom">
         <div class="home-info">
-          <span class="lvl">Nv ${s.level}${maxed ? " MAX" : ""} · <span class="rank">${playerRank(s.level)}</span></span>
-          <div class="statline oneline">
-            <span class="vt">${gicon("vt", 20)} ${eff.vt}</span><span class="atk">${gicon("atk", 20)} ${eff.atk}</span><span class="def">${gicon("def", 20)} ${eff.def}</span>
-            <span class="flow">${gicon("flow", 20)} <em>${getFlowState(s.equippedFlow)?.name ?? "—"}</em></span>
+          <span class="lvl"><b class="hnick">${s.nick || "Luchador"}</b> · Nv ${s.level}${maxed ? " MAX" : ""} · <span class="rank">${playerRank(s.level)}</span></span>
+          <div class="statline oneline res">
+            <span class="r-coin">${gicon("coin", 22)} ${s.coins}</span>
+            <span class="r-gem">${gicon("gem", 22)} ${s.premium}</span>
+            <span class="r-energy">🥤 ${energy}/${eMax}</span>
           </div>
         </div>
         <button class="nav-main" data-nav="luchar"><img class="nav-bg" src="buttons/fight.webp" alt=""><span class="nav-label">${gicon("campaign", 44)} LUCHAR</span></button>
