@@ -147,9 +147,11 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .home-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; padding: 0 12px calc(env(safe-area-inset-bottom) + 8px); background: linear-gradient(transparent, #07080f 32%); display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
 .home-info { display: flex; flex-direction: column; align-items: center; gap: 0; }
 .home-info .lvl { font-size: 13px; font-weight: 700; }
-.nav-main { width: 100%; height: 82px; margin: 0; border: none; background: url("../buttons/fight.webp") center / contain no-repeat; color: #fff; font-weight: 900; font-size: 26px; letter-spacing: 1.5px; display: flex; align-items: center; justify-content: center; gap: 10px; box-sizing: border-box; filter: drop-shadow(0 6px 16px #000); transition: transform .07s ease, filter .07s ease; text-shadow: 0 2px 4px #000, 0 0 10px #0008; }
-.nav-main .gi, .nav-main .gi-emoji { filter: drop-shadow(0 2px 3px #000); }
-.nav-main:active { transform: translateY(3px) scale(.97); filter: drop-shadow(0 2px 6px #000) brightness(.9); }
+.nav-main { position: relative; display: block; width: 100%; margin: 0; padding: 0; border: none; background: none; transition: transform .07s ease, filter .07s ease; filter: drop-shadow(0 5px 14px #000); }
+.nav-bg { display: block; width: 100%; height: auto; }
+.nav-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; font-weight: 900; font-size: 26px; letter-spacing: 1.5px; text-shadow: 0 2px 4px #000, 0 0 10px #0009; pointer-events: none; }
+.nav-label .gi, .nav-label .gi-emoji { filter: drop-shadow(0 2px 3px #000); }
+.nav-main:active { transform: translateY(3px) scale(.98); filter: drop-shadow(0 2px 6px #000) brightness(.92); }
 .nav-row { display: flex; gap: 7px; }
 .nav-chip { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 3px; border-radius: 11px; background: #141415e6; border: 1px solid var(--line); color: var(--txt); }
 .nav-chip span { font-size: 10px; font-weight: 700; white-space: nowrap; }

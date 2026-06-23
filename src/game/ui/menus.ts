@@ -77,7 +77,7 @@ export function renderHome(app: App) {
             <span class="flow">${gicon("flow", 20)} <em>${getFlowState(s.equippedFlow)?.name ?? "—"}</em></span>
           </div>
         </div>
-        <button class="nav-main" data-nav="luchar">${gicon("campaign", 28)}<span>LUCHAR</span></button>
+        <button class="nav-main" data-nav="luchar"><img class="nav-bg" src="buttons/fight.webp" alt=""><span class="nav-label">${gicon("campaign", 26)} LUCHAR</span></button>
         <div class="nav-row">
           ${navBtn("training", "Entrenar")}${navBtn("equip", "Equipo")}${navBtn("gacha", "Gacha")}${navBtn("challenges", "Desafíos")}${navBtn("collection", "Colección")}
         </div>
