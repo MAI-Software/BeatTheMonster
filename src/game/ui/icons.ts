@@ -44,13 +44,13 @@ export type { IconName };
 // emoji placeholder. Drop real icons later to replace them one by one.
 export type GIconName =
   | "campaign" | "practice" | "tutorial" | "training" | "equip" | "gacha"
-  | "challenges" | "ranking" | "collection" | "songs" | "options" | "profile" | "wardrobe" | "story"
+  | "challenges" | "ranking" | "collection" | "songs" | "options" | "profile" | "wardrobe" | "story" | "fragments"
   | "coin" | "gem" | "flow" | "vt" | "atk" | "def";
 
 const EMOJI: Record<GIconName, string> = {
   campaign: "⚔️", practice: "🎯", tutorial: "🥊", training: "💪", equip: "🧤", gacha: "🎰",
   challenges: "📅", ranking: "🏆", collection: "📖", songs: "📼", options: "⚙️", profile: "👤",
-  wardrobe: "🧥", story: "📜",
+  wardrobe: "🧥", story: "📜", fragments: "🧩",
   coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️",
 };
 

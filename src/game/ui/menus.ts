@@ -62,7 +62,7 @@ export function renderHome(app: App) {
         <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 28)}</button>
         <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 28)}</button>
         <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 28)}</button>
-        <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${emj("🧩")}</button>
+        <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${gicon("fragments", 28)}</button>
       </div>
       <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
       <div class="hero-art">
