@@ -140,9 +140,9 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 
 /* home v2: full-body character + coach as a backdrop, buttons overlaid at the bottom */
 .home { display: block; padding: 0; text-align: center; }
-.home-title { position: absolute; top: calc(env(safe-area-inset-top) + 8px); left: 50%; transform: translateX(-50%); width: auto; max-width: 72%; max-height: 12vh; object-fit: contain; z-index: 3; filter: drop-shadow(0 0 16px #e7202b66); }
+.home-title { position: absolute; top: calc(env(safe-area-inset-top) + 8px); left: 12px; width: auto; max-width: 52%; max-height: 11vh; object-fit: contain; z-index: 3; filter: drop-shadow(0 0 16px #e7202b66); }
 .hero-art { position: absolute; inset: 0; z-index: 1; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
-.ha-coach { position: absolute; bottom: 9%; right: -11%; height: 70%; width: auto; object-fit: contain; z-index: 1; filter: drop-shadow(0 0 16px #000); }
+.ha-coach { position: absolute; bottom: 16%; right: -16%; height: 70%; width: auto; object-fit: contain; z-index: 1; filter: drop-shadow(0 0 16px #000); }
 .ha-player { position: relative; height: 88%; width: auto; object-fit: contain; object-position: bottom; z-index: 2; filter: drop-shadow(0 12px 30px #000); }
 .home-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; padding: 8px 12px calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(transparent, #07080f 60%); display: flex; flex-direction: column; gap: 9px; }
 .home-info { display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -167,7 +167,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .skin-card.locked { opacity: .5; }
 .sk-on { position: absolute; top: 8px; right: 8px; color: var(--green); }
 
-.home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 14px; z-index: 3; display: flex; flex-direction: column; gap: 12px; }
+.home .home-top { position: absolute; top: calc(env(safe-area-inset-top) + 10px); right: 10px; z-index: 3; display: flex; flex-direction: row; gap: 10px; }
 .home-icon { position: relative; width: 42px; height: 42px; background: none; border: none; color: #fff; display: grid; place-items: center; }
 .home-icon .gi, .home-icon .gi-emoji, .home-icon .ic { filter: drop-shadow(0 0 5px #e7202baa) drop-shadow(0 1px 3px #000); }
 .home-icon:active { transform: scale(.92); }

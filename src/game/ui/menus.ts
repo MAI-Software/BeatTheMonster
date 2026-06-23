@@ -17,7 +17,7 @@ import { icon, gicon, type IconName, type GIconName } from "./icons";
 
 export interface App {
   root: HTMLElement; save: any;
-  persist(): void; go(screen: string): void;
+  persist(): void; go(screen: string): void; back(): void;
   startFight(enemyId: string, episodeId?: number): void;
   startPractice(kind: "punch" | "dodge"): void;
   startSong(cassetteId: string): void;
@@ -43,7 +43,7 @@ function equipCard(rarity: string, owned: boolean, eq: boolean, ic: IconName, na
 function topBar(app: App, title: string): string {
   const s = app.save;
   return `<div class="topbar">
-    <button class="back" data-nav="home">${icon("back", 22)}</button>
+    <button class="back" data-back>${icon("back", 22)}</button>
     <h2>${title}</h2>
     <div class="currency">
       <span>${gicon("coin", 16)} ${s.coins}</span>
@@ -164,7 +164,7 @@ export function renderCampaign(app: App) {
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}
-    <div class="topbar"><button class="back" data-nav="home">${icon("back", 22)}</button><h2>Capítulo 1</h2>
+    <div class="topbar"><button class="back" data-back>${icon("back", 22)}</button><h2>Capítulo 1</h2>
       <div class="energy-pill">🥤 ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div></div>
     <div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p><div class="lvl-list">${cards}</div></div></div>`;
   wireNav(app);
@@ -534,4 +534,5 @@ export function renderCollection(app: App) {
 
 function wireNav(app: App) {
   app.root.querySelectorAll<HTMLButtonElement>("[data-nav]").forEach((b) => b.onclick = () => { try { window.speechSynthesis?.cancel(); } catch {} app.go(b.dataset.nav!); });
+  app.root.querySelectorAll<HTMLButtonElement>("[data-back]").forEach((b) => b.onclick = () => app.back());
 }

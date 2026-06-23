@@ -28,6 +28,8 @@ class Game implements App {
   save: SaveState = loadSave();
   input: InputProvider | null = null;
   difficulty: DifficultyId = "normal";
+  private current = "home";
+  private hist: string[] = [];
 
   constructor() {
     refreshChallenges(this.save);
@@ -41,7 +43,18 @@ class Game implements App {
     return `<div class="scene loading"><img class="load-bg" src="portal.webp" alt="" onerror="this.style.display='none'"><div class="spinner"></div><p>${text}</p></div>`;
   }
 
-  go(screen: string) {
+  back() {
+    const prev = this.hist.pop();
+    this.go(prev ?? "home", false);
+  }
+  go(screen: string, push = true) {
+    if (push && screen !== this.current) {
+      // home is the root; don't stack duplicates
+      if (this.current !== "home" || screen !== "home") this.hist.push(this.current);
+      if (this.hist.length > 20) this.hist.shift();
+    }
+    this.current = screen;
+    if (screen === "home") this.hist = [];
     const map: Record<string, (a: App) => void> = {
       campaign: renderCampaign, training: renderTraining, equip: renderEquip,
       gacha: renderGacha, challenges: renderChallenges, ranking: renderRanking,
