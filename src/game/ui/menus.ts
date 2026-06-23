@@ -58,11 +58,14 @@ export function renderHome(app: App) {
   app.root.innerHTML = `
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
-      <div class="home-top">
-        <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 28)}</button>
-        <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 28)}</button>
-        <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 28)}</button>
-        <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${gicon("fragments", 28)}</button>
+      <div class="home-top" id="homeTop">
+        <button class="menu-toggle" id="menuToggle" title="Menú"><img src="buttons/menu.webp" alt="Menú"></button>
+        <div class="home-icons">
+          <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 28)}</button>
+          <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 28)}</button>
+          <button class="home-icon" data-nav="wardrobe" title="Vestuario">${gicon("wardrobe", 28)}</button>
+          <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${gicon("fragments", 28)}</button>
+        </div>
       </div>
       <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
       <div class="hero-art">
@@ -86,6 +89,8 @@ export function renderHome(app: App) {
   wireNav(app);
   setupGymWalk(app);
   app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast(`${s.nick || "Luchador"} · Nivel ${s.level} · ${playerRank(s.level)}`);
+  const homeTop = app.root.querySelector<HTMLElement>("#homeTop")!;
+  app.root.querySelector<HTMLButtonElement>("#menuToggle")!.onclick = () => homeTop.classList.toggle("open");
 }
 const emj = (e: string) => `<span class="gi-emoji" style="font-size:24px">${e}</span>`;
 const navBtn = (nav: string, label: string) =>
