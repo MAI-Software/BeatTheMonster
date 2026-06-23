@@ -147,7 +147,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .home-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; padding: 8px 12px calc(env(safe-area-inset-bottom) + 12px); background: linear-gradient(transparent, #07080f 60%); display: flex; flex-direction: column; gap: 9px; }
 .home-info { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .home-info .lvl { font-size: 13px; font-weight: 700; }
-.nav-main { width: 100%; height: 178px; margin: 8px 0 -10px; border: none; background: url("../buttons/fight.webp") center / auto 178px no-repeat; color: #fff; font-weight: 900; font-size: 28px; letter-spacing: 1.5px; display: flex; align-items: center; justify-content: center; gap: 12px; filter: drop-shadow(0 6px 16px #000); transition: transform .07s ease, filter .07s ease; text-shadow: 0 2px 4px #000, 0 0 10px #0008; }
+.nav-main { width: 100%; height: 208px; margin: 22px 0 -22px; border: none; background: url("../buttons/fight.webp") center / auto 208px no-repeat; color: #fff; font-weight: 900; font-size: 30px; letter-spacing: 1.5px; display: flex; align-items: center; justify-content: center; gap: 12px; filter: drop-shadow(0 6px 16px #000); transition: transform .07s ease, filter .07s ease; text-shadow: 0 2px 4px #000, 0 0 10px #0008; }
 .nav-main .gi, .nav-main .gi-emoji { filter: drop-shadow(0 2px 3px #000); }
 .nav-main:active { transform: translateY(3px) scale(.97); filter: drop-shadow(0 2px 6px #000) brightness(.9); }
 .nav-row { display: flex; gap: 7px; }
