@@ -79,7 +79,7 @@ export function renderHome(app: App) {
           <div class="statline oneline res">
             <span class="r-coin">${gicon("coin", 22)} ${s.coins}</span>
             <span class="r-gem">${gicon("gem", 22)} ${s.premium}</span>
-            <span class="r-energy">🥤 ${energy}/${eMax}</span>
+            <span class="r-energy">${gicon("stamina", 22)} ${energy}/${eMax}</span>
           </div>
         </div>
         <button class="nav-main" data-nav="luchar"><img class="nav-bg" src="buttons/fight.webp" alt=""><span class="nav-label">${gicon("campaign", 44)} LUCHAR</span></button>
@@ -166,13 +166,13 @@ export function renderCampaign(app: App) {
     return `<button class="lvl-card ${cls} ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${lv.enemyId}" ${unlocked && afford ? "" : "disabled"} style="--c:${e.color}">
       <span class="lc-n">${lv.n}</span>
       <span class="lc-body"><b>${unlocked ? e.name : "???"}</b><small>${lv.finalBoss ? "JEFE FINAL" : lv.boss ? "JEFE" : e.title}</small></span>
-      <span class="lc-cost ${afford ? "" : "no"}">🥤${lv.cost}</span>
+      <span class="lc-cost ${afford ? "" : "no"}">${gicon("stamina", 14)}${lv.cost}</span>
       <span class="lc-badge">${beaten ? icon("check", 16) : unlocked ? icon("play", 14) : icon("lock", 14)}</span>
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}
     <div class="topbar"><button class="back" data-back>${icon("back", 22)}</button><h2>Capítulo 1</h2>
-      <div class="energy-pill">🥤 ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div></div>
+      <div class="energy-pill">${gicon("stamina", 20)} ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div></div>
     <div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p><div class="lvl-list">${cards}</div></div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!));
