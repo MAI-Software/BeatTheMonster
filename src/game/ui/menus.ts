@@ -185,19 +185,19 @@ export function renderCampaign(app: App) {
 
 export function renderTraining(app: App) {
   const s = app.save;
-  const row = (stat: "atk" | "def" | "vt", label: string, cls: string) => {
+  const row = (stat: "atk" | "def" | "vt", cls: string) => {
     const cur = s.stats[stat]; const max = stat === "vt" ? CAPS.VT : stat === "atk" ? CAPS.ATK : CAPS.DEF;
     const cost = trainCost(stat, cur); const atMax = cur >= max;
-    return `<div class="train-row">
-      <div class="tr-label ${cls}">${label}<small>${cur} / ${max}</small></div>
+    return `<div class="train-row ${cls}">
+      <div class="tr-label ${cls}">${gicon(stat, 30)}<small>${cur}</small></div>
       <div class="bar tiny"><i class="fill ${cls}" style="width:${(cur / max) * 100}%"></i></div>
-      <button class="tr-btn" data-train="${stat}" ${atMax || !canTrain(s, stat) ? "disabled" : ""}>${atMax ? "MAX" : `+${stat === "vt" ? 10 : 1} · ${cost}`}</button>
+      <button class="tr-btn" data-train="${stat}" ${atMax || !canTrain(s, stat) ? "disabled" : ""}>${atMax ? "MAX" : `+${stat === "vt" ? 10 : 1} · ${gicon("coin", 13)}${cost}`}</button>
       ${s.statVouchers > 0 && !atMax ? `<button class="tr-vch" data-vch="${stat}">Vale</button>` : ""}
     </div>`;
   };
   app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar")}<div class="scroll">
     <p class="hint">Sube stats con monedas. Vales de logro: <b>${s.statVouchers}</b>.</p>
-    ${row("vt", "VT · Vida", "c-green")}${row("atk", "ATK · Ataque", "c-orange")}${row("def", "DEF · Defensa", "c-blue")}
+    ${row("vt", "c-green")}${row("atk", "c-orange")}${row("def", "c-blue")}
     <p class="hint small">Más ATK = más daño. Más DEF = menos daño recibido. VT = aguante.</p>
   </div></div>`;
   wireNav(app);
