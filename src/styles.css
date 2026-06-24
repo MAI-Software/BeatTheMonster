@@ -86,7 +86,15 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .topbar .back:active { background: var(--panel2); }
 .topbar h2 { flex: 1; }
 /* one-handed layout: move the top bar to the bottom for bottom-nav screens */
-.bar-bottom .topbar { order: 99; padding-top: 14px; padding-bottom: calc(env(safe-area-inset-bottom) + 14px); background: linear-gradient(transparent, var(--bg2)); border-top: 4px solid transparent; border-bottom: none; border-image: linear-gradient(90deg, var(--red), #fff, var(--blue)) 1; box-shadow: 0 -6px 14px #0006; }
+.bar-bottom .topbar {
+  order: 99; padding-top: 14px; padding-bottom: calc(env(safe-area-inset-bottom) + 14px);
+  border: none;
+  background:
+    repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 4px),
+    linear-gradient(180deg, #2c2c31 0%, #161618 16%, #0b0b0d 60%, #060607 100%);
+  box-shadow: inset 0 1px 0 #ffffff2e, inset 0 2px 6px #ffffff10, inset 0 -3px 6px #000, 0 -8px 20px #000c;
+}
+.bar-bottom .topbar .back { background: linear-gradient(180deg, #303035, #141416); box-shadow: inset 0 1px 0 #ffffff22, 0 1px 2px #000; }
 .bar-bottom .scroll { padding-bottom: 20px; }
 .currency { display: flex; gap: 10px; font-size: 13px; font-weight: 700; }
 .currency span:first-child { color: var(--gold); } .currency span:last-child { color: var(--blue); }
