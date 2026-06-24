@@ -12,6 +12,8 @@ import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
 import { rankLabel, rankProgress } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
 import { setVolumes, sfx } from "../systems/audio";
+import { GLOBAL_SONG } from "../systems/song";
+import { applyMenuVolume, ensureMenuMusic } from "../systems/menuMusic";
 import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg } from "../data/skins";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
@@ -73,7 +75,7 @@ export function renderHome(app: App) {
           <button class="home-icon ${anyCraftable(s) ? "notify" : ""}" data-nav="fragments" title="Fragmentos">${gicon("fragments", 32)}</button>
         </div>
       </div>
-      <img class="home-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
+      <button class="home-radio" id="radioBtn" title="Radio · elige tu canción">${gicon("radio", 46)}</button>
       <div class="hero-art">
         <img class="ha-coach" src="${coachSkinImg(s.coachSkin)}" alt="" onerror="this.style.display='none'">
         <img class="ha-player" src="${playerSkinImg(s.gender)}" alt="" onerror="this.style.display='none'">
@@ -100,6 +102,7 @@ export function renderHome(app: App) {
   app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast(`${s.nick || "Luchador"} · Nivel ${s.level} · ${playerRank(s.level)}`);
   const homeTop = app.root.querySelector<HTMLElement>("#homeTop")!;
   app.root.querySelector<HTMLButtonElement>("#menuToggle")!.onclick = () => homeTop.classList.toggle("open");
+  app.root.querySelector<HTMLButtonElement>("#radioBtn")!.onclick = () => app.go("radio");
 }
 const emj = (e: string) => `<span class="gi-emoji" style="font-size:24px">${e}</span>`;
 const navBtn = (nav: string, label: string, notify = false) =>
@@ -504,7 +507,7 @@ export function renderOptions(app: App) {
   const sf = app.root.querySelector<HTMLInputElement>("#volSfx")!;
   const mv = app.root.querySelector<HTMLElement>("#volMusicV")!;
   const sv = app.root.querySelector<HTMLElement>("#volSfxV")!;
-  const applyVol = () => { s.settings.musicVol = +m.value / 100; s.settings.sfxVol = +sf.value / 100; mv.textContent = m.value; sv.textContent = sf.value; setVolumes(s.settings.musicVol, s.settings.sfxVol); app.persist(); };
+  const applyVol = () => { s.settings.musicVol = +m.value / 100; s.settings.sfxVol = +sf.value / 100; mv.textContent = m.value; sv.textContent = sf.value; setVolumes(s.settings.musicVol, s.settings.sfxVol); applyMenuVolume(); app.persist(); };
   m.oninput = applyVol; sf.oninput = applyVol;
   const ne = app.root.querySelector<HTMLInputElement>("#nickEdit")!;
   app.root.querySelector<HTMLButtonElement>("#nickSave")!.onclick = () => { s.nick = (ne.value.trim() || "Luchador").slice(0, 14); app.persist(); app.toast("Nombre guardado"); };
@@ -531,6 +534,33 @@ export function renderSongs(app: App) {
   </div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-song]").forEach((b) => b.onclick = () => app.startSong(b.dataset.song!));
+}
+
+// Radio: pick the favourite song that plays during the menus.
+export function renderRadio(app: App) {
+  const s = app.save;
+  const fav = s.favSong || GLOBAL_SONG.id;
+  const owned = CASSETTES.filter((c) => s.cassettes[c.id]);
+  const opts: { id: string; name: string; bpm?: number }[] = [
+    { id: GLOBAL_SONG.id, name: GLOBAL_SONG.name },
+    ...owned.map((c) => ({ id: c.id, name: c.name, bpm: c.bpm })),
+  ];
+  const rows = opts.map((o) => {
+    const on = fav === o.id;
+    return `<button class="radio-row ${on ? "on" : ""}" data-fav="${o.id}">
+      <span class="rr-ic">${gicon("songs", 26)}</span>
+      <span class="rr-meta"><b>${o.name}</b><small>${o.bpm ? `${o.bpm} BPM` : "Tema base"}</small></span>
+      <span class="rr-state">${on ? `SONANDO ${icon("check", 16)}` : icon("play", 14)}</span>
+    </button>`;
+  }).join("");
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Radio")}<div class="scroll">
+    <p class="hint">Elige la canción que sonará en los menús. Solo las desbloqueadas (cassettes de jefes + el tema base). Llegarán más.</p>
+    ${rows}
+  </div></div>`;
+  wireNav(app);
+  app.root.querySelectorAll<HTMLButtonElement>("[data-fav]").forEach((b) => b.onclick = () => {
+    s.favSong = b.dataset.fav!; app.persist(); ensureMenuMusic(s.favSong); renderRadio(app);
+  });
 }
 
 export function renderCollection(app: App) {

@@ -47,6 +47,7 @@ export interface SaveState {
   ads: number; // watch-ad free pulls available
   adsTs: number; // last ad recharge timestamp
   settings: { musicVol: number; sfxVol: number };
+  favSong: string; // chosen menu background song (cassette id or global id)
   difficultyWins: Record<string, number>; // wins per difficulty id (gates harder modes)
   bestScore: number;
   totalPerfects: number;
@@ -88,6 +89,7 @@ export function defaultSave(): SaveState {
     ads: 5,
     adsTs: Date.now(),
     settings: { musicVol: 0.85, sfxVol: 0.8 },
+    favSong: "",
     difficultyWins: {},
     bestScore: 0,
     totalPerfects: 0,
