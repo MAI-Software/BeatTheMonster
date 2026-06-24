@@ -24,6 +24,10 @@ import { ensureMenuMusic, stopMenuMusic } from "./game/systems/menuMusic";
 
 const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#e7202b", emoji: "🥊" };
 
+// Screens reached from the BOTTOM nav of home keep their top bar at the bottom
+// (one-handed reach). Top-of-home screens (radio, profile, options, wardrobe…) stay up.
+const BOTTOM_BAR_SCREENS = new Set(["luchar", "training", "equip", "gacha", "challenges", "collection", "campaign", "practice", "songs"]);
+
 class Game implements App {
   root = document.getElementById("app")!;
   save: SaveState = loadSave();
@@ -65,6 +69,9 @@ class Game implements App {
       radio: renderRadio, profile: renderProfile,
     };
     (map[screen] ?? renderHome)(this);
+    // one-handed UX: screens reached from the bottom nav keep their bar at the
+    // bottom; screens reached from the top of home keep it at the top.
+    this.root.classList.toggle("bar-bottom", BOTTOM_BAR_SCREENS.has(screen));
     // menu music plays across menu screens when enabled in settings (off during combat)
     if (this.save.tutorialDone && this.save.settings.menuMusic !== false) ensureMenuMusic(this.save.favSong);
     else stopMenuMusic();

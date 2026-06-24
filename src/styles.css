@@ -85,6 +85,9 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .topbar .back { color: var(--txt); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--panel); }
 .topbar .back:active { background: var(--panel2); }
 .topbar h2 { flex: 1; }
+/* one-handed layout: move the top bar to the bottom for bottom-nav screens */
+.bar-bottom .topbar { order: 99; padding-top: 14px; padding-bottom: calc(env(safe-area-inset-bottom) + 14px); background: linear-gradient(transparent, var(--bg2)); border-top: 4px solid transparent; border-bottom: none; border-image: linear-gradient(90deg, var(--red), #fff, var(--blue)) 1; box-shadow: 0 -6px 14px #0006; }
+.bar-bottom .scroll { padding-bottom: 20px; }
 .currency { display: flex; gap: 10px; font-size: 13px; font-weight: 700; }
 .currency span:first-child { color: var(--gold); } .currency span:last-child { color: var(--blue); }
 
