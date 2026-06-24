@@ -269,15 +269,18 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .train-row.c-orange { background: color-mix(in srgb, #e7202b 16%, var(--panel)); border-color: #e7202b; }
 .train-row.c-blue { background: color-mix(in srgb, #2e9bff 16%, var(--panel)); border-color: #2e9bff; }
 .tr-head { display: flex; align-items: center; gap: 10px; }
-.tr-stat { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 20px; }
-.tr-stat.c-green { color: #27c46b; } .tr-stat.c-orange { color: #e7202b; } .tr-stat.c-blue { color: #2e9bff; }
-.tr-cost { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-size: 14px; color: var(--dim); }
-.tr-cost .tr-tk { display: inline-flex; align-items: center; gap: 3px; margin-left: 5px; color: #e0b048; }
-.tr-acts { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.tr-ic { display: inline-flex; align-items: center; }
+.tr-head .tr-btn { margin-left: auto; }
 .train-row .fill.c-green { background: #27c46b; } .train-row .fill.c-orange { background: #e7202b; } .train-row .fill.c-blue { background: #2e9bff; }
-.tr-btn { padding: 5px 12px; border-radius: 8px; background: var(--green); color: #111; font-weight: 800; font-size: 13px; }
+.tr-val { display: flex; align-items: baseline; gap: 6px; font-weight: 800; font-size: 21px; margin-top: 2px; }
+.tr-val span { font-size: 12px; font-weight: 700; color: var(--dim); }
+.tr-val.c-green { color: #27c46b; } .tr-val.c-orange { color: #e7202b; } .tr-val.c-blue { color: #2e9bff; }
+.tr-btn { padding: 6px 14px; border-radius: 8px; background: var(--green); color: #111; font-weight: 800; font-size: 13px; }
 .tr-btn:disabled { background: var(--line); color: var(--dim); }
-.tr-vch { display: inline-flex; align-items: center; padding: 4px 7px; border-radius: 8px; border: 1px solid var(--gold); background: transparent; }
+.tr-buy { display: flex; gap: 7px; margin-top: 10px; }
+.tr-buy[hidden] { display: none; }
+.tr-buy .bb { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 6px; border-radius: 9px; background: #0006; border: 1px solid var(--line); color: var(--txt); font-weight: 800; font-size: 13px; }
+.tr-buy .bb:disabled { opacity: .4; }
 .train-info { width: min(74%, 360px); margin: 14px 0 0 auto; }
 .train-info p { display: flex; gap: 7px; align-items: flex-start; font-size: 11.5px; color: var(--dim); line-height: 1.45; margin-bottom: 8px; }
 .train-info .ti-ic { flex-shrink: 0; margin-top: 1px; }

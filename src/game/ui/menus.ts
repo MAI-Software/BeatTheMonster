@@ -3,7 +3,7 @@ import { CAPS, playerRank } from "../data/balance";
 import { LEVELS, ENEMIES, BOSS_IDS, CAMPAIGN_LORE } from "../data/enemies";
 import { EQUIPMENT, SLOT_LABEL, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
 import { FLOW_STATES, getFlowState } from "../data/flowStates";
-import { canTrain, effectiveStats, spendVoucher, train, trainCost, xpToNext } from "../systems/progression";
+import { canTrain, effectiveStats, gemTrainCost, spendVoucher, train, trainCost, trainWithGems, xpToNext } from "../systems/progression";
 import { AD_MAX, PULL_COST, adMsToNext, anyCraftable, canPull, craftItem, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
 import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../systems/stamina";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
@@ -40,7 +40,7 @@ function equipCard(rarity: string, owned: boolean, eq: boolean, ic: IconName, na
   </button>`;
 }
 
-function topBar(app: App, title: string): string {
+function topBar(app: App, title: string, showTickets = false): string {
   const s = app.save;
   return `<div class="topbar">
     <button class="back" data-back>${icon("back", 22)}</button>
@@ -48,6 +48,7 @@ function topBar(app: App, title: string): string {
     <div class="currency">
       <span>${gicon("coin", 16)} ${s.coins}</span>
       <span>${gicon("gem", 16)} ${s.premium}</span>
+      ${showTickets ? `<span>${gicon("ticket", 16)} ${s.statVouchers}</span>` : ""}
     </div>
   </div>`;
 }
@@ -190,29 +191,42 @@ export function renderTraining(app: App) {
   const s = app.save;
   const row = (stat: "atk" | "def" | "vt", cls: string) => {
     const cur = s.stats[stat]; const max = stat === "vt" ? CAPS.VT : stat === "atk" ? CAPS.ATK : CAPS.DEF;
-    const cost = trainCost(stat, cur); const atMax = cur >= max;
+    const cost = trainCost(stat, cur); const gcost = gemTrainCost(stat, cur); const atMax = cur >= max; const inc = stat === "vt" ? 10 : 1;
     return `<div class="train-row ${cls}">
       <div class="tr-head">
-        <span class="tr-stat ${cls}">${gicon(stat, 28)}<b>${cur}</b></span>
-        <span class="tr-cost">${atMax ? "MAX" : `${gicon("coin", 14)}${cost} <span class="tr-tk">${gicon("ticket", 14)}1</span>`}</span>
-        <span class="tr-acts">
-          <button class="tr-btn" data-train="${stat}" ${atMax || !canTrain(s, stat) ? "disabled" : ""}>+${stat === "vt" ? 10 : 1}</button>
-          ${s.statVouchers > 0 && !atMax ? `<button class="tr-vch" data-vch="${stat}" title="Usar ticket de refuerzo">${gicon("ticket", 16)}</button>` : ""}
-        </span>
+        <span class="tr-ic ${cls}">${gicon(stat, 26)}</span>
+        <button class="tr-btn" data-toggle="${stat}" ${atMax ? "disabled" : ""}>${atMax ? "MAX" : "Mejorar"}</button>
       </div>
       <div class="bar tiny"><i class="fill ${cls}" style="width:${(cur / max) * 100}%"></i></div>
+      <div class="tr-val ${cls}"><b>${cur}</b><span>+${inc}</span></div>
+      <div class="tr-buy" data-panel="${stat}" hidden>
+        <button class="bb" data-buy="coin" data-stat="${stat}" ${s.coins >= cost ? "" : "disabled"}>${gicon("coin", 15)} ${cost}</button>
+        <button class="bb" data-buy="gem" data-stat="${stat}" ${s.premium >= gcost ? "" : "disabled"}>${gicon("gem", 15)} ${gcost}</button>
+        <button class="bb" data-buy="ticket" data-stat="${stat}" ${s.statVouchers > 0 ? "" : "disabled"}>${gicon("ticket", 15)} 1</button>
+      </div>
     </div>`;
   };
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar")}<div class="scroll">
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar", true)}<div class="scroll">
     ${row("vt", "c-green")}${row("atk", "c-orange")}${row("def", "c-blue")}
     <div class="train-info">
-      <p><span class="ti-ic">${gicon("coin", 15)}</span> Sube VT (+10), ATK (+1) o DEF (+1) con monedas. El coste crece con el nivel. Más ATK = más daño · más DEF = menos daño recibido · VT = aguante.</p>
-      <p><span class="ti-ic">${gicon("ticket", 15)}</span> Tickets de refuerzo: suben un stat gratis. Se ganan en desafíos, al superar un escenario por primera vez y (raro) de jefes. Tienes <b>${s.statVouchers}</b>.</p>
+      <p><span class="ti-ic">${gicon("coin", 15)}</span> Pulsa <b>Mejorar</b> y elige pagar con monedas, ${gicon("gem", 13)} gemalma o ${gicon("ticket", 13)} tickets. El coste crece con el nivel. Más ATK = más daño · más DEF = menos daño recibido · VT = aguante.</p>
+      <p><span class="ti-ic">${gicon("ticket", 15)}</span> Tickets de refuerzo: suben un stat gratis. Se ganan en desafíos, al superar un escenario por primera vez y (raro) de jefes.</p>
     </div>
   </div></div>`;
   wireNav(app);
-  app.root.querySelectorAll<HTMLButtonElement>("[data-train]").forEach((b) => b.onclick = () => { train(s, b.dataset.train as any) ? (app.persist(), renderTraining(app)) : app.toast("Sin monedas"); });
-  app.root.querySelectorAll<HTMLButtonElement>("[data-vch]").forEach((b) => b.onclick = () => { if (spendVoucher(s, b.dataset.vch as any)) { app.persist(); renderTraining(app); } });
+  app.root.querySelectorAll<HTMLButtonElement>("[data-toggle]").forEach((b) => b.onclick = () => {
+    const row = b.closest(".train-row")!; const panel = row.querySelector<HTMLElement>(".tr-buy")!;
+    const open = !panel.hidden;
+    app.root.querySelectorAll<HTMLElement>(".tr-buy").forEach((p) => (p.hidden = true));
+    app.root.querySelectorAll(".train-row").forEach((r) => r.classList.remove("open"));
+    if (!open) { panel.hidden = false; row.classList.add("open"); }
+  });
+  app.root.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((b) => b.onclick = () => {
+    const stat = b.dataset.stat as any; const how = b.dataset.buy;
+    const ok = how === "coin" ? train(s, stat) : how === "gem" ? trainWithGems(s, stat) : spendVoucher(s, stat);
+    if (ok) { app.persist(); renderTraining(app); }
+    else app.toast(how === "coin" ? "Sin monedas" : how === "gem" ? "Sin gemalma" : "Sin tickets");
+  });
 }
 
 export function renderEquip(app: App) {

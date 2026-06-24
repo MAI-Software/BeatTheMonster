@@ -64,6 +64,22 @@ export function train(s: SaveState, stat: "atk" | "def" | "vt"): boolean {
   return true;
 }
 
+// Gem (gemalma) price to train a stat — small, scales with the coin cost.
+export function gemTrainCost(stat: "atk" | "def" | "vt", current: number): number {
+  return Math.max(1, Math.ceil(trainCost(stat, current) / 60));
+}
+
+// Train paying with gems instead of coins.
+export function trainWithGems(s: SaveState, stat: "atk" | "def" | "vt"): boolean {
+  const cur = s.stats[stat];
+  const max = stat === "vt" ? CAPS.VT : stat === "atk" ? CAPS.ATK : CAPS.DEF;
+  const price = gemTrainCost(stat, cur);
+  if (cur >= max || s.premium < price) return false;
+  s.premium -= price;
+  s.stats[stat] = clampStat(stat, cur + (stat === "vt" ? 10 : 1));
+  return true;
+}
+
 // Spend a stat voucher: +1 atk/def or +10 vt, ignores coin cost, respects caps.
 export function spendVoucher(s: SaveState, stat: "atk" | "def" | "vt"): boolean {
   if (s.statVouchers <= 0) return false;
