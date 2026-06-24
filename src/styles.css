@@ -244,13 +244,13 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 /* ---------- chapter levels ---------- */
 .energy-pill { font-weight: 800; font-size: 13px; color: var(--txt); background: #141415cc; border: 1px solid var(--line); padding: 6px 10px; border-radius: 18px; white-space: nowrap; }
 .lvl-list { display: flex; flex-direction: column; gap: 8px; }
-.lvl-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #141415e0; border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 11px; color: var(--txt); text-align: left; }
+.lvl-card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: none; border: 1px solid #ffffff22; border-left: 4px solid var(--c); border-radius: 11px; color: var(--txt); text-align: left; text-shadow: 0 1px 4px #000c, 0 0 2px #000; }
 .lvl-card.locked { opacity: .45; }
 .lvl-card.beaten { border-color: var(--green); }
 .lvl-card.boss { border-left-width: 6px; }
 .lvl-card.final { border-left-color: var(--red); box-shadow: 0 0 16px #e7202b33; }
 .lvl-card:disabled { opacity: .4; }
-.lc-n { width: 30px; text-align: center; font-weight: 900; font-size: 18px; color: var(--dim); flex: none; }
+.lc-n { width: 32px; text-align: center; font-weight: 900; font-size: 22px; color: #fff; flex: none; }
 .lc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; } .lc-body b { font-size: 14px; } .lc-body small { color: var(--dim); font-size: 11px; }
 .lc-cost { display: inline-flex; align-items: center; gap: 3px; font-weight: 800; font-size: 13px; color: var(--gold); flex: none; } .lc-cost.no { color: var(--red); }
 .lc-badge { color: var(--dim); flex: none; }

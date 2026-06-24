@@ -179,8 +179,8 @@ export function renderCampaign(app: App) {
     return `<button class="lvl-card ${cls} ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${lv.enemyId}" ${unlocked && afford ? "" : "disabled"} style="--c:${e.color}">
       <span class="lc-n">${lv.n}</span>
       <span class="lc-body"><b>${unlocked ? e.name : "???"}</b><small>${lv.finalBoss ? "JEFE FINAL" : lv.boss ? "JEFE" : e.title}</small></span>
-      <span class="lc-cost ${afford ? "" : "no"}">${gicon("stamina", 14)}${lv.cost}</span>
-      <span class="lc-badge">${beaten ? icon("check", 16) : unlocked ? icon("play", 14) : icon("lock", 14)}</span>
+      <span class="lc-cost ${afford ? "" : "no"}">${gicon("stamina", 20)}${lv.cost}</span>
+      <span class="lc-badge">${beaten ? icon("check", 24) : unlocked ? icon("play", 22) : icon("lock", 22)}</span>
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}
