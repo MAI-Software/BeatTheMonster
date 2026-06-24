@@ -29,7 +29,7 @@ export interface App {
 
 // section background image (each menu shows its own room). Falls back to gym.
 function sectionBg(key: string): string {
-  return `<div class="section-bg"><img src="menu/${key}.webp" alt="" onerror="this.onerror=null;this.src='menu/gym.webp'"></div>`;
+  return `<div class="section-bg section-bg--${key}"><img src="menu/${key}.webp" alt="" onerror="this.onerror=null;this.src='menu/gym.webp'"></div>`;
 }
 
 const slotIcon: Record<string, IconName> = { head: "headband", gloves: "glove", body: "charm", shins: "boot" };
@@ -42,16 +42,16 @@ function equipCard(rarity: string, owned: boolean, eq: boolean, ic: IconName, na
   </button>`;
 }
 
-function topBar(app: App, title: string, showTickets = false): string {
+function topBar(app: App, title: string, showTickets = false, noCurrency = false): string {
   const s = app.save;
   return `<div class="topbar">
     <button class="back" data-back>${icon("back", 22)}</button>
     <h2>${title}</h2>
-    <div class="currency">
+    ${noCurrency ? "" : `<div class="currency">
       <span>${gicon("coin", 16)} ${s.coins}</span>
       <span>${gicon("gem", 16)} ${s.premium}</span>
       ${showTickets ? `<span>${gicon("ticket", 16)} ${s.statVouchers}</span>` : ""}
-    </div>
+    </div>`}
   </div>`;
 }
 
@@ -216,10 +216,6 @@ export function renderTraining(app: App, openStat?: string) {
   };
   app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar", true)}<div class="scroll">
     ${row("vt", "c-green")}${row("atk", "c-orange")}${row("def", "c-blue")}
-    <div class="train-info">
-      <p><span class="ti-ic">${gicon("coin", 15)}</span> Pulsa <b>Mejorar</b> y elige pagar con monedas, ${gicon("gem", 13)} gemalma o ${gicon("ticket", 13)} tickets. Cada barra son 10 tramos de 10 mejoras (tope ${UP_LIMIT} por ahora). Más ATK = más daño · más DEF = menos daño · VT = aguante.</p>
-      <p><span class="ti-ic">${gicon("ticket", 15)}</span> Tickets de refuerzo: suben un stat gratis. Se ganan en desafíos, al superar un escenario por primera vez y (raro) de jefes.</p>
-    </div>
   </div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-toggle]").forEach((b) => b.onclick = () => {
@@ -315,7 +311,6 @@ export function renderGacha(app: App) {
   const ads = refreshAds(s); const adNext = adMsToNext(s);
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Gacha")}
     <div class="scroll gacha-scroll">
-      <p class="hint">Tira para ganar <b>fragmentos</b>. Júntalos y crea el objeto en ${icon("puzzle", 13)} Fragmentos. Sin pagos reales.</p>
       <div id="pull-result"></div>
     </div>
     <div class="gacha-bottom">
@@ -389,7 +384,7 @@ export function renderChallenges(app: App) {
     return `<div class="chal achv"><div class="chal-text">${a.text} <i>Nv.${ap.tier}</i></div><div class="bar tiny"><i class="fill gold" style="width:${pct}%"></i></div>
       <div class="chal-foot"><span>${ap.progress}/${next}</span><span class="reward">+1 Vale stat</span></div></div>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos")}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos", true)}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-claim]").forEach((b) => b.onclick = () => { if (claimChallenge(s, b.dataset.claim!, b.dataset.scope as any)) { app.persist(); renderChallenges(app); } });
 }
@@ -553,14 +548,14 @@ export function renderRadio(app: App) {
   const rows = ordered.map((c) => {
     if (cur && c.id === cur.id) {
       return `<div class="radio-row on">
-        <span class="rr-ic">${gicon("cassette", 26)}</span>
+        <span class="rr-ic">${gicon("cassette", 36)}</span>
         <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM · ${playing ? "Sonando" : "En pausa"}</small></span>
         ${wave}
         <button class="radio-pp" id="ppBtn">${icon(playing ? "pause" : "play", 22)}</button>
       </div>`;
     }
     return `<button class="radio-row" data-fav="${c.id}">
-      <span class="rr-ic">${gicon("cassette", 26)}</span>
+      <span class="rr-ic">${gicon("cassette", 36)}</span>
       <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM</small></span>
       <span class="rr-state">${icon("play", 14)}</span>
     </button>`;
@@ -631,7 +626,7 @@ export function renderCollection(app: App) {
   const grid = (list: ColItem[]) => `<div class="col-sq-grid">${list.map(tile).join("")}</div>`;
   const cnt = (list: ColItem[]) => list.filter((x) => x.owned).length;
 
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección")}<div class="scroll">
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección", false, true)}<div class="scroll">
     <p class="hint">Toca un coleccionable para verlo de cerca, su descripción y su <b>rango</b> (sube con copias/sellos repetidos).</p>
     <h3>Jefes · ${cnt(bosses)}/${bosses.length}</h3>${grid(bosses)}
     <h3>Equipo · ${cnt(gear)}/${gear.length}</h3>${grid(gear)}
