@@ -542,27 +542,32 @@ export function renderRadio(app: App) {
   const fav = s.favSong || "cs_1";
   const playing = isMenuPlaying();
   const owned = CASSETTES.filter((c) => s.cassettes[c.id]);
-  const cur = owned.find((c) => c.id === fav);
-  const wave = `<span class="radio-wave on sm"><i></i><i></i><i></i><i></i></span>`;
-  const rows = owned.map((c) => {
-    const on = fav === c.id;
-    return `<button class="radio-row ${on ? "on" : ""}" data-fav="${c.id}">
+  const cur = owned.find((c) => c.id === fav) ?? owned[0];
+  // selected song goes first, rest follow
+  const ordered = cur ? [cur, ...owned.filter((c) => c.id !== cur.id)] : owned;
+  const wave = `<span class="radio-wave ${playing ? "on" : ""}"><i></i><i></i><i></i><i></i><i></i></span>`;
+  const rows = ordered.map((c) => {
+    if (cur && c.id === cur.id) {
+      return `<div class="radio-row on">
+        <span class="rr-ic">${gicon("cassette", 26)}</span>
+        <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM · ${playing ? "Sonando" : "En pausa"}</small></span>
+        ${wave}
+        <button class="radio-pp" id="ppBtn">${icon(playing ? "pause" : "play", 22)}</button>
+      </div>`;
+    }
+    return `<button class="radio-row" data-fav="${c.id}">
       <span class="rr-ic">${gicon("cassette", 26)}</span>
       <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM</small></span>
-      <span class="rr-state">${on ? (playing ? wave : "EN PAUSA") : icon("play", 14)}</span>
+      <span class="rr-state">${icon("play", 14)}</span>
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Radio")}<div class="scroll">
-    <div class="radio-now">
-      <button class="radio-pp" id="ppBtn">${icon(playing ? "pause" : "play", 24)}</button>
-      <div class="radio-now-meta"><b>${cur?.name ?? "—"}</b><small>${playing ? "Sonando" : "En pausa"}</small></div>
-      <div class="radio-wave ${playing ? "on" : ""}"><i></i><i></i><i></i><i></i><i></i></div>
-    </div>
     <p class="hint">Elige la canción que sonará en los menús. Solo las desbloqueadas (cassettes de jefes + Wasteland). Llegarán más.</p>
     ${rows}
   </div></div>`;
   wireNav(app);
-  app.root.querySelector<HTMLButtonElement>("#ppBtn")!.onclick = () => { toggleMenuMusic(); renderRadio(app); };
+  const pp = app.root.querySelector<HTMLButtonElement>("#ppBtn");
+  if (pp) pp.onclick = () => { toggleMenuMusic(); renderRadio(app); };
   app.root.querySelectorAll<HTMLButtonElement>("[data-fav]").forEach((b) => b.onclick = () => {
     s.favSong = b.dataset.fav!; app.persist(); ensureMenuMusic(s.favSong); renderRadio(app);
   });
