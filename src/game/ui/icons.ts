@@ -4,7 +4,7 @@
 type IconName =
   | "coin" | "gem" | "glove" | "boot" | "headband" | "charm"
   | "bolt" | "trophy" | "calendar" | "dumbbell" | "fist" | "target"
-  | "play" | "back" | "close" | "lock" | "check" | "star" | "note" | "swords" | "cog" | "user" | "hanger" | "puzzle";
+  | "play" | "pause" | "back" | "close" | "lock" | "check" | "star" | "note" | "swords" | "cog" | "user" | "hanger" | "puzzle";
 
 const P: Record<IconName, string> = {
   coin: `<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/>`,
@@ -20,6 +20,7 @@ const P: Record<IconName, string> = {
   fist: `<path d="M5 11V8a2 2 0 0 1 4 0m0 0V6a2 2 0 0 1 4 0v2m0 0a2 2 0 0 1 4 0v5a6 6 0 0 1-6 6H9a4 4 0 0 1-4-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>`,
   target: `<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1" fill="currentColor"/>`,
   play: `<path d="M7 5l12 7-12 7z" fill="currentColor"/>`,
+  pause: `<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>`,
   back: `<path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`,
   close: `<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>`,
   lock: `<rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/>`,
@@ -45,13 +46,13 @@ export type { IconName };
 export type GIconName =
   | "campaign" | "practice" | "tutorial" | "training" | "equip" | "gacha"
   | "challenges" | "ranking" | "collection" | "songs" | "options" | "profile" | "wardrobe" | "story" | "fragments"
-  | "coin" | "gem" | "flow" | "vt" | "atk" | "def" | "stamina" | "ads" | "ticket" | "radio";
+  | "coin" | "gem" | "flow" | "vt" | "atk" | "def" | "stamina" | "ads" | "ticket" | "radio" | "cassette";
 
 const EMOJI: Record<GIconName, string> = {
   campaign: "⚔️", practice: "🎯", tutorial: "🥊", training: "💪", equip: "🧤", gacha: "🎰",
   challenges: "📅", ranking: "🏆", collection: "📖", songs: "📼", options: "⚙️", profile: "👤",
   wardrobe: "🧥", story: "📜", fragments: "🧩",
-  coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️", stamina: "🥤", ads: "🎬", ticket: "🎟️", radio: "📻",
+  coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️", stamina: "🥤", ads: "🎬", ticket: "🎟️", radio: "📻", cassette: "📼",
 };
 
 // install the onerror fallback once

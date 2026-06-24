@@ -13,7 +13,7 @@ import { collectRank, collectNext } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
 import { setVolumes, sfx } from "../systems/audio";
 import { GLOBAL_SONG } from "../systems/song";
-import { applyMenuVolume, ensureMenuMusic } from "../systems/menuMusic";
+import { applyMenuVolume, ensureMenuMusic, isMenuPlaying, toggleMenuMusic } from "../systems/menuMusic";
 import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg } from "../data/skins";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
@@ -540,21 +540,29 @@ export function renderSongs(app: App) {
 export function renderRadio(app: App) {
   const s = app.save;
   const fav = s.favSong || "cs_1";
+  const playing = isMenuPlaying();
   const owned = CASSETTES.filter((c) => s.cassettes[c.id]);
-  const opts: { id: string; name: string; bpm?: number }[] = owned.map((c) => ({ id: c.id, name: c.name, bpm: c.bpm }));
-  const rows = opts.map((o) => {
-    const on = fav === o.id;
-    return `<button class="radio-row ${on ? "on" : ""}" data-fav="${o.id}">
-      <span class="rr-ic">${gicon("songs", 26)}</span>
-      <span class="rr-meta"><b>${o.name}</b><small>${o.bpm ? `${o.bpm} BPM` : "Tema base"}</small></span>
-      <span class="rr-state">${on ? `SONANDO ${icon("check", 16)}` : icon("play", 14)}</span>
+  const cur = owned.find((c) => c.id === fav);
+  const wave = `<span class="radio-wave on sm"><i></i><i></i><i></i><i></i></span>`;
+  const rows = owned.map((c) => {
+    const on = fav === c.id;
+    return `<button class="radio-row ${on ? "on" : ""}" data-fav="${c.id}">
+      <span class="rr-ic">${gicon("cassette", 26)}</span>
+      <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM</small></span>
+      <span class="rr-state">${on ? (playing ? wave : "EN PAUSA") : icon("play", 14)}</span>
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Radio")}<div class="scroll">
-    <p class="hint">Elige la canción que sonará en los menús. Solo las desbloqueadas (cassettes de jefes + el tema base). Llegarán más.</p>
+    <div class="radio-now">
+      <button class="radio-pp" id="ppBtn">${icon(playing ? "pause" : "play", 24)}</button>
+      <div class="radio-now-meta"><b>${cur?.name ?? "—"}</b><small>${playing ? "Sonando" : "En pausa"}</small></div>
+      <div class="radio-wave ${playing ? "on" : ""}"><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <p class="hint">Elige la canción que sonará en los menús. Solo las desbloqueadas (cassettes de jefes + Wasteland). Llegarán más.</p>
     ${rows}
   </div></div>`;
   wireNav(app);
+  app.root.querySelector<HTMLButtonElement>("#ppBtn")!.onclick = () => { toggleMenuMusic(); renderRadio(app); };
   app.root.querySelectorAll<HTMLButtonElement>("[data-fav]").forEach((b) => b.onclick = () => {
     s.favSong = b.dataset.fav!; app.persist(); ensureMenuMusic(s.favSong); renderRadio(app);
   });
@@ -592,15 +600,17 @@ export function renderCollection(app: App) {
       count: owned ? 1 : 0, rank: collectRank(owned ? 1 : 0), desc: f.desc };
   });
   const cassettes: ColItem[] = CASSETTES.map((c) => { const copies = s.cassettes[c.id] ?? 0;
-    return { k: "cassette", id: c.id, name: c.name, owned: copies > 0, iconHtml: gicon("songs", 42), rarity: "rare", count: copies, rank: collectRank(copies),
+    return { k: "cassette", id: c.id, name: c.name, owned: copies > 0, iconHtml: gicon("cassette", 42), rarity: "rare", count: copies, rank: collectRank(copies),
       desc: `Canción · ${c.bpm} BPM. Copias: ${copies}.${rankInfo(copies)} Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}. Desbloquea el tema en Radio y Canciones.` };
   });
-  const skins: ColItem[] = ALL_SKINS.map((sk) => {
+  const skinItem = (sk: typeof ALL_SKINS[number]): ColItem => {
     const owned = s.ownedSkins[sk.id] ?? true; const copies = owned ? (s.skinCopies[sk.id] ?? 0) + 1 : 0;
     return { k: "skin", id: sk.id, name: sk.name, owned, img: sk.img, rarity: "epic", count: copies, rank: collectRank(copies),
       desc: `Apariencia ${sk.kind === "coach" ? "de entrenador" : "de luchador"}. Copias: ${copies}.${rankInfo(copies)}` };
-  });
-  const all = [...bosses, ...gear, ...flows, ...cassettes, ...skins];
+  };
+  const pskins = PLAYER_SKINS.map(skinItem);
+  const cskins = COACH_SKINS.map(skinItem);
+  const all = [...bosses, ...gear, ...flows, ...cassettes, ...pskins, ...cskins];
   const lookup: Record<string, ColItem> = {};
   for (const it of all) lookup[`${it.k}:${it.id}`] = it;
 
@@ -618,7 +628,8 @@ export function renderCollection(app: App) {
     <h3>Equipo · ${cnt(gear)}/${gear.length}</h3>${grid(gear)}
     <h3>Estados de Flujo · ${cnt(flows)}/${flows.length}</h3>${grid(flows)}
     <h3>Canciones · ${cnt(cassettes)}/${cassettes.length}</h3>${grid(cassettes)}
-    <h3>Apariencias · ${cnt(skins)}/${skins.length}</h3>${grid(skins)}
+    <h3>Apariencias · Protagonista · ${cnt(pskins)}/${pskins.length}</h3>${grid(pskins)}
+    <h3>Apariencias · Entrenador · ${cnt(cskins)}/${cskins.length}</h3>${grid(cskins)}
   </div>
   <div class="col-detail" id="colDetail" hidden>
     <div class="cd-card">

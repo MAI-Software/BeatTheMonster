@@ -9,13 +9,13 @@ export interface Skin {
 }
 
 export const PLAYER_SKINS: Skin[] = [
-  { id: "player_male", name: "Boxeador", kind: "player", gender: "male", img: "characters/player/male.webp" },
-  { id: "player_female", name: "Boxeadora", kind: "player", gender: "female", img: "characters/player/female.webp" },
+  { id: "player_male", name: "Basic M", kind: "player", gender: "male", img: "characters/player/male.webp" },
+  { id: "player_female", name: "Basic F", kind: "player", gender: "female", img: "characters/player/female.webp" },
 ];
 
 export const COACH_SKINS: Skin[] = [
-  { id: "coach_vega", name: "Entrenador Vega", kind: "coach", img: "characters/coach/coach_body.webp" },
-  { id: "coach_vega_f", name: "Entrenadora Vega", kind: "coach", img: "characters/coach/coach_female.webp" },
+  { id: "coach_vega", name: "Basic M", kind: "coach", img: "characters/coach/coach_body.webp" },
+  { id: "coach_vega_f", name: "Basic F", kind: "coach", img: "characters/coach/coach_female.webp" },
 ];
 
 export const ALL_SKINS = [...PLAYER_SKINS, ...COACH_SKINS];

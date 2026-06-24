@@ -25,4 +25,13 @@ export function ensureMenuMusic(favSong: string): void {
 
 export function stopMenuMusic(): void { if (el) el.pause(); }
 
+export function isMenuPlaying(): boolean { return !!el && !el.paused; }
+
+// Toggle play/pause; returns the new playing state.
+export function toggleMenuMusic(): boolean {
+  if (!el) return false;
+  if (el.paused) { el.play().catch(() => {}); return true; }
+  el.pause(); return false;
+}
+
 export function applyMenuVolume(): void { if (el) el.volume = volumes.music * 0.55; }
