@@ -18,7 +18,7 @@ import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassette
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
-  renderFragments, renderLuchar, renderNickname, renderOptions, renderPractice, renderRanking, renderRadio, renderSongs, renderTraining, renderTutorial, renderWardrobe, type App,
+  renderFragments, renderLuchar, renderNickname, renderOptions, renderPractice, renderProfile, renderRanking, renderRadio, renderSongs, renderTraining, renderTutorial, renderWardrobe, type App,
 } from "./game/ui/menus";
 import { ensureMenuMusic, stopMenuMusic } from "./game/systems/menuMusic";
 
@@ -62,11 +62,12 @@ class Game implements App {
       tutorial: renderTutorial, practice: renderPractice, charselect: renderCharacterSelect,
       collection: renderCollection, songs: renderSongs, options: renderOptions,
       luchar: renderLuchar, wardrobe: renderWardrobe, fragments: renderFragments, nickname: renderNickname,
-      radio: renderRadio,
+      radio: renderRadio, profile: renderProfile,
     };
     (map[screen] ?? renderHome)(this);
-    // menu music plays across all menu screens (pauses during combat)
-    if (this.save.tutorialDone) ensureMenuMusic(this.save.favSong);
+    // menu music plays across menu screens when enabled in settings (off during combat)
+    if (this.save.tutorialDone && this.save.settings.menuMusic !== false) ensureMenuMusic(this.save.favSong);
+    else stopMenuMusic();
   }
 
   async startPractice(kind: "punch" | "dodge") {

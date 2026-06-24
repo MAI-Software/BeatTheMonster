@@ -13,7 +13,7 @@ import { collectRank, collectNext } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
 import { setVolumes, sfx } from "../systems/audio";
 import { GLOBAL_SONG } from "../systems/song";
-import { applyMenuVolume, ensureMenuMusic, isMenuPlaying, toggleMenuMusic } from "../systems/menuMusic";
+import { applyMenuVolume, ensureMenuMusic, isMenuPlaying, stopMenuMusic } from "../systems/menuMusic";
 import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg } from "../data/skins";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
@@ -42,16 +42,19 @@ function equipCard(rarity: string, owned: boolean, eq: boolean, ic: IconName, na
   </button>`;
 }
 
-function topBar(app: App, title: string, showTickets = false, noCurrency = false): string {
+function topBar(app: App, title: string, showTickets = false, noCurrency = false, rightHtml = ""): string {
   const s = app.save;
-  return `<div class="topbar">
-    <button class="back" data-back>${icon("back", 22)}</button>
-    <h2>${title}</h2>
-    ${noCurrency ? "" : `<div class="currency">
+  const right = rightHtml
+    ? `<div class="currency">${rightHtml}</div>`
+    : (noCurrency ? "" : `<div class="currency">
       <span>${gicon("coin", 16)} ${s.coins}</span>
       <span>${gicon("gem", 16)} ${s.premium}</span>
       ${showTickets ? `<span>${gicon("ticket", 16)} ${s.statVouchers}</span>` : ""}
-    </div>`}
+    </div>`);
+  return `<div class="topbar">
+    <button class="back" data-back>${icon("back", 22)}</button>
+    <h2>${title}</h2>
+    ${right}
   </div>`;
 }
 
@@ -99,7 +102,7 @@ export function renderHome(app: App) {
     </div>`;
   wireNav(app);
   setupGymWalk(app);
-  app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.toast(`${s.nick || "Luchador"} · Nivel ${s.level} · ${playerRank(s.level)}`);
+  app.root.querySelector<HTMLButtonElement>("#profileBtn")!.onclick = () => app.go("profile");
   const homeTop = app.root.querySelector<HTMLElement>("#homeTop")!;
   app.root.querySelector<HTMLButtonElement>("#menuToggle")!.onclick = () => homeTop.classList.toggle("open");
   app.root.querySelector<HTMLButtonElement>("#radioBtn")!.onclick = () => app.go("radio");
@@ -539,19 +542,19 @@ export function renderSongs(app: App) {
 export function renderRadio(app: App) {
   const s = app.save;
   const fav = s.favSong || "cs_1";
-  const playing = isMenuPlaying();
+  const on = s.settings.menuMusic !== false; // master radio switch (saved)
+  const playing = on && isMenuPlaying();
   const owned = CASSETTES.filter((c) => s.cassettes[c.id]);
   const cur = owned.find((c) => c.id === fav) ?? owned[0];
-  // selected song goes first, rest follow
   const ordered = cur ? [cur, ...owned.filter((c) => c.id !== cur.id)] : owned;
   const wave = `<span class="radio-wave ${playing ? "on" : ""}"><i></i><i></i><i></i><i></i><i></i></span>`;
+  const power = `<button class="radio-power ${on ? "on" : "off"}" id="radioPower">${gicon("radio", 18)} ${on ? "ON" : "OFF"}</button>`;
   const rows = ordered.map((c) => {
     if (cur && c.id === cur.id) {
       return `<div class="radio-row on">
         <span class="rr-ic">${gicon("cassette", 46)}</span>
-        <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM · ${playing ? "Sonando" : "En pausa"}</small></span>
-        ${wave}
-        <button class="radio-pp" id="ppBtn">${icon(playing ? "pause" : "play", 22)}</button>
+        <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM · ${on ? (playing ? "Sonando" : "En pausa") : "Radio apagada"}</small></span>
+        ${on ? wave : ""}
       </div>`;
     }
     return `<button class="radio-row" data-fav="${c.id}">
@@ -560,15 +563,64 @@ export function renderRadio(app: App) {
       <span class="rr-state">${icon("play", 14)}</span>
     </button>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Radio")}<div class="scroll">
-    <p class="hint">Elige la canción que sonará en los menús. Solo las desbloqueadas (cassettes de jefes + Wasteland). Llegarán más.</p>
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Radio", false, false, power)}<div class="scroll">
+    <p class="hint">Elige la canción que sonará en los menús. El botón de arriba enciende o apaga la radio (se guarda). Solo las desbloqueadas (cassettes de jefes + Wasteland).</p>
     ${rows}
   </div></div>`;
   wireNav(app);
-  const pp = app.root.querySelector<HTMLButtonElement>("#ppBtn");
-  if (pp) pp.onclick = () => { toggleMenuMusic(); renderRadio(app); };
+  app.root.querySelector<HTMLButtonElement>("#radioPower")!.onclick = () => {
+    const wasOn = s.settings.menuMusic !== false;
+    s.settings.menuMusic = !wasOn; app.persist();
+    if (!wasOn) ensureMenuMusic(s.favSong); else stopMenuMusic();
+    renderRadio(app);
+  };
   app.root.querySelectorAll<HTMLButtonElement>("[data-fav]").forEach((b) => b.onclick = () => {
-    s.favSong = b.dataset.fav!; app.persist(); ensureMenuMusic(s.favSong); renderRadio(app);
+    s.favSong = b.dataset.fav!; app.persist();
+    if (s.settings.menuMusic !== false) ensureMenuMusic(s.favSong);
+    renderRadio(app);
+  });
+}
+
+// Player profile / ID card ("carnet"): log in, customize photo + song, see stats.
+export function renderProfile(app: App) {
+  const s = app.save;
+  const eff = effectiveStats(s);
+  const favName = CASSETTES.find((c) => c.id === (s.favSong || "cs_1"))?.name ?? "—";
+  const ownedSongs = CASSETTES.filter((c) => s.cassettes[c.id]);
+  const playerPick = PLAYER_SKINS.map((sk) => {
+    const owned = s.ownedSkins[sk.id] ?? true; const active = (s.gender ?? "male") === sk.gender;
+    return `<button class="pf-skin ${active ? "on" : ""} ${owned ? "" : "locked"}" data-pskin="${sk.gender}" ${owned ? "" : "disabled"}>
+      <img src="${sk.img}" alt="" onerror="this.style.display='none'"><span>${owned ? sk.name : "???"}</span>
+    </button>`;
+  }).join("");
+  const songPick = ownedSongs.map((c) => {
+    const active = (s.favSong || "cs_1") === c.id;
+    return `<button class="pf-song ${active ? "on" : ""}" data-psong="${c.id}">${gicon("cassette", 22)} <b>${c.name}</b>${active ? ` ${icon("check", 14)}` : ""}</button>`;
+  }).join("");
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Perfil", false, true)}<div class="scroll">
+    <div class="carnet">
+      <div class="carnet-photo"><img src="${playerSkinImg(s.gender)}" alt="" onerror="this.style.display='none'"></div>
+      <div class="carnet-info">
+        <div class="carnet-name">${s.nick || "Luchador"}</div>
+        <div class="carnet-sub">Nv ${s.level} · <b>${playerRank(s.level)}</b></div>
+        <div class="carnet-stats"><span class="vt">${gicon("vt", 16)} ${eff.vt}</span><span>${gicon("atk", 16)} ${eff.atk}</span><span>${gicon("def", 16)} ${eff.def}</span></div>
+        <div class="carnet-song">${gicon("cassette", 16)} ${favName}</div>
+      </div>
+    </div>
+    <button class="opt-btn ghostbtn" disabled>Iniciar sesión (próximamente)</button>
+    <h3>Imagen del carnet</h3>
+    <div class="pf-skins">${playerPick}</div>
+    <h3>Canción favorita</h3>
+    <div class="pf-songs">${songPick}</div>
+  </div></div>`;
+  wireNav(app);
+  app.root.querySelectorAll<HTMLButtonElement>("[data-pskin]").forEach((b) => b.onclick = () => {
+    s.gender = b.dataset.pskin as "male" | "female"; app.persist(); renderProfile(app);
+  });
+  app.root.querySelectorAll<HTMLButtonElement>("[data-psong]").forEach((b) => b.onclick = () => {
+    s.favSong = b.dataset.psong!; app.persist();
+    if (s.settings.menuMusic !== false) ensureMenuMusic(s.favSong);
+    renderProfile(app);
   });
 }
 
