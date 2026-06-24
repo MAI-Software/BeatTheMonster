@@ -12,7 +12,7 @@ import { createInput, type InputProvider } from "./game/systems/pose";
 import { DIFFICULTIES, DIFFICULTY_ORDER, isDifficultyUnlocked, unlockHint, type DifficultyId } from "./game/data/difficulty";
 import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
-import { icon } from "./game/ui/icons";
+import { icon, gicon } from "./game/ui/icons";
 import { SEAL_DROP_CHANCE, SEALS_PER_RANK } from "./game/data/collection";
 import { cassetteForBoss, getCassette } from "./game/data/cassettes";
 import { applySongPlay } from "./game/systems/challenges";
@@ -185,15 +185,19 @@ class Game implements App {
     s.coins += coins; s.premium += premium;
     const lv = grantXp(s, xpGain);
     s.bestScore = Math.max(s.bestScore, score);
+    let ticketsGained = 0;
     if (r.won) {
+      const firstClear = !s.defeated[enemyId];
       s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
       s.defeated[enemyId] = true;
+      if (firstClear) ticketsGained += 1; // first-time scenario clear = 1 ticket
       if (isBoss(enemyId)) {
         if (Math.random() < SEAL_DROP_CHANCE) {
           s.seals[enemyId] = (s.seals[enemyId] ?? 0) + 1;
           this.toast(`¡Sello de ${enemy.name}!`);
           if (s.seals[enemyId] % SEALS_PER_RANK === 0) { s.statVouchers += 1; this.toast("¡Rango de colección + Ticket de stat!"); }
         }
+        if (Math.random() < 0.01) ticketsGained += 1; // rare 1% boss ticket drop
         const cas = cassetteForBoss(enemyId);
         if (cas && !s.cassettes[cas.id] && Math.random() < 0.10) { s.cassettes[cas.id] = true; this.toast(`¡Cassette: ${cas.name}! (Canciones)`); }
       }
@@ -201,6 +205,7 @@ class Game implements App {
       const lvl = levelByEnemy(enemyId);
       if (lvl && lvl.n - 1 === s.episodeProgress) s.episodeProgress = lvl.n;
     }
+    if (ticketsGained > 0) { s.statVouchers += ticketsGained; this.toast(`¡+${ticketsGained} Ticket de refuerzo!`); }
     applyFightResult(s, { perfects: r.perfects, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won });
     this.persist();
 
@@ -218,6 +223,7 @@ class Game implements App {
         </div>
         <div class="res-rewards">
           <span>${icon("coin", 16)} +${coins}</span><span>${icon("gem", 16)} +${premium}</span><span>XP +${xpGain}</span>
+          ${ticketsGained > 0 ? `<span>${gicon("ticket", 16)} +${ticketsGained}</span>` : ""}
           ${lv.leveled ? `<div class="lvup">SUBISTE ${lv.levels} NIVEL${lv.levels > 1 ? "ES" : ""}</div>` : ""}
         </div>
         <button class="primary" id="again">Reintentar</button>

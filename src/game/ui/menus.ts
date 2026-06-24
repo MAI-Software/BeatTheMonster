@@ -192,16 +192,23 @@ export function renderTraining(app: App) {
     const cur = s.stats[stat]; const max = stat === "vt" ? CAPS.VT : stat === "atk" ? CAPS.ATK : CAPS.DEF;
     const cost = trainCost(stat, cur); const atMax = cur >= max;
     return `<div class="train-row ${cls}">
-      <div class="tr-label ${cls}">${gicon(stat, 30)}<small>${cur}</small></div>
+      <div class="tr-head">
+        <span class="tr-stat ${cls}">${gicon(stat, 28)}<b>${cur}</b></span>
+        <span class="tr-cost">${atMax ? "MAX" : `${gicon("coin", 14)}${cost}`}</span>
+        <span class="tr-acts">
+          <button class="tr-btn" data-train="${stat}" ${atMax || !canTrain(s, stat) ? "disabled" : ""}>+${stat === "vt" ? 10 : 1}</button>
+          ${s.statVouchers > 0 && !atMax ? `<button class="tr-vch" data-vch="${stat}" title="Usar ticket de refuerzo">${gicon("ticket", 16)}</button>` : ""}
+        </span>
+      </div>
       <div class="bar tiny"><i class="fill ${cls}" style="width:${(cur / max) * 100}%"></i></div>
-      <button class="tr-btn" data-train="${stat}" ${atMax || !canTrain(s, stat) ? "disabled" : ""}>${atMax ? "MAX" : `+${stat === "vt" ? 10 : 1} · ${gicon("coin", 13)}${cost}`}</button>
-      ${s.statVouchers > 0 && !atMax ? `<button class="tr-vch" data-vch="${stat}">Vale</button>` : ""}
     </div>`;
   };
   app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar")}<div class="scroll">
-    <p class="hint">Sube stats con monedas. Vales de logro: <b>${s.statVouchers}</b>.</p>
     ${row("vt", "c-green")}${row("atk", "c-orange")}${row("def", "c-blue")}
-    <p class="hint small">Más ATK = más daño. Más DEF = menos daño recibido. VT = aguante.</p>
+    <div class="train-info">
+      <p><span class="ti-ic">${gicon("coin", 15)}</span> Sube VT (+10), ATK (+1) o DEF (+1) con monedas. El coste crece con el nivel. Más ATK = más daño · más DEF = menos daño recibido · VT = aguante.</p>
+      <p><span class="ti-ic">${gicon("ticket", 15)}</span> Tickets de refuerzo: suben un stat gratis. Se ganan en desafíos, al superar un escenario por primera vez y (raro) de jefes. Tienes <b>${s.statVouchers}</b>.</p>
+    </div>
   </div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-train]").forEach((b) => b.onclick = () => { train(s, b.dataset.train as any) ? (app.persist(), renderTraining(app)) : app.toast("Sin monedas"); });
@@ -339,7 +346,7 @@ export function renderChallenges(app: App) {
       return `<div class="chal ${ch.claimed ? "claimed" : done ? "ready" : ""}">
         <div class="chal-text">${def.text}</div><div class="bar tiny"><i class="fill" style="width:${pct}%"></i></div>
         <div class="chal-foot"><span>${Math.min(ch.progress, def.goal)}/${def.goal}</span>
-          <span class="reward">${gicon("coin", 13)}${def.rewardCoins}${def.rewardPremium ? ` ${gicon("gem", 13)}${def.rewardPremium}` : ""}</span>
+          <span class="reward">${gicon("coin", 13)}${def.rewardCoins}${def.rewardPremium ? ` ${gicon("gem", 13)}${def.rewardPremium}` : ""}${def.rewardVoucher ? ` ${gicon("ticket", 13)}${def.rewardVoucher}` : ""}</span>
           ${ch.claimed ? icon("check", 18) : done ? `<button data-claim="${ch.id}" data-scope="${scope}">Cobrar</button>` : ""}
         </div></div>`;
     }).join("");

@@ -8,6 +8,7 @@ export interface ChallengeDef {
   goal: number;
   rewardCoins: number;
   rewardPremium?: number;
+  rewardVoucher?: number; // stat-up tickets granted on claim
   metric: Metric;
 }
 
@@ -17,14 +18,14 @@ const DAILY_POOL: ChallengeDef[] = [
   { id: "d_perfect", text: "Consigue 30 Perfects", goal: 30, rewardCoins: 80, metric: "perfects" },
   { id: "d_win", text: "Gana 2 combates", goal: 2, rewardCoins: 100, metric: "wins" },
   { id: "d_combo", text: "Alcanza combo x15", goal: 15, rewardCoins: 90, metric: "combo" },
-  { id: "d_super", text: "Activa 3 Super Combos", goal: 3, rewardCoins: 120, metric: "supercombos" },
+  { id: "d_super", text: "Activa 3 Super Combos", goal: 3, rewardCoins: 120, rewardVoucher: 1, metric: "supercombos" },
   { id: "d_song", text: "Toca 1 canción", goal: 1, rewardCoins: 70, metric: "songsPlayed" },
 ];
 
 const WEEKLY_POOL: ChallengeDef[] = [
-  { id: "w_perfect", text: "Consigue 400 Perfects", goal: 400, rewardCoins: 400, rewardPremium: 20, metric: "perfects" },
-  { id: "w_win", text: "Gana 15 combates", goal: 15, rewardCoins: 500, rewardPremium: 25, metric: "wins" },
-  { id: "w_super", text: "Activa 20 Super Combos", goal: 20, rewardCoins: 450, rewardPremium: 20, metric: "supercombos" },
+  { id: "w_perfect", text: "Consigue 400 Perfects", goal: 400, rewardCoins: 400, rewardPremium: 20, rewardVoucher: 1, metric: "perfects" },
+  { id: "w_win", text: "Gana 15 combates", goal: 15, rewardCoins: 500, rewardPremium: 25, rewardVoucher: 2, metric: "wins" },
+  { id: "w_super", text: "Activa 20 Super Combos", goal: 20, rewardCoins: 450, rewardPremium: 20, rewardVoucher: 1, metric: "supercombos" },
   { id: "w_song", text: "Toca 5 canciones", goal: 5, rewardCoins: 350, rewardPremium: 15, metric: "songsPlayed" },
 ];
 
@@ -125,6 +126,7 @@ export function claimChallenge(s: SaveState, id: string, scope: "daily" | "weekl
   ch.claimed = true;
   s.coins += def.rewardCoins;
   s.premium += def.rewardPremium ?? 0;
+  s.statVouchers += def.rewardVoucher ?? 0;
   return true;
 }
 
