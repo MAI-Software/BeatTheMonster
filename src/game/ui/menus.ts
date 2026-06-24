@@ -548,7 +548,7 @@ export function renderRadio(app: App) {
   const cur = owned.find((c) => c.id === fav) ?? owned[0];
   const ordered = cur ? [cur, ...owned.filter((c) => c.id !== cur.id)] : owned;
   const wave = `<span class="radio-wave ${playing ? "on" : ""}"><i></i><i></i><i></i><i></i><i></i></span>`;
-  const power = `<button class="radio-power ${on ? "on" : "off"}" id="radioPower">${gicon("radio", 18)} ${on ? "ON" : "OFF"}</button>`;
+  const power = `<button class="radio-toggle ${on ? "on" : ""}" id="radioPower" role="switch" aria-checked="${on}" title="${on ? "Radio encendida" : "Radio apagada"}"><span class="rt-knob"></span></button>`;
   const rows = ordered.map((c) => {
     if (cur && c.id === cur.id) {
       return `<div class="radio-row on">
