@@ -563,54 +563,83 @@ export function renderRadio(app: App) {
   });
 }
 
+interface ColItem {
+  k: string; id: string; name: string; owned: boolean;
+  img?: string; glyph?: string; iconHtml?: string;
+  rarity?: string; count?: number; rank?: string; desc: string;
+}
+
+// Square face: image, emoji glyph, inline icon, or "?" placeholder — always square.
+function colFace(it: ColItem): string {
+  if (!it.owned) return `<span class="cs-ph">?</span>`;
+  if (it.img) return `<img src="${it.img}" alt="" onerror="this.outerHTML='<span class=\\'cs-ph\\'>?</span>'">`;
+  if (it.glyph) return `<span class="cs-glyph">${it.glyph}</span>`;
+  return it.iconHtml ?? `<span class="cs-ph">?</span>`;
+}
+
 export function renderCollection(app: App) {
   const s = app.save;
-  const bosses = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => {
-    const defeated = !!s.defeated[e.id];
+  const bonusOf = (b: any) => [b.atk && `ATK+${b.atk}`, b.def && `DEF+${b.def}`, b.vt && `VT+${b.vt}`, b.flowGainMult && `Flujo ×${b.flowGainMult}`].filter(Boolean).join(" · ");
+  const bosses: ColItem[] = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => {
     const seals = s.seals[e.id] ?? 0;
-    const rp = rankProgress(seals);
-    if (!defeated) return `<div class="col-card locked"><div class="cc-face">?</div><div class="cc-body"><b>???</b><small>Sin derrotar</small></div></div>`;
-    return `<div class="col-card">
-      <div class="cc-face">${e.emoji}</div>
-      <div class="cc-body"><b>${e.name}</b><small>Sellos: ${seals}${rp.maxed ? " · MAX" : ` · ${rp.have}/${rp.need} al siguiente`}</small></div>
-      <div class="cc-rank">${rankLabel(seals)}</div>
-    </div>`;
-  }).join("");
-  const gear = EQUIPMENT.map((e) => {
-    const owned = s.ownedEquipment.includes(e.id);
-    return `<div class="col-mini r-${e.rarity} ${owned ? "" : "locked"}"><span>${owned ? e.name : "???"}</span><i>${e.rarity}</i></div>`;
-  }).join("");
-  const flows = FLOW_STATES.map((f) => {
-    const owned = s.ownedFlow.includes(f.id);
-    return `<div class="col-mini r-${f.rarity} ${owned ? "" : "locked"}"><span>${owned ? f.name : "???"}</span><i>${f.rarity}</i></div>`;
-  }).join("");
-  const cassettes = CASSETTES.map((c) => {
-    const has = !!s.cassettes[c.id];
-    return `<div class="col-mini r-rare ${has ? "" : "locked"}"><span>${has ? c.name : "???"}</span><i>cassette</i></div>`;
-  }).join("");
-  const ownedGear = EQUIPMENT.filter((e) => s.ownedEquipment.includes(e.id)).length;
-  const ownedFlow = FLOW_STATES.filter((f) => s.ownedFlow.includes(f.id)).length;
-  const skins = ALL_SKINS.map((sk) => {
-    const owned = s.ownedSkins[sk.id] ?? true; const copies = s.skinCopies[sk.id] ?? 0;
-    return `<div class="col-mini r-epic ${owned ? "" : "locked"}"><span>${owned ? sk.name : "???"}</span><i>${copies > 0 ? "×" + (copies + 1) : "skin"}</i></div>`;
-  }).join("");
-  const ownedSkins = ALL_SKINS.filter((sk) => s.ownedSkins[sk.id] ?? true).length;
-  const ownedCas = CASSETTES.filter((c) => s.cassettes[c.id]).length;
-  const defeatedN = BOSS_IDS.filter((id) => s.defeated[id]).length;
+    return { k: "boss", id: e.id, name: e.name, owned: !!s.defeated[e.id], glyph: e.emoji, count: seals, rank: rankLabel(seals),
+      desc: `${e.title}. Sellos ${seals}. Derrota al jefe (5%) para conseguir su sello; cada 5 sube el rango (F→SSS) y da un ticket.` };
+  });
+  const gear: ColItem[] = EQUIPMENT.map((e) => ({ k: "gear", id: e.id, name: e.name, owned: s.ownedEquipment.includes(e.id),
+    iconHtml: icon(slotIcon[e.slot] ?? "glove", 42), rarity: e.rarity, desc: `${SLOT_LABEL[e.slot]} · ${e.rarity}. ${bonusOf(e.bonus)}` }));
+  const flows: ColItem[] = FLOW_STATES.map((f) => ({ k: "flow", id: f.id, name: f.name, owned: s.ownedFlow.includes(f.id),
+    iconHtml: icon("bolt", 42), rarity: f.rarity, desc: f.desc }));
+  const cassettes: ColItem[] = CASSETTES.map((c) => ({ k: "cassette", id: c.id, name: c.name, owned: !!s.cassettes[c.id],
+    iconHtml: gicon("songs", 42), rarity: "rare", desc: `Canción · ${c.bpm} BPM. Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}. Desbloquea el tema en Radio y Canciones.` }));
+  const skins: ColItem[] = ALL_SKINS.map((sk) => {
+    const copies = s.skinCopies[sk.id] ?? 0;
+    return { k: "skin", id: sk.id, name: sk.name, owned: s.ownedSkins[sk.id] ?? true, img: sk.img, rarity: "epic", count: copies, rank: rankLabel(copies),
+      desc: `Apariencia ${sk.kind === "coach" ? "de entrenador" : "de luchador"}. Copias repetidas: ${copies}.` };
+  });
+  const all = [...bosses, ...gear, ...flows, ...cassettes, ...skins];
+  const lookup: Record<string, ColItem> = {};
+  for (const it of all) lookup[`${it.k}:${it.id}`] = it;
+
+  const tile = (it: ColItem) => `<button class="col-sq ${it.owned ? `r-${it.rarity ?? "rare"}` : "locked"}" data-col="${it.k}:${it.id}" ${it.owned ? "" : "disabled"}>
+    <span class="cs-face">${colFace(it)}</span>
+    <span class="cs-name">${it.owned ? it.name : "???"}</span>
+    ${it.owned && it.rank ? `<span class="cs-rank">${it.rank}</span>` : ""}
+  </button>`;
+  const grid = (list: ColItem[]) => `<div class="col-sq-grid">${list.map(tile).join("")}</div>`;
+  const cnt = (list: ColItem[]) => list.filter((x) => x.owned).length;
+
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección")}<div class="scroll">
-    <p class="hint">Derrota jefes para conseguir sus <b>sellos</b> (5% por victoria). Cada 5 sellos sube el rango (F→SSS) y da un <b>ticket de stat</b>.</p>
-    <h3>Jefes · ${defeatedN}/${BOSS_IDS.length}</h3>
-    <div class="col-list">${bosses}</div>
-    <h3>Equipo · ${ownedGear}/${EQUIPMENT.length}</h3>
-    <div class="col-grid">${gear}</div>
-    <h3>Estados de Flujo · ${ownedFlow}/${FLOW_STATES.length}</h3>
-    <div class="col-grid">${flows}</div>
-    <h3>Canciones · ${ownedCas}/${CASSETTES.length}</h3>
-    <div class="col-grid">${cassettes}</div>
-    <h3>Apariencias · ${ownedSkins}/${ALL_SKINS.length}</h3>
-    <div class="col-grid">${skins}</div>
+    <p class="hint">Toca un coleccionable para verlo de cerca, su descripción y su <b>rango</b> (sube con copias/sellos repetidos).</p>
+    <h3>Jefes · ${cnt(bosses)}/${bosses.length}</h3>${grid(bosses)}
+    <h3>Equipo · ${cnt(gear)}/${gear.length}</h3>${grid(gear)}
+    <h3>Estados de Flujo · ${cnt(flows)}/${flows.length}</h3>${grid(flows)}
+    <h3>Canciones · ${cnt(cassettes)}/${cassettes.length}</h3>${grid(cassettes)}
+    <h3>Apariencias · ${cnt(skins)}/${skins.length}</h3>${grid(skins)}
+  </div>
+  <div class="col-detail" id="colDetail" hidden>
+    <div class="cd-card">
+      <button class="cd-close" id="cdClose">${icon("close", 20)}</button>
+      <div class="cd-face" id="cdFace"></div>
+      <div class="cd-name" id="cdName"></div>
+      <div class="cd-rank" id="cdRank"></div>
+      <p class="cd-desc" id="cdDesc"></p>
+    </div>
   </div></div>`;
   wireNav(app);
+  const detail = app.root.querySelector<HTMLElement>("#colDetail")!;
+  const close = () => { detail.classList.remove("show"); setTimeout(() => (detail.hidden = true), 200); };
+  app.root.querySelector<HTMLButtonElement>("#cdClose")!.onclick = close;
+  detail.onclick = (e) => { if (e.target === detail) close(); };
+  app.root.querySelectorAll<HTMLButtonElement>("[data-col]").forEach((b) => b.onclick = () => {
+    const it = lookup[b.dataset.col!]; if (!it || !it.owned) return;
+    app.root.querySelector<HTMLElement>("#cdFace")!.innerHTML = colFace(it);
+    app.root.querySelector<HTMLElement>("#cdName")!.textContent = it.name;
+    app.root.querySelector<HTMLElement>("#cdRank")!.innerHTML = it.rank
+      ? `Rango <b>${it.rank}</b>${it.count != null ? ` · ${it.count} ${it.k === "boss" ? "sellos" : "copias"}` : ""}`
+      : (it.rarity ? it.rarity.toUpperCase() : "");
+    app.root.querySelector<HTMLElement>("#cdDesc")!.textContent = it.desc;
+    detail.hidden = false; requestAnimationFrame(() => detail.classList.add("show"));
+  });
 }
 
 function wireNav(app: App) {

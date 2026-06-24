@@ -13,15 +13,24 @@ export interface Cassette {
 }
 
 const BLOCK_BPM = [92, 104, 116, 128, 140, 150];
-const NAMES = ["Marcha Orca", "Tambores de Guerra", "Horda Imparable", "Furia Verde", "Asedio del Portal", "God Is Dead"];
+// One song per 5-level block (block 0 = levels 1-5 ... block 5 = levels 26-30).
+// Wasteland opens the campaign; God Is Dead closes it.
+const NAMES = ["Wasteland", "Feral Hearts", "Learn Fast", "No Gods Here", "Hollow Mirrors", "God Is Dead"];
+const FILES = ["wasteland.mp3", "feral-hearts.mp3", "learn-fast.mp3", "no-gods-here.mp3", "hollow-mirrors.mp3", "god-is-dead.mp3"];
 
 export const CASSETTES: Cassette[] = BOSS_IDS.map((enemyId, i) => ({
   id: `cs_${i + 1}`,
   name: NAMES[i] ?? `Tema ${i + 1}`,
   enemyId,
   bpm: BLOCK_BPM[i] ?? 120,
-  file: "god-is-dead.mp3", // only track available right now
+  file: FILES[i] ?? "god-is-dead.mp3",
 }));
+
+// SongMeta for a campaign block (0..5) — that block's theme song.
+export function songForBlock(block: number): { id: string; name: string; file: string; bpm: number } {
+  const c = CASSETTES[Math.max(0, Math.min(CASSETTES.length - 1, block))];
+  return { id: c.id, name: c.name, file: c.file!, bpm: c.bpm };
+}
 
 export function cassetteForBoss(enemyId: string): Cassette | undefined {
   return CASSETTES.find((c) => c.enemyId === enemyId);

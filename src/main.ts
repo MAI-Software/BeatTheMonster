@@ -14,7 +14,7 @@ import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudi
 import { runCombat } from "./game/ui/combatScene";
 import { icon, gicon } from "./game/ui/icons";
 import { SEAL_DROP_CHANCE, SEALS_PER_RANK } from "./game/data/collection";
-import { cassetteForBoss, getCassette } from "./game/data/cassettes";
+import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassettes";
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
@@ -108,10 +108,12 @@ class Game implements App {
   async startFight(enemyId: string, episodeId?: number) {
     unlockSongAudio();
     const enemy = ENEMIES[enemyId];
-    // global song first, then any per-enemy tracks
-    const songs = [GLOBAL_SONG, ...(await listSongs(enemyId))];
+    // block theme song first (the level's default), then per-enemy tracks
+    const block = levelByEnemy(enemyId)?.songBlock ?? 0;
+    const blockSong = songForBlock(block);
+    const songs = [blockSong, ...(await listSongs(enemyId))];
     let useCamera = true;
-    let chosenSong: SongMeta | null = songs[0]; // default = God Is Dead
+    let chosenSong: SongMeta | null = songs[0]; // default = this block's theme
     const unlocked = (d: DifficultyId) => isDifficultyUnlocked(d, this.save.level, this.save.difficultyWins);
     if (!unlocked(this.difficulty)) this.difficulty = "easy";
 
