@@ -41,7 +41,7 @@ export interface SaveState {
   skinCopies: Record<string, number>; // skin id -> dup count (album points)
   seals: Record<string, number>; // boss id -> collected seals (collection ranks)
   defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
-  cassettes: Record<string, boolean>; // cassette id -> unlocked (collectible songs)
+  cassettes: Record<string, number>; // cassette id -> copies owned (>=1 = unlocked)
   energy: number; // stamina for the adventure
   energyTs: number; // last regen timestamp
   ads: number; // watch-ad free pulls available
@@ -62,7 +62,7 @@ const KEY = "mbh_save_v1";
 
 export function defaultSave(): SaveState {
   return {
-    version: 2,
+    version: 3,
     level: 1,
     xp: 0,
     stats: { atk: 10, def: 8, vt: 200 },
@@ -83,13 +83,13 @@ export function defaultSave(): SaveState {
     skinCopies: {},
     seals: {},
     defeated: {},
-    cassettes: {},
+    cassettes: { cs_1: 1 }, // Wasteland unlocked from the start
     energy: 10,
     energyTs: Date.now(),
     ads: 5,
     adsTs: Date.now(),
     settings: { musicVol: 0.85, sfxVol: 0.8 },
-    favSong: "",
+    favSong: "cs_1", // Wasteland by default
     difficultyWins: {},
     bestScore: 0,
     totalPerfects: 0,
@@ -108,6 +108,16 @@ export function loadSave(): SaveState {
     const parsed = { ...defaultSave(), ...JSON.parse(raw) } as SaveState;
     // temp testing grant: force everyone to 1000 coins / 50 gems / 10 tickets once
     if (parsed.version < 2) { parsed.coins = 1000; parsed.premium = 50; parsed.statVouchers = 10; parsed.version = 2; }
+    // v3: cassettes become copy counts; Wasteland (cs_1) unlocked + default song
+    if (parsed.version < 3) {
+      const cc: Record<string, number> = {};
+      const old = (parsed.cassettes ?? {}) as Record<string, any>;
+      for (const k of Object.keys(old)) cc[k] = typeof old[k] === "number" ? old[k] : (old[k] ? 1 : 0);
+      cc.cs_1 = Math.max(1, cc.cs_1 ?? 0);
+      parsed.cassettes = cc;
+      if (!parsed.favSong || parsed.favSong === "god_is_dead") parsed.favSong = "cs_1";
+      parsed.version = 3;
+    }
     // clamp against caps in case of tampering / old data
     parsed.level = Math.min(CAPS.PLAYER_LEVEL, Math.max(1, parsed.level));
     parsed.stats.atk = Math.min(CAPS.ATK, parsed.stats.atk);

@@ -9,7 +9,7 @@ import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../syste
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
-import { rankLabel, rankProgress } from "../data/collection";
+import { collectRank, collectNext } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
 import { setVolumes, sfx } from "../systems/audio";
 import { GLOBAL_SONG } from "../systems/song";
@@ -539,12 +539,9 @@ export function renderSongs(app: App) {
 // Radio: pick the favourite song that plays during the menus.
 export function renderRadio(app: App) {
   const s = app.save;
-  const fav = s.favSong || GLOBAL_SONG.id;
+  const fav = s.favSong || "cs_1";
   const owned = CASSETTES.filter((c) => s.cassettes[c.id]);
-  const opts: { id: string; name: string; bpm?: number }[] = [
-    { id: GLOBAL_SONG.id, name: GLOBAL_SONG.name },
-    ...owned.map((c) => ({ id: c.id, name: c.name, bpm: c.bpm })),
-  ];
+  const opts: { id: string; name: string; bpm?: number }[] = owned.map((c) => ({ id: c.id, name: c.name, bpm: c.bpm }));
   const rows = opts.map((o) => {
     const on = fav === o.id;
     return `<button class="radio-row ${on ? "on" : ""}" data-fav="${o.id}">
@@ -580,21 +577,28 @@ function colFace(it: ColItem): string {
 export function renderCollection(app: App) {
   const s = app.save;
   const bonusOf = (b: any) => [b.atk && `ATK+${b.atk}`, b.def && `DEF+${b.def}`, b.vt && `VT+${b.vt}`, b.flowGainMult && `Flujo ×${b.flowGainMult}`].filter(Boolean).join(" · ");
+  const rankInfo = (n: number) => { const nx = collectNext(n); return nx ? ` ${n}/${nx.need} a la siguiente.` : ""; };
   const bosses: ColItem[] = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => {
     const seals = s.seals[e.id] ?? 0;
-    return { k: "boss", id: e.id, name: e.name, owned: !!s.defeated[e.id], glyph: e.emoji, count: seals, rank: rankLabel(seals),
-      desc: `${e.title}. Sellos ${seals}. Derrota al jefe (5%) para conseguir su sello; cada 5 sube el rango (F→SSS) y da un ticket.` };
+    return { k: "boss", id: e.id, name: e.name, owned: !!s.defeated[e.id], glyph: e.emoji, count: seals, rank: collectRank(seals),
+      desc: `${e.title}. Sellos: ${seals}.${rankInfo(seals)} Derrota al jefe (5%) para conseguir su sello.` };
   });
-  const gear: ColItem[] = EQUIPMENT.map((e) => ({ k: "gear", id: e.id, name: e.name, owned: s.ownedEquipment.includes(e.id),
-    iconHtml: icon(slotIcon[e.slot] ?? "glove", 42), rarity: e.rarity, desc: `${SLOT_LABEL[e.slot]} · ${e.rarity}. ${bonusOf(e.bonus)}` }));
-  const flows: ColItem[] = FLOW_STATES.map((f) => ({ k: "flow", id: f.id, name: f.name, owned: s.ownedFlow.includes(f.id),
-    iconHtml: icon("bolt", 42), rarity: f.rarity, desc: f.desc }));
-  const cassettes: ColItem[] = CASSETTES.map((c) => ({ k: "cassette", id: c.id, name: c.name, owned: !!s.cassettes[c.id],
-    iconHtml: gicon("songs", 42), rarity: "rare", desc: `Canción · ${c.bpm} BPM. Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}. Desbloquea el tema en Radio y Canciones.` }));
+  const gear: ColItem[] = EQUIPMENT.map((e) => { const owned = s.ownedEquipment.includes(e.id);
+    return { k: "gear", id: e.id, name: e.name, owned, iconHtml: icon(slotIcon[e.slot] ?? "glove", 42), rarity: e.rarity,
+      count: owned ? 1 : 0, rank: collectRank(owned ? 1 : 0), desc: `${SLOT_LABEL[e.slot]} · ${e.rarity}. ${bonusOf(e.bonus)}` };
+  });
+  const flows: ColItem[] = FLOW_STATES.map((f) => { const owned = s.ownedFlow.includes(f.id);
+    return { k: "flow", id: f.id, name: f.name, owned, iconHtml: icon("bolt", 42), rarity: f.rarity,
+      count: owned ? 1 : 0, rank: collectRank(owned ? 1 : 0), desc: f.desc };
+  });
+  const cassettes: ColItem[] = CASSETTES.map((c) => { const copies = s.cassettes[c.id] ?? 0;
+    return { k: "cassette", id: c.id, name: c.name, owned: copies > 0, iconHtml: gicon("songs", 42), rarity: "rare", count: copies, rank: collectRank(copies),
+      desc: `Canción · ${c.bpm} BPM. Copias: ${copies}.${rankInfo(copies)} Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}. Desbloquea el tema en Radio y Canciones.` };
+  });
   const skins: ColItem[] = ALL_SKINS.map((sk) => {
-    const copies = s.skinCopies[sk.id] ?? 0;
-    return { k: "skin", id: sk.id, name: sk.name, owned: s.ownedSkins[sk.id] ?? true, img: sk.img, rarity: "epic", count: copies, rank: rankLabel(copies),
-      desc: `Apariencia ${sk.kind === "coach" ? "de entrenador" : "de luchador"}. Copias repetidas: ${copies}.` };
+    const owned = s.ownedSkins[sk.id] ?? true; const copies = owned ? (s.skinCopies[sk.id] ?? 0) + 1 : 0;
+    return { k: "skin", id: sk.id, name: sk.name, owned, img: sk.img, rarity: "epic", count: copies, rank: collectRank(copies),
+      desc: `Apariencia ${sk.kind === "coach" ? "de entrenador" : "de luchador"}. Copias: ${copies}.${rankInfo(copies)}` };
   });
   const all = [...bosses, ...gear, ...flows, ...cassettes, ...skins];
   const lookup: Record<string, ColItem> = {};

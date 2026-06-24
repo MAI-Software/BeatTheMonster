@@ -13,7 +13,7 @@ import { DIFFICULTIES, DIFFICULTY_ORDER, isDifficultyUnlocked, unlockHint, type 
 import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
 import { icon, gicon } from "./game/ui/icons";
-import { SEAL_DROP_CHANCE, SEALS_PER_RANK } from "./game/data/collection";
+import { SEAL_DROP_CHANCE, collectTicketGain } from "./game/data/collection";
 import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassettes";
 import { applySongPlay } from "./game/systems/challenges";
 import {
@@ -202,13 +202,19 @@ class Game implements App {
       if (firstClear) ticketsGained += 1; // first-time scenario clear = 1 ticket
       if (isBoss(enemyId)) {
         if (Math.random() < SEAL_DROP_CHANCE) {
-          s.seals[enemyId] = (s.seals[enemyId] ?? 0) + 1;
+          const before = s.seals[enemyId] ?? 0;
+          s.seals[enemyId] = before + 1;
+          ticketsGained += collectTicketGain(before, before + 1);
           this.toast(`¡Sello de ${enemy.name}!`);
-          if (s.seals[enemyId] % SEALS_PER_RANK === 0) { s.statVouchers += 1; this.toast("¡Rango de colección + Ticket de stat!"); }
         }
         if (Math.random() < 0.01) ticketsGained += 1; // rare 1% boss ticket drop
         const cas = cassetteForBoss(enemyId);
-        if (cas && !s.cassettes[cas.id] && Math.random() < 0.10) { s.cassettes[cas.id] = true; this.toast(`¡Cassette: ${cas.name}! (Canciones)`); }
+        if (cas && Math.random() < 0.10) { // can drop again -> duplicates stack
+          const before = s.cassettes[cas.id] ?? 0;
+          s.cassettes[cas.id] = before + 1;
+          ticketsGained += collectTicketGain(before, before + 1);
+          this.toast(before === 0 ? `¡Cassette: ${cas.name}! (Canciones)` : `¡${cas.name} duplicada!`);
+        }
       }
       // advance the chapter frontier (episodeProgress = furthest level index cleared)
       const lvl = levelByEnemy(enemyId);
