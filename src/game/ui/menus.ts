@@ -711,7 +711,7 @@ export function renderCollection(app: App) {
     <h3>Apariencias · Protagonista · ${cnt(pskins)}/${pskins.length}</h3>${grid(pskins)}
     <h3>Apariencias · Entrenador · ${cnt(cskins)}/${cskins.length}</h3>${grid(cskins)}
   </div>
-  <button class="claim-all ${canAny ? "ready" : "off"}" id="ascendAll" ${canAny ? "" : "disabled"}>${icon("star", 16)} Mejorar todo</button>
+  <button class="claim-all ${canAny ? "ready" : "off"}" id="ascendAll" ${canAny ? "" : "disabled"}>${icon("arrowup", 16)} Mejorar todo</button>
   <div class="col-detail" id="colDetail" hidden>
     <div class="cd-card">
       <button class="cd-close" id="cdClose">${icon("close", 20)}</button>
@@ -739,22 +739,36 @@ export function renderCollection(app: App) {
       : "";
     const up = app.root.querySelector<HTMLButtonElement>("[data-asc]");
     if (up) up.onclick = () => {
-      const [k, id] = up.dataset.asc!.split(":");
+      const key = up.dataset.asc!; const [k, id] = key.split(":");
       const r = ascendOnce(s, k, id);
-      if (r) { app.persist(); app.toast(`¡Ascendido! +${r.coins} monedas${r.gems ? ` +${r.gems} gemas` : ""}`); }
-      renderCollection(app);
+      if (r) { app.persist(); sfx.upgrade(); app.toast(`¡Ascendido! +${r.coins} monedas${r.gems ? ` +${r.gems} gemas` : ""}`); renderCollection(app); flashCollect(app, [key]); }
+      else renderCollection(app);
     };
     detail.hidden = false; requestAnimationFrame(() => detail.classList.add("show"));
   });
   const asc = app.root.querySelector<HTMLButtonElement>("#ascendAll");
   if (asc) asc.onclick = () => {
-    let tc = 0, tg = 0, n = 0;
+    let tc = 0, tg = 0, n = 0; const upIds: string[] = [];
     for (const it of all) {
       if (!it.owned || !["boss", "cassette", "skin"].includes(it.k)) continue;
-      let r; while ((r = ascendOnce(s, it.k, it.id))) { tc += r.coins; tg += r.gems; n++; }
+      let did = false, r; while ((r = ascendOnce(s, it.k, it.id))) { tc += r.coins; tg += r.gems; n++; did = true; }
+      if (did) upIds.push(`${it.k}:${it.id}`);
     }
-    if (n > 0) { app.persist(); app.toast(`Ascendidos ${n} · +${tc} monedas${tg ? ` +${tg} gemas` : ""}`); renderCollection(app); }
+    if (n > 0) { app.persist(); sfx.upgrade(); app.toast(`Ascendidos ${n} · +${tc} monedas${tg ? ` +${tg} gemas` : ""}`); renderCollection(app); flashCollect(app, upIds); }
   };
+}
+
+// Pulse + arrow pop on collection tiles that just ascended (like the stat upgrade).
+function flashCollect(app: App, keys: string[]) {
+  for (const key of keys) {
+    const tile = app.root.querySelector<HTMLElement>(`.col-sq[data-col="${key}"]`);
+    if (!tile) continue;
+    tile.classList.add("upok");
+    const pop = document.createElement("span");
+    pop.className = "up-pop"; pop.textContent = "↑";
+    tile.appendChild(pop);
+    setTimeout(() => { tile.classList.remove("upok"); pop.remove(); }, 900);
+  }
 }
 
 function wireNav(app: App) {
