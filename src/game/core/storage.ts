@@ -43,6 +43,7 @@ export interface SaveState {
   seals: Record<string, number>; // boss id -> collected seals (collection ranks)
   defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
   cassettes: Record<string, number>; // cassette id -> copies owned (>=1 = unlocked)
+  collectRanks: Record<string, number>; // "kind:id" -> ascended rank index (0=F)
   energy: number; // stamina for the adventure
   energyTs: number; // last regen timestamp
   ads: number; // watch-ad free pulls available
@@ -86,6 +87,7 @@ export function defaultSave(): SaveState {
     seals: {},
     defeated: {},
     cassettes: { cs_1: 1 }, // Wasteland unlocked from the start
+    collectRanks: {},
     energy: 10,
     energyTs: Date.now(),
     ads: 5,

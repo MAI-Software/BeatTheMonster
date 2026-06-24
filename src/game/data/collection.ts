@@ -49,3 +49,21 @@ export function collectTicketGain(before: number, after: number): number {
   const ext = (n: number) => (n >= 64 ? Math.floor((n - 64) / SUPER_STEP) : 0);
   return Math.max(0, ext(after) - ext(before));
 }
+
+// Manual rank-up: spend duplicate copies to ascend a collectible's rank.
+// Rank letters by stored index; past S (index 6) shows S+1, S+2, ...
+export function rankByIndex(i: number): string {
+  if (i < 0) return "—";
+  if (i <= 6) return COPY_LETTERS[i];
+  return `S+${i - 6}`;
+}
+// Duplicate copies consumed to go from rankIdx to rankIdx+1 (F->E=2, E->D=4, ...).
+export function ascendCost(rankIdx: number): number {
+  const next = rankIdx + 1;
+  return next <= 6 ? COPY_THRESH[next] : SUPER_STEP;
+}
+// Reward (coins/gems) for reaching rank index `toIdx`.
+export function ascendReward(toIdx: number): { coins: number; gems: number } {
+  const cost = toIdx <= 6 ? COPY_THRESH[toIdx] : SUPER_STEP;
+  return { coins: cost * 25, gems: Math.max(0, toIdx - 4) };
+}

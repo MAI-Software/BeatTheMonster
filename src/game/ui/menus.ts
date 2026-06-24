@@ -9,7 +9,7 @@ import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../syste
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
-import { collectRank, collectNext } from "../data/collection";
+import { rankByIndex, ascendCost, ascendReward } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
 import { setVolumes, sfx } from "../systems/audio";
 import { GLOBAL_SONG } from "../systems/song";
@@ -637,7 +637,7 @@ export function renderProfile(app: App) {
 interface ColItem {
   k: string; id: string; name: string; owned: boolean;
   img?: string; glyph?: string; iconHtml?: string;
-  rarity?: string; count?: number; rank?: string; desc: string;
+  rarity?: string; spare?: number; rankIdx?: number; rank?: string; canAscend?: boolean; desc: string;
 }
 
 // Square face: image, emoji glyph, inline icon, or "?" placeholder — always square.
@@ -648,48 +648,62 @@ function colFace(it: ColItem): string {
   return it.iconHtml ?? `<span class="cs-ph">?</span>`;
 }
 
+// Spare DUPLICATE copies available to spend on rank-ups (first copy = owning).
+function colSpare(s: any, k: string, id: string): number {
+  if (k === "boss") return s.seals[id] ?? 0;
+  if (k === "cassette") return Math.max(0, (s.cassettes[id] ?? 0) - 1);
+  if (k === "skin") return s.skinCopies[id] ?? 0;
+  return 0;
+}
+function colRankIdx(s: any, k: string, id: string): number { return s.collectRanks[`${k}:${id}`] ?? 0; }
+
+// Ascend one rank if enough duplicates; consumes them, grants coins/gems.
+function ascendOnce(s: any, k: string, id: string): { coins: number; gems: number } | null {
+  const idx = colRankIdx(s, k, id); const cost = ascendCost(idx);
+  if (colSpare(s, k, id) < cost) return null;
+  if (k === "boss") s.seals[id] = (s.seals[id] ?? 0) - cost;
+  else if (k === "cassette") s.cassettes[id] = (s.cassettes[id] ?? 0) - cost;
+  else if (k === "skin") s.skinCopies[id] = (s.skinCopies[id] ?? 0) - cost;
+  else return null;
+  s.collectRanks[`${k}:${id}`] = idx + 1;
+  const rew = ascendReward(idx + 1);
+  s.coins += rew.coins; s.premium += rew.gems;
+  return rew;
+}
+
 export function renderCollection(app: App) {
   const s = app.save;
   const bonusOf = (b: any) => [b.atk && `ATK+${b.atk}`, b.def && `DEF+${b.def}`, b.vt && `VT+${b.vt}`, b.flowGainMult && `Flujo ×${b.flowGainMult}`].filter(Boolean).join(" · ");
-  const rankInfo = (n: number) => { const nx = collectNext(n); return nx ? ` ${n}/${nx.need} a la siguiente.` : ""; };
-  const bosses: ColItem[] = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => {
-    const seals = s.seals[e.id] ?? 0;
-    return { k: "boss", id: e.id, name: e.name, owned: !!s.defeated[e.id], glyph: e.emoji, count: seals, rank: collectRank(seals),
-      desc: `${e.title}. Sellos: ${seals}.${rankInfo(seals)} Derrota al jefe (5%) para conseguir su sello.` };
-  });
-  const gear: ColItem[] = EQUIPMENT.map((e) => { const owned = s.ownedEquipment.includes(e.id);
-    return { k: "gear", id: e.id, name: e.name, owned, iconHtml: icon(slotIcon[e.slot] ?? "glove", 42), rarity: e.rarity,
-      count: owned ? 1 : 0, rank: collectRank(owned ? 1 : 0), desc: `${SLOT_LABEL[e.slot]} · ${e.rarity}. ${bonusOf(e.bonus)}` };
-  });
-  const flows: ColItem[] = FLOW_STATES.map((f) => { const owned = s.ownedFlow.includes(f.id);
-    return { k: "flow", id: f.id, name: f.name, owned, iconHtml: icon("bolt", 42), rarity: f.rarity,
-      count: owned ? 1 : 0, rank: collectRank(owned ? 1 : 0), desc: f.desc };
-  });
-  const cassettes: ColItem[] = CASSETTES.map((c) => { const copies = s.cassettes[c.id] ?? 0;
-    return { k: "cassette", id: c.id, name: c.name, owned: copies > 0, iconHtml: gicon("cassette", 42), rarity: "rare", count: copies, rank: collectRank(copies),
-      desc: `Canción · ${c.bpm} BPM. Copias: ${copies}.${rankInfo(copies)} Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}. Desbloquea el tema en Radio y Canciones.` };
-  });
-  const skinItem = (sk: typeof ALL_SKINS[number]): ColItem => {
-    const owned = s.ownedSkins[sk.id] ?? true; const copies = owned ? (s.skinCopies[sk.id] ?? 0) + 1 : 0;
-    return { k: "skin", id: sk.id, name: sk.name, owned, img: sk.img, rarity: "epic", count: copies, rank: collectRank(copies),
-      desc: `Apariencia ${sk.kind === "coach" ? "de entrenador" : "de luchador"}. Copias: ${copies}.${rankInfo(copies)}` };
+  const build = (k: string, id: string, name: string, owned: boolean, extra: Partial<ColItem>, baseDesc: string): ColItem => {
+    const idx = owned ? colRankIdx(s, k, id) : -1;
+    const spare = owned ? colSpare(s, k, id) : 0;
+    const cost = ascendCost(idx < 0 ? 0 : idx);
+    const canAscend = owned && ["boss", "cassette", "skin"].includes(k) && spare >= cost;
+    const nextTxt = owned && ["boss", "cassette", "skin"].includes(k) ? ` Duplicados: ${spare}/${cost} para subir a ${rankByIndex((idx < 0 ? 0 : idx) + 1)}.` : "";
+    return { k, id, name, owned, rank: rankByIndex(idx), spare, rankIdx: idx, canAscend, desc: baseDesc + nextTxt, ...extra };
   };
+  const bosses = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => build("boss", e.id, e.name, !!s.defeated[e.id], { glyph: e.emoji }, `${e.title}. Derrota al jefe (5%) para sus sellos.`));
+  const gear = EQUIPMENT.map((e) => build("gear", e.id, e.name, s.ownedEquipment.includes(e.id), { iconHtml: icon(slotIcon[e.slot] ?? "glove", 42), rarity: e.rarity }, `${SLOT_LABEL[e.slot]} · ${e.rarity}. ${bonusOf(e.bonus)}`));
+  const flows = FLOW_STATES.map((f) => build("flow", f.id, f.name, s.ownedFlow.includes(f.id), { iconHtml: icon("bolt", 42), rarity: f.rarity }, f.desc));
+  const cassettes = CASSETTES.map((c) => build("cassette", c.id, c.name, (s.cassettes[c.id] ?? 0) > 0, { iconHtml: gicon("cassette", 42), rarity: "rare" }, `Canción · ${c.bpm} BPM. Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}.`));
+  const skinItem = (sk: typeof ALL_SKINS[number]) => build("skin", sk.id, sk.name, s.ownedSkins[sk.id] ?? true, { img: sk.img, rarity: "epic" }, `Apariencia ${sk.kind === "coach" ? "de entrenador" : "de luchador"}.`);
   const pskins = PLAYER_SKINS.map(skinItem);
   const cskins = COACH_SKINS.map(skinItem);
   const all = [...bosses, ...gear, ...flows, ...cassettes, ...pskins, ...cskins];
   const lookup: Record<string, ColItem> = {};
   for (const it of all) lookup[`${it.k}:${it.id}`] = it;
+  const canAny = all.some((it) => it.canAscend);
 
-  const tile = (it: ColItem) => `<button class="col-sq ${it.owned ? `r-${it.rarity ?? "rare"}` : "locked"}" data-col="${it.k}:${it.id}" ${it.owned ? "" : "disabled"}>
+  const tile = (it: ColItem) => `<button class="col-sq ${it.owned ? `r-${it.rarity ?? "rare"}` : "locked"} ${it.canAscend ? "up" : ""}" data-col="${it.k}:${it.id}" ${it.owned ? "" : "disabled"}>
     <span class="cs-face">${colFace(it)}</span>
     <span class="cs-name">${it.owned ? it.name : "???"}</span>
-    ${it.owned && it.rank ? `<span class="cs-rank">${it.rank}</span>` : ""}
+    ${it.owned ? `<span class="cs-rank">${it.rank}</span>` : ""}
   </button>`;
   const grid = (list: ColItem[]) => `<div class="col-sq-grid">${list.map(tile).join("")}</div>`;
   const cnt = (list: ColItem[]) => list.filter((x) => x.owned).length;
 
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección", false, true)}<div class="scroll">
-    <p class="hint">Toca un coleccionable para verlo de cerca, su descripción y su <b>rango</b> (sube con copias/sellos repetidos).</p>
+    <p class="hint">Toca un coleccionable para verlo y <b>ascender su rango</b> gastando duplicados (recompensa en monedas/gemas).</p>
     <h3>Jefes · ${cnt(bosses)}/${bosses.length}</h3>${grid(bosses)}
     <h3>Equipo · ${cnt(gear)}/${gear.length}</h3>${grid(gear)}
     <h3>Estados de Flujo · ${cnt(flows)}/${flows.length}</h3>${grid(flows)}
@@ -697,6 +711,7 @@ export function renderCollection(app: App) {
     <h3>Apariencias · Protagonista · ${cnt(pskins)}/${pskins.length}</h3>${grid(pskins)}
     <h3>Apariencias · Entrenador · ${cnt(cskins)}/${cskins.length}</h3>${grid(cskins)}
   </div>
+  <button class="claim-all ${canAny ? "ready" : "off"}" id="ascendAll" ${canAny ? "" : "disabled"}>${icon("star", 16)} Mejorar todo</button>
   <div class="col-detail" id="colDetail" hidden>
     <div class="cd-card">
       <button class="cd-close" id="cdClose">${icon("close", 20)}</button>
@@ -704,6 +719,7 @@ export function renderCollection(app: App) {
       <div class="cd-name" id="cdName"></div>
       <div class="cd-rank" id="cdRank"></div>
       <p class="cd-desc" id="cdDesc"></p>
+      <div id="cdAscend"></div>
     </div>
   </div></div>`;
   wireNav(app);
@@ -715,12 +731,30 @@ export function renderCollection(app: App) {
     const it = lookup[b.dataset.col!]; if (!it || !it.owned) return;
     app.root.querySelector<HTMLElement>("#cdFace")!.innerHTML = colFace(it);
     app.root.querySelector<HTMLElement>("#cdName")!.textContent = it.name;
-    app.root.querySelector<HTMLElement>("#cdRank")!.innerHTML = it.rank
-      ? `Rango <b>${it.rank}</b>${it.count != null ? ` · ${it.count} ${it.k === "boss" ? "sellos" : "copias"}` : ""}`
-      : (it.rarity ? it.rarity.toUpperCase() : "");
+    app.root.querySelector<HTMLElement>("#cdRank")!.innerHTML = `Rango <b>${it.rank}</b>${["boss", "cassette", "skin"].includes(it.k) ? ` · ${it.spare} duplicados` : ""}`;
     app.root.querySelector<HTMLElement>("#cdDesc")!.textContent = it.desc;
+    const rew = it.canAscend ? ascendReward((it.rankIdx ?? 0) + 1) : null;
+    app.root.querySelector<HTMLElement>("#cdAscend")!.innerHTML = it.canAscend
+      ? `<button class="cd-up" data-asc="${it.k}:${it.id}">Ascender a ${rankByIndex((it.rankIdx ?? 0) + 1)} · −${ascendCost(it.rankIdx ?? 0)} copias → ${gicon("coin", 13)}${rew!.coins}${rew!.gems ? ` ${gicon("gem", 13)}${rew!.gems}` : ""}</button>`
+      : "";
+    const up = app.root.querySelector<HTMLButtonElement>("[data-asc]");
+    if (up) up.onclick = () => {
+      const [k, id] = up.dataset.asc!.split(":");
+      const r = ascendOnce(s, k, id);
+      if (r) { app.persist(); app.toast(`¡Ascendido! +${r.coins} monedas${r.gems ? ` +${r.gems} gemas` : ""}`); }
+      renderCollection(app);
+    };
     detail.hidden = false; requestAnimationFrame(() => detail.classList.add("show"));
   });
+  const asc = app.root.querySelector<HTMLButtonElement>("#ascendAll");
+  if (asc) asc.onclick = () => {
+    let tc = 0, tg = 0, n = 0;
+    for (const it of all) {
+      if (!it.owned || !["boss", "cassette", "skin"].includes(it.k)) continue;
+      let r; while ((r = ascendOnce(s, it.k, it.id))) { tc += r.coins; tg += r.gems; n++; }
+    }
+    if (n > 0) { app.persist(); app.toast(`Ascendidos ${n} · +${tc} monedas${tg ? ` +${tg} gemas` : ""}`); renderCollection(app); }
+  };
 }
 
 function wireNav(app: App) {
