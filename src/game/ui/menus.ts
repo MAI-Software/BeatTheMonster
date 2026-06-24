@@ -387,9 +387,19 @@ export function renderChallenges(app: App) {
     return `<div class="chal achv"><div class="chal-text">${a.text} <i>Nv.${ap.tier}</i></div><div class="bar tiny"><i class="fill gold" style="width:${pct}%"></i></div>
       <div class="chal-foot"><span>${ap.progress}/${next}</span><span class="reward">+1 Vale stat</span></div></div>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos", true)}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div></div>`;
+  const claimableN = (list: any[]) => list.filter((c) => !c.claimed && c.progress >= (defFor(c.id)?.goal ?? Infinity)).length;
+  const canClaimAll = claimableN(s.daily.challenges) + claimableN(s.weekly.challenges) > 0;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos", true)}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div>
+    ${canClaimAll ? `<button class="claim-all" id="claimAll">${icon("check", 16)} Reclamar todo</button>` : ""}</div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-claim]").forEach((b) => b.onclick = () => { if (claimChallenge(s, b.dataset.claim!, b.dataset.scope as any)) { app.persist(); renderChallenges(app); } });
+  const ca = app.root.querySelector<HTMLButtonElement>("#claimAll");
+  if (ca) ca.onclick = () => {
+    let any = false;
+    for (const c of s.daily.challenges) if (claimChallenge(s, c.id, "daily")) any = true;
+    for (const c of s.weekly.challenges) if (claimChallenge(s, c.id, "weekly")) any = true;
+    if (any) { app.persist(); app.toast("¡Recompensas reclamadas!"); renderChallenges(app); }
+  };
 }
 
 export function renderRanking(app: App) {
