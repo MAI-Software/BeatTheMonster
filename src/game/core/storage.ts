@@ -61,13 +61,13 @@ const KEY = "mbh_save_v1";
 
 export function defaultSave(): SaveState {
   return {
-    version: 1,
+    version: 2,
     level: 1,
     xp: 0,
     stats: { atk: 10, def: 8, vt: 200 },
-    statVouchers: 0,
-    coins: 200,
-    premium: 0,
+    statVouchers: 10,
+    coins: 1000,
+    premium: 50,
     fragments: {},
     ownedEquipment: [],
     ownedFlow: ["flow_oraora"], // start with Ora Ora Ora
@@ -104,6 +104,8 @@ export function loadSave(): SaveState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultSave();
     const parsed = { ...defaultSave(), ...JSON.parse(raw) } as SaveState;
+    // temp testing grant: force everyone to 1000 coins / 50 gems / 10 tickets once
+    if (parsed.version < 2) { parsed.coins = 1000; parsed.premium = 50; parsed.statVouchers = 10; parsed.version = 2; }
     // clamp against caps in case of tampering / old data
     parsed.level = Math.min(CAPS.PLAYER_LEVEL, Math.max(1, parsed.level));
     parsed.stats.atk = Math.min(CAPS.ATK, parsed.stats.atk);

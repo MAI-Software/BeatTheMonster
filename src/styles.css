@@ -272,6 +272,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .tr-stat { display: inline-flex; align-items: center; gap: 7px; font-weight: 800; font-size: 20px; }
 .tr-stat.c-green { color: #27c46b; } .tr-stat.c-orange { color: #e7202b; } .tr-stat.c-blue { color: #2e9bff; }
 .tr-cost { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-size: 14px; color: var(--dim); }
+.tr-cost .tr-tk { display: inline-flex; align-items: center; gap: 3px; margin-left: 5px; color: #e0b048; }
 .tr-acts { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
 .train-row .fill.c-green { background: #27c46b; } .train-row .fill.c-orange { background: #e7202b; } .train-row .fill.c-blue { background: #2e9bff; }
 .tr-btn { padding: 5px 12px; border-radius: 8px; background: var(--green); color: #111; font-weight: 800; font-size: 13px; }

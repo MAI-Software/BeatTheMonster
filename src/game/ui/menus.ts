@@ -194,7 +194,7 @@ export function renderTraining(app: App) {
     return `<div class="train-row ${cls}">
       <div class="tr-head">
         <span class="tr-stat ${cls}">${gicon(stat, 28)}<b>${cur}</b></span>
-        <span class="tr-cost">${atMax ? "MAX" : `${gicon("coin", 14)}${cost}`}</span>
+        <span class="tr-cost">${atMax ? "MAX" : `${gicon("coin", 14)}${cost} <span class="tr-tk">${gicon("ticket", 14)}1</span>`}</span>
         <span class="tr-acts">
           <button class="tr-btn" data-train="${stat}" ${atMax || !canTrain(s, stat) ? "disabled" : ""}>+${stat === "vt" ? 10 : 1}</button>
           ${s.statVouchers > 0 && !atMax ? `<button class="tr-vch" data-vch="${stat}" title="Usar ticket de refuerzo">${gicon("ticket", 16)}</button>` : ""}
