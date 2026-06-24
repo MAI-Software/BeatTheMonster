@@ -44,10 +44,13 @@ export function counterDamage(enemyAtk: number, playerDef: number): number {
   return Math.max(1, Math.round(base));
 }
 
-// Training cost (coins) to raise a stat by one point, scales with current value.
+// Training cost (coins) to raise a stat, scales with current value AND steps up
+// in brackets (tramos): each tier of progress adds a flat multiplier. Approximate.
 export function trainCost(stat: "atk" | "def" | "vt", current: number): number {
   const base = stat === "vt" ? 8 : 25;
-  return Math.floor(base * (1 + current * 0.06));
+  const tierSize = stat === "vt" ? 200 : 20;
+  const bracketMult = 1 + Math.floor(current / tierSize) * 0.5; // +50% per bracket
+  return Math.floor(base * (1 + current * 0.06) * bracketMult);
 }
 
 // Player rank by level.

@@ -11,7 +11,7 @@ import { leaderboard, myRank } from "../systems/ranking";
 import { COACH_NAME, TUTORIAL_STEPS } from "../data/coach";
 import { rankLabel, rankProgress } from "../data/collection";
 import { CASSETTES } from "../data/cassettes";
-import { setVolumes } from "../systems/audio";
+import { setVolumes, sfx } from "../systems/audio";
 import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg } from "../data/skins";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 
@@ -84,6 +84,7 @@ export function renderHome(app: App) {
           <div class="statline oneline res">
             <span class="r-coin">${gicon("coin", 22)} ${s.coins}</span>
             <span class="r-gem">${gicon("gem", 22)} ${s.premium}</span>
+            <span class="r-ticket">${gicon("ticket", 22)} ${s.statVouchers}</span>
             <span class="r-energy">${gicon("stamina", 22)} ${energy}/${eMax}</span>
             <span class="r-ads">${gicon("ads", 22)} ${ads}/${AD_MAX}</span>
           </div>
@@ -192,7 +193,7 @@ export function renderTraining(app: App) {
   const row = (stat: "atk" | "def" | "vt", cls: string) => {
     const cur = s.stats[stat]; const max = stat === "vt" ? CAPS.VT : stat === "atk" ? CAPS.ATK : CAPS.DEF;
     const cost = trainCost(stat, cur); const gcost = gemTrainCost(stat, cur); const atMax = cur >= max; const inc = stat === "vt" ? 10 : 1;
-    return `<div class="train-row ${cls}">
+    return `<div class="train-row ${cls}" data-row="${stat}">
       <div class="tr-head">
         <span class="tr-ic ${cls}">${gicon(stat, 26)}</span>
         <button class="tr-btn" data-toggle="${stat}" ${atMax ? "disabled" : ""}>${atMax ? "MAX" : "Mejorar"}</button>
@@ -222,11 +223,22 @@ export function renderTraining(app: App) {
     if (!open) { panel.hidden = false; row.classList.add("open"); }
   });
   app.root.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((b) => b.onclick = () => {
-    const stat = b.dataset.stat as any; const how = b.dataset.buy;
+    const stat = b.dataset.stat as any; const how = b.dataset.buy; const inc = stat === "vt" ? 10 : 1;
     const ok = how === "coin" ? train(s, stat) : how === "gem" ? trainWithGems(s, stat) : spendVoucher(s, stat);
-    if (ok) { app.persist(); renderTraining(app); }
+    if (ok) { app.persist(); renderTraining(app); sfx.upgrade(); flashUpgrade(app, stat, inc); }
     else app.toast(how === "coin" ? "Sin monedas" : how === "gem" ? "Sin gemalma" : "Sin tickets");
   });
+}
+
+// Flashy success feedback after a stat upgrade: pulse the card + float a "+N".
+function flashUpgrade(app: App, stat: string, inc: number) {
+  const row = app.root.querySelector<HTMLElement>(`.train-row[data-row="${stat}"]`);
+  if (!row) return;
+  row.classList.add("upok");
+  const pop = document.createElement("span");
+  pop.className = "up-pop"; pop.textContent = `+${inc}`;
+  row.appendChild(pop);
+  setTimeout(() => { row.classList.remove("upok"); pop.remove(); }, 900);
 }
 
 export function renderEquip(app: App) {

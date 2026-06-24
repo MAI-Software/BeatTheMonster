@@ -130,7 +130,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .hnick { color: #fff; font-weight: 800; }
 .statline.res { font-size: 16px; font-weight: 700; }
 .statline.oneline.res { flex-wrap: wrap; overflow: visible; }
-.statline.res .r-coin { color: var(--gold); } .statline.res .r-gem { color: #2e9bff; } .statline.res .r-energy { color: #ff5b6e; } .statline.res .r-ads { color: #e0b048; }
+.statline.res .r-coin { color: var(--gold); } .statline.res .r-gem { color: #2e9bff; } .statline.res .r-ticket { color: #e0b048; } .statline.res .r-energy { color: #ff5b6e; } .statline.res .r-ads { color: #e0b048; }
 .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 480px; }
 .tile { display: flex; align-items: center; gap: 12px; padding: 12px 14px; text-align: left;
   background: #141415e0; border: 1px solid var(--line); border-radius: var(--rad); font-weight: 700;
@@ -264,7 +264,12 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .gbanner .pull-btn { width: 100%; padding: 9px 4px; font-size: 13px; }
 
 /* ---------- training ---------- */
-.train-row { padding: 11px 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(74%, 360px); margin: 0 0 10px auto; }
+.train-row { position: relative; padding: 11px 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(74%, 360px); margin: 0 0 10px auto; }
+.train-row.upok { animation: upPulse .5s ease; box-shadow: 0 0 22px #fff8, 0 0 8px #fff inset; }
+.train-row.upok .bar .fill { box-shadow: 0 0 16px #fff; filter: brightness(1.4); }
+@keyframes upPulse { 0% { transform: scale(1); } 32% { transform: scale(1.05); } 100% { transform: scale(1); } }
+.up-pop { position: absolute; right: 16px; top: 6px; font-weight: 900; font-size: 24px; color: #fff; text-shadow: 0 0 12px #fff, 0 0 4px #fff; pointer-events: none; animation: upFloat .9s ease forwards; }
+@keyframes upFloat { 0% { opacity: 0; transform: translateY(8px) scale(.7); } 22% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px) scale(1.15); } }
 .train-row.c-green { background: color-mix(in srgb, #27c46b 16%, var(--panel)); border-color: #27c46b; }
 .train-row.c-orange { background: color-mix(in srgb, #e7202b 16%, var(--panel)); border-color: #e7202b; }
 .train-row.c-blue { background: color-mix(in srgb, #2e9bff 16%, var(--panel)); border-color: #2e9bff; }
