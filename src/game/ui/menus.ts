@@ -390,7 +390,7 @@ export function renderChallenges(app: App) {
   const claimableN = (list: any[]) => list.filter((c) => !c.claimed && c.progress >= (defFor(c.id)?.goal ?? Infinity)).length;
   const canClaimAll = claimableN(s.daily.challenges) + claimableN(s.weekly.challenges) > 0;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos", true)}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div>
-    ${canClaimAll ? `<button class="claim-all" id="claimAll">${icon("check", 16)} Reclamar todo</button>` : ""}</div>`;
+    <button class="claim-all ${canClaimAll ? "ready" : "off"}" id="claimAll" ${canClaimAll ? "" : "disabled"}>${icon("check", 16)} Reclamar todo</button></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-claim]").forEach((b) => b.onclick = () => { if (claimChallenge(s, b.dataset.claim!, b.dataset.scope as any)) { app.persist(); renderChallenges(app); } });
   const ca = app.root.querySelector<HTMLButtonElement>("#claimAll");
