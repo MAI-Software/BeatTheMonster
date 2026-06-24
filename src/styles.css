@@ -157,8 +157,9 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .nav-label .gi, .nav-label .gi-emoji { filter: drop-shadow(0 2px 3px #000); }
 .nav-main:active { transform: translateY(3px) scale(.98); filter: drop-shadow(0 2px 6px #000) brightness(.92); }
 .nav-row { display: flex; gap: 7px; }
-.nav-chip { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 3px; border-radius: 11px; background: #141415e6; border: 1px solid var(--line); color: var(--txt); }
+.nav-chip { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 3px; border-radius: 11px; background: #141415e6; border: 1px solid var(--line); color: var(--txt); }
 .nav-chip span { font-size: 10px; font-weight: 700; white-space: nowrap; }
+.nav-chip.notify::after { content: ""; position: absolute; top: 5px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 7px var(--red); }
 .nav-chip:active, .nav-main:active { transform: scale(.96); }
 
 /* luchar hub */

@@ -57,6 +57,9 @@ export function renderHome(app: App) {
   const need = xpToNext(s.level); const maxed = s.level >= CAPS.PLAYER_LEVEL;
   const energy = refreshEnergy(s); const eMax = maxEnergy(s);
   const ads = refreshAds(s);
+  const canImprove = canTrain(s, "vt") || canTrain(s, "atk") || canTrain(s, "def");
+  const chalClaimable = (list: any[]) => list.some((ch: any) => !ch.claimed && ch.progress >= (defFor(ch.id)?.goal ?? Infinity));
+  const hasChalReward = chalClaimable(s.daily.challenges) || chalClaimable(s.weekly.challenges);
   app.root.innerHTML = `
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
@@ -86,7 +89,7 @@ export function renderHome(app: App) {
         </div>
         <button class="nav-main" data-nav="luchar"><img class="nav-bg" src="buttons/fight.webp" alt=""><span class="nav-label">${gicon("campaign", 44)} LUCHAR</span></button>
         <div class="nav-row">
-          ${navBtn("training", "Entrenar")}${navBtn("equip", "Equipo")}${navBtn("gacha", "Gacha")}${navBtn("challenges", "Desafíos")}${navBtn("collection", "Colección")}
+          ${navBtn("training", "Entrenar", canImprove)}${navBtn("equip", "Equipo")}${navBtn("gacha", "Gacha", ads >= AD_MAX)}${navBtn("challenges", "Desafíos", hasChalReward)}${navBtn("collection", "Colección")}
         </div>
       </div>
     </div>`;
@@ -97,8 +100,8 @@ export function renderHome(app: App) {
   app.root.querySelector<HTMLButtonElement>("#menuToggle")!.onclick = () => homeTop.classList.toggle("open");
 }
 const emj = (e: string) => `<span class="gi-emoji" style="font-size:24px">${e}</span>`;
-const navBtn = (nav: string, label: string) =>
-  `<button class="nav-chip" data-nav="${nav}">${gicon(nav as GIconName, 24)}<span>${label}</span></button>`;
+const navBtn = (nav: string, label: string, notify = false) =>
+  `<button class="nav-chip ${notify ? "notify" : ""}" data-nav="${nav}">${gicon(nav as GIconName, 24)}<span>${label}</span></button>`;
 
 // Home keeps the MAIN gym image fixed; tapping a section plays a brief "step in"
 // transition, then that section shows its own background.
