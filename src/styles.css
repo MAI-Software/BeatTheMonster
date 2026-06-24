@@ -263,13 +263,14 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .gbanner .pull-btn { width: 100%; padding: 9px 4px; font-size: 13px; }
 
 /* ---------- training ---------- */
-.train-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; }
-.train-row.c-green { background: color-mix(in srgb, var(--green) 12%, var(--panel)); border-color: color-mix(in srgb, var(--green) 40%, var(--line)); }
-.train-row.c-orange { background: color-mix(in srgb, var(--orange) 14%, var(--panel)); border-color: color-mix(in srgb, var(--orange) 50%, var(--line)); }
-.train-row.c-blue { background: color-mix(in srgb, var(--blue) 12%, var(--panel)); border-color: color-mix(in srgb, var(--blue) 40%, var(--line)); }
+.train-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px 12px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; width: min(74%, 360px); margin: 0 0 10px auto; }
+.train-row.c-green { background: color-mix(in srgb, #27c46b 16%, var(--panel)); border-color: #27c46b; }
+.train-row.c-orange { background: color-mix(in srgb, #e7202b 16%, var(--panel)); border-color: #e7202b; }
+.train-row.c-blue { background: color-mix(in srgb, #2e9bff 16%, var(--panel)); border-color: #2e9bff; }
 .tr-label { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 14px; }
 .tr-label small { font-weight: 800; color: var(--txt); font-size: 19px; margin: 0; }
-.tr-label.c-green { color: var(--green); } .tr-label.c-orange { color: var(--orange); } .tr-label.c-blue { color: var(--blue); }
+.tr-label.c-green { color: #27c46b; } .tr-label.c-orange { color: #e7202b; } .tr-label.c-blue { color: #2e9bff; }
+.train-row .fill.c-green { background: #27c46b; } .train-row .fill.c-orange { background: #e7202b; } .train-row .fill.c-blue { background: #2e9bff; }
 .train-row .bar.tiny { grid-column: 1 / -1; }
 .tr-btn { justify-self: end; display: inline-flex; align-items: center; gap: 4px; padding: 7px 11px; border-radius: 9px; background: var(--green); color: #111; font-weight: 800; font-size: 12px; }
 .tr-btn .gi { vertical-align: middle; }
