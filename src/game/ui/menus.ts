@@ -266,15 +266,15 @@ export function renderEquip(app: App) {
     app.root.innerHTML = `<div class="scene menu">${sectionBg("equip")}${topBar(app, "Equipo & Flow")}
       <div class="scroll equip-scroll">
         <div class="equip-hero"><img src="characters/player/${gender}.webp" alt="" onerror="this.style.display='none'"></div>
+        <div class="statline equip-stats">
+          <span class="vt">${gicon("vt", 24)} ${eff.vt}</span><span class="atk">${gicon("atk", 24)} ${eff.atk}</span><span class="def">${gicon("def", 24)} ${eff.def}</span>
+          <span class="flow">${gicon("flow", 24)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
+        </div>
         <div class="slot-chips">${SLOTS.map((sl) => {
           const eq = sl.key === "flow" ? !!s.equippedFlow : !!s.equippedGear[sl.key];
           const rar = slotRarity(sl.key);
           return `<button class="slot-chip ${eq ? "equipped" : ""} ${rar ? "r-" + rar : ""} ${sl.key === "flow" ? "flow" : ""}" data-open="${sl.key}" title="${sl.label}">${icon(sl.ic, 26)}</button>`;
         }).join("")}</div>
-        <div class="statline equip-stats">
-          <span class="vt">${gicon("vt", 24)} ${eff.vt}</span><span class="atk">${gicon("atk", 24)} ${eff.atk}</span><span class="def">${gicon("def", 24)} ${eff.def}</span>
-          <span class="flow">${gicon("flow", 24)} ${getFlowState(s.equippedFlow)?.name ?? "—"}</span>
-        </div>
       </div></div>`;
     wireNav(app);
     app.root.querySelectorAll<HTMLButtonElement>("[data-open]").forEach((b) => b.onclick = () => subView(b.dataset.open!));
