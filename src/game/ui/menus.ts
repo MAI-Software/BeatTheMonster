@@ -548,14 +548,14 @@ export function renderRadio(app: App) {
   const rows = ordered.map((c) => {
     if (cur && c.id === cur.id) {
       return `<div class="radio-row on">
-        <span class="rr-ic">${gicon("cassette", 36)}</span>
+        <span class="rr-ic">${gicon("cassette", 46)}</span>
         <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM · ${playing ? "Sonando" : "En pausa"}</small></span>
         ${wave}
         <button class="radio-pp" id="ppBtn">${icon(playing ? "pause" : "play", 22)}</button>
       </div>`;
     }
     return `<button class="radio-row" data-fav="${c.id}">
-      <span class="rr-ic">${gicon("cassette", 36)}</span>
+      <span class="rr-ic">${gicon("cassette", 46)}</span>
       <span class="rr-meta"><b>${c.name}</b><small>${c.bpm} BPM</small></span>
       <span class="rr-state">${icon("play", 14)}</span>
     </button>`;
