@@ -25,6 +25,7 @@ export interface SaveState {
   xp: number;
   stats: PlayerStats;
   statVouchers: number; // each = +1 to a stat of choice
+  statUpgrades: { atk: number; def: number; vt: number }; // manual upgrades done (cap 100 for now)
   coins: number; // normal banner currency
   premium: number; // premium banner currency
   fragments: Record<string, number>; // itemId/flowId -> frag count
@@ -67,6 +68,7 @@ export function defaultSave(): SaveState {
     xp: 0,
     stats: { atk: 10, def: 8, vt: 200 },
     statVouchers: 10,
+    statUpgrades: { atk: 0, def: 0, vt: 0 },
     coins: 1000,
     premium: 50,
     fragments: {},

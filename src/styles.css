@@ -286,6 +286,10 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .tr-buy[hidden] { display: none; }
 .tr-buy .bb { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 6px; border-radius: 9px; background: #0006; border: 1px solid var(--line); color: var(--txt); font-weight: 800; font-size: 13px; }
 .tr-buy .bb:disabled { opacity: .4; }
+.seg-bar { display: flex; gap: 3px; margin: 9px 0; }
+.seg-bar i { flex: 1; height: 10px; border-radius: 3px; background: #00000066; position: relative; overflow: hidden; }
+.seg-bar i::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--f, 0%); transition: width .3s ease; }
+.seg-bar.c-green i::after { background: #27c46b; } .seg-bar.c-orange i::after { background: #e7202b; } .seg-bar.c-blue i::after { background: #2e9bff; }
 .train-info { width: min(74%, 360px); margin: 14px 0 0 auto; }
 .train-info p { display: flex; gap: 7px; align-items: flex-start; font-size: 11.5px; color: var(--dim); line-height: 1.45; margin-bottom: 8px; }
 .train-info .ti-ic { flex-shrink: 0; margin-top: 1px; }

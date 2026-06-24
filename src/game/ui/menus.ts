@@ -191,44 +191,48 @@ export function renderCampaign(app: App) {
   app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!));
 }
 
-export function renderTraining(app: App) {
+const UP_LIMIT = 100; // upgrades per stat before the cap must be broken (future)
+
+export function renderTraining(app: App, openStat?: string) {
   const s = app.save;
   const row = (stat: "atk" | "def" | "vt", cls: string) => {
-    const cur = s.stats[stat]; const max = stat === "vt" ? CAPS.VT : stat === "atk" ? CAPS.ATK : CAPS.DEF;
-    const cost = trainCost(stat, cur); const gcost = gemTrainCost(stat, cur); const atMax = cur >= max; const inc = stat === "vt" ? 10 : 1;
+    const cur = s.stats[stat]; const ups = s.statUpgrades[stat] ?? 0; const atLimit = ups >= UP_LIMIT;
+    const cost = trainCost(stat, cur); const gcost = gemTrainCost(stat, cur); const inc = stat === "vt" ? 10 : 1;
+    const open = stat === openStat;
+    const seg = Array.from({ length: 10 }, (_, k) => `<i style="--f:${Math.max(0, Math.min(100, (ups - k * 10) / 10 * 100))}%"></i>`).join("");
     return `<div class="train-row ${cls}" data-row="${stat}">
       <div class="tr-head">
         <span class="tr-ic ${cls}">${gicon(stat, 26)}</span>
-        <button class="tr-btn" data-toggle="${stat}" ${atMax ? "disabled" : ""}>${atMax ? "MAX" : "Mejorar"}</button>
+        <button class="tr-btn" data-toggle="${stat}" ${atLimit ? "disabled" : ""}>${atLimit ? "LÍMITE" : "Mejorar"}</button>
       </div>
-      <div class="bar tiny"><i class="fill ${cls}" style="width:${(cur / max) * 100}%"></i></div>
-      <div class="tr-val ${cls}"><b>${cur}</b><span>+${inc}</span></div>
-      <div class="tr-buy" data-panel="${stat}" hidden>
-        <button class="bb" data-buy="coin" data-stat="${stat}" ${s.coins >= cost ? "" : "disabled"}>${gicon("coin", 15)} ${cost}</button>
-        <button class="bb" data-buy="gem" data-stat="${stat}" ${s.premium >= gcost ? "" : "disabled"}>${gicon("gem", 15)} ${gcost}</button>
-        <button class="bb" data-buy="ticket" data-stat="${stat}" ${s.statVouchers > 0 ? "" : "disabled"}>${gicon("ticket", 15)} 1</button>
+      <div class="seg-bar ${cls}">${seg}</div>
+      <div class="tr-val ${cls}"><b>${cur}</b><span>${ups}/${UP_LIMIT} mejoras${atLimit ? "" : ` · +${inc}`}</span></div>
+      <div class="tr-buy" data-panel="${stat}" ${open ? "" : "hidden"}>
+        <button class="bb" data-buy="coin" data-stat="${stat}" ${!atLimit && s.coins >= cost ? "" : "disabled"}>${gicon("coin", 15)} ${cost}</button>
+        <button class="bb" data-buy="gem" data-stat="${stat}" ${!atLimit && s.premium >= gcost ? "" : "disabled"}>${gicon("gem", 15)} ${gcost}</button>
+        <button class="bb" data-buy="ticket" data-stat="${stat}" ${!atLimit && s.statVouchers > 0 ? "" : "disabled"}>${gicon("ticket", 15)} 1</button>
       </div>
     </div>`;
   };
   app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar", true)}<div class="scroll">
     ${row("vt", "c-green")}${row("atk", "c-orange")}${row("def", "c-blue")}
     <div class="train-info">
-      <p><span class="ti-ic">${gicon("coin", 15)}</span> Pulsa <b>Mejorar</b> y elige pagar con monedas, ${gicon("gem", 13)} gemalma o ${gicon("ticket", 13)} tickets. El coste crece con el nivel. Más ATK = más daño · más DEF = menos daño recibido · VT = aguante.</p>
+      <p><span class="ti-ic">${gicon("coin", 15)}</span> Pulsa <b>Mejorar</b> y elige pagar con monedas, ${gicon("gem", 13)} gemalma o ${gicon("ticket", 13)} tickets. Cada barra son 10 tramos de 10 mejoras (tope ${UP_LIMIT} por ahora). Más ATK = más daño · más DEF = menos daño · VT = aguante.</p>
       <p><span class="ti-ic">${gicon("ticket", 15)}</span> Tickets de refuerzo: suben un stat gratis. Se ganan en desafíos, al superar un escenario por primera vez y (raro) de jefes.</p>
     </div>
   </div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-toggle]").forEach((b) => b.onclick = () => {
     const row = b.closest(".train-row")!; const panel = row.querySelector<HTMLElement>(".tr-buy")!;
-    const open = !panel.hidden;
+    const wasOpen = !panel.hidden;
     app.root.querySelectorAll<HTMLElement>(".tr-buy").forEach((p) => (p.hidden = true));
-    app.root.querySelectorAll(".train-row").forEach((r) => r.classList.remove("open"));
-    if (!open) { panel.hidden = false; row.classList.add("open"); }
+    if (!wasOpen) panel.hidden = false;
   });
   app.root.querySelectorAll<HTMLButtonElement>("[data-buy]").forEach((b) => b.onclick = () => {
-    const stat = b.dataset.stat as any; const how = b.dataset.buy; const inc = stat === "vt" ? 10 : 1;
+    const stat = b.dataset.stat as "atk" | "def" | "vt"; const how = b.dataset.buy; const inc = stat === "vt" ? 10 : 1;
+    if ((s.statUpgrades[stat] ?? 0) >= UP_LIMIT) { app.toast("Límite de mejoras alcanzado"); return; }
     const ok = how === "coin" ? train(s, stat) : how === "gem" ? trainWithGems(s, stat) : spendVoucher(s, stat);
-    if (ok) { app.persist(); renderTraining(app); sfx.upgrade(); flashUpgrade(app, stat, inc); }
+    if (ok) { s.statUpgrades[stat] = (s.statUpgrades[stat] ?? 0) + 1; app.persist(); renderTraining(app, stat); sfx.upgrade(); flashUpgrade(app, stat, inc); }
     else app.toast(how === "coin" ? "Sin monedas" : how === "gem" ? "Sin gemalma" : "Sin tickets");
   });
 }
