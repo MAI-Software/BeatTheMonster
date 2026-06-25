@@ -14,7 +14,7 @@ export interface Equipment {
   fragsToCraft: number;
 }
 
-export const FRAGS_TO_CRAFT: Record<Rarity, number> = { common: 20, rare: 40, epic: 70, legendary: 120 };
+export const FRAGS_TO_CRAFT: Record<Rarity, number> = { common: 20, uncommon: 30, rare: 40, epic: 70, legendary: 120, unique: 200 };
 
 export const SLOT_LABEL: Record<Slot, string> = { head: "Cabeza", gloves: "Puños", body: "Ropa", shins: "Espinilleras" };
 

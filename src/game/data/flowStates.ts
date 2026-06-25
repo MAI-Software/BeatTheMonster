@@ -25,7 +25,7 @@ export interface FlowState {
   buff: FlowBuff;
 }
 
-export type Rarity = "common" | "rare" | "epic" | "legendary";
+export type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary" | "unique";
 
 export const FLOW_STATES: FlowState[] = [
   {
