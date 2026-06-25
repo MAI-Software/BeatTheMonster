@@ -86,7 +86,7 @@ export function renderHome(app: App) {
     <div class="scene menu home">
       <div class="gym-bg"><img class="gym-layer show" alt=""><img class="gym-layer" alt=""></div>
       <div class="home-top" id="homeTop">
-        <button class="menu-toggle" id="menuToggle" title="Menú"><img src="buttons/menu.webp" alt="Menú"></button>
+        <button class="menu-toggle ${anyCraftable(s) ? "notify" : ""}" id="menuToggle" title="Menú"><img src="buttons/menu.webp" alt="Menú"></button>
         <div class="home-icons">
           <button class="home-icon" id="profileBtn" title="Perfil">${gicon("profile", 32)}</button>
           <button class="home-icon" data-nav="options" title="Opciones">${gicon("options", 32)}</button>
@@ -696,11 +696,9 @@ export function renderProfile(app: App) {
         <div class="carnet-song">${gicon("cassette", 16)} ${favName}</div>
       </div>
     </div>
-    <button class="opt-btn ghostbtn" disabled>Iniciar sesión (próximamente)</button>
-    <h3>Imagen del carnet</h3>
-    <div class="pf-skins">${playerPick}</div>
-    <h3>Canción favorita</h3>
-    <div class="pf-songs">${songPick}</div>
+    <div class="menu-block"><div class="mb-title">Imagen del carnet</div><div class="pf-skins">${playerPick}</div></div>
+    <div class="menu-block"><div class="mb-title">Canción favorita</div><div class="pf-songs">${songPick}</div></div>
+    <button class="opt-btn login-off" disabled>Iniciar sesión (próximamente)</button>
   </div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-pskin]").forEach((b) => b.onclick = () => {

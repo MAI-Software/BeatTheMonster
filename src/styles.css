@@ -202,6 +202,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .menu-toggle { position: relative; z-index: 2; width: 34px; height: 34px; padding: 0; border: none; background: none; transition: transform .42s cubic-bezier(.34,.9,.3,1); filter: drop-shadow(0 0 7px #e7202baa) drop-shadow(0 2px 4px #000); }
 .menu-toggle img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .menu-toggle:active { transform: scale(.88); }
+.menu-toggle.notify::after { content: ""; position: absolute; top: -2px; right: -2px; width: 11px; height: 11px; border-radius: 50%; background: var(--red); box-shadow: 0 0 8px var(--red); z-index: 3; }
 .home-top.open .menu-toggle { transform: rotate(180deg); }
 .home-top.open .menu-toggle:active { transform: rotate(180deg) scale(.88); }
 .home-icons { position: relative; z-index: 1; display: flex; flex-direction: row; align-items: center; gap: 1px; transform-origin: right center; transition: opacity .28s ease, transform .4s cubic-bezier(.34,.9,.3,1); }
@@ -253,6 +254,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .opt-btn { width: 100%; padding: 14px; border-radius: 11px; font-weight: 800; border: 1px solid var(--line); background: var(--panel); color: var(--txt); }
 .opt-btn.ghostbtn { width: auto; opacity: .55; }
 .opt-btn.danger { border-color: var(--red); color: var(--red); }
+.opt-btn.login-off { width: 100%; margin-top: 10px; border: 1px solid var(--red); background: #1a0d0e; color: #ff5b6e; opacity: .55; }
 .menu-block { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; }
 .menu-block > :last-child { margin-bottom: 0; }
 .mb-title { font-size: 12px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
