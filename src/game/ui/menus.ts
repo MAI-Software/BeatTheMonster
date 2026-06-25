@@ -40,7 +40,7 @@ const slotIcon: Record<string, IconName> = { head: "headband", gloves: "glove", 
 
 // Satisfying full-screen reveal when you craft or pull an item. Darkens the
 // screen, shows the item big + animated, dismiss on tap. Plays a reveal sound.
-function revealOverlay(faceHtml: string, name: string, sub: string, rarity: string): void {
+export function revealOverlay(faceHtml: string, name: string, sub: string, rarity: string): void {
   sfx.reveal();
   const ov = document.createElement("div");
   ov.className = `reveal-ov r-${rarity}`;
@@ -147,15 +147,15 @@ function setupGymWalk(app: App) {
 // "Luchar" hub: the play modes.
 export function renderLuchar(app: App) {
   const s = app.save;
-  const energy = refreshEnergy(s); const eMax = maxEnergy(s); const eNext = msToNext(s);
+  const energy = refreshEnergy(s); const eMax = maxEnergy(s);
+  const cur = `<span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("gem", 16)} ${s.premium}</span><span>${gicon("stamina", 16)} ${energy}/${eMax}</span>`;
   const modes: { nav: string; ic: GIconName; label: string; sub: string }[] = [
     { nav: "campaign", ic: "campaign", label: "Historia", sub: "Capítulo 1 · contén la horda" },
     { nav: "practice", ic: "practice", label: "Práctica", sub: "Entrena puños o esquivas" },
     { nav: "tutorial", ic: "tutorial", label: "Tutorial", sub: "Cómo se juega" },
     { nav: "songs", ic: "cassette", label: "Canciones", sub: "Juego libre con tus temas" },
   ];
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar")}<div class="scroll">
-    <div class="energy-pill">${gicon("stamina", 20)} ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div>
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar", false, false, cur)}<div class="scroll">
     ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 30)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span></button>`).join("")}
   </div></div>`;
   wireNav(app);
@@ -195,8 +195,8 @@ export function renderCampaign(app: App) {
     const afford = energy >= lv.cost;
     const cls = lv.finalBoss ? "final" : lv.boss ? "boss" : "normal";
     const songName = CASSETTES[Math.floor((lv.n - 1) / 5)]?.name ?? "";
-    const badge = beaten ? icon("check", 24) : !unlocked ? icon("lock", 22)
-      : lv.finalBoss ? gicon("finalboss", 34) : lv.boss ? gicon("boss", 34) : "";
+    const badge = lv.finalBoss ? gicon("finalboss", 38) : lv.boss ? gicon("boss", 38)
+      : beaten ? icon("check", 24) : !unlocked ? icon("lock", 22) : "";
     return `<button class="lvl-card ${cls} ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${lv.enemyId}" ${unlocked && afford ? "" : "disabled"}>
       <span class="lc-n">${lv.n}</span>
       <span class="lc-body"><b>${unlocked ? e.name : "???"}</b><small>${lv.finalBoss ? "JEFE FINAL" : lv.boss ? "JEFE" : e.title}</small><small class="lc-song">${gicon("cassette", 11)} ${songName}</small></span>

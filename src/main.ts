@@ -18,7 +18,7 @@ import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassette
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
-  renderFragments, renderLuchar, renderNickname, renderOptions, renderPractice, renderProfile, renderRanking, renderRadio, renderSongs, renderTraining, renderTutorial, renderWardrobe, type App,
+  renderFragments, renderLuchar, renderNickname, renderOptions, renderPractice, renderProfile, renderRanking, renderRadio, renderSongs, renderTraining, renderTutorial, renderWardrobe, revealOverlay, type App,
 } from "./game/ui/menus";
 import { ensureMenuMusic, stopMenuMusic } from "./game/systems/menuMusic";
 
@@ -182,6 +182,7 @@ class Game implements App {
     const lv = grantXp(s, xpGain);
     s.bestScore = Math.max(s.bestScore, score);
     let ticketsGained = 0;
+    let droppedCas: { id: string; name: string } | null = null;
     if (r.won) {
       const firstClear = !s.defeated[enemyId];
       s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
@@ -200,6 +201,7 @@ class Game implements App {
           const before = s.cassettes[cas.id] ?? 0;
           s.cassettes[cas.id] = before + 1;
           ticketsGained += collectTicketGain(before, before + 1);
+          droppedCas = { id: cas.id, name: cas.name };
           this.toast(before === 0 ? `¡Cassette: ${cas.name}! (Canciones)` : `¡${cas.name} duplicada!`);
         }
       }
@@ -214,6 +216,7 @@ class Game implements App {
 
     this.root.innerHTML = `
       <div class="scene menu result ${r.won ? "win" : "lose"}">
+        <div class="section-bg"><img src="portal.webp" alt="" onerror="this.style.display='none'"></div>
         <h1>${r.won ? "VICTORIA" : "DERROTA"}</h1>
         <div class="res-enemy">${enemy.name}</div>
         <div class="res-grid">
@@ -236,6 +239,9 @@ class Game implements App {
     this.root.querySelector<HTMLButtonElement>("#again")!.onclick = () => this.startFight(enemyId, episodeId);
     this.root.querySelector<HTMLButtonElement>("#toCampaign")!.onclick = () => this.go("campaign");
     this.root.querySelector<HTMLButtonElement>("#toHome")!.onclick = () => this.go("home");
+    // big reveal for a rare combat drop (cassette > ticket)
+    if (droppedCas) revealOverlay(gicon("cassette", 130), droppedCas.name, "¡Cassette!", "rare");
+    else if (ticketsGained > 0) revealOverlay(gicon("ticket", 130), "Ticket de refuerzo", `+${ticketsGained}`, "legendary");
   }
 }
 
