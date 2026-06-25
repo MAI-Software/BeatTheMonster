@@ -34,6 +34,18 @@ function sectionBg(key: string): string {
 
 const slotIcon: Record<string, IconName> = { head: "headband", gloves: "glove", body: "charm", shins: "boot" };
 
+// Satisfying full-screen reveal when you craft or pull an item. Darkens the
+// screen, shows the item big + animated, dismiss on tap. Plays a reveal sound.
+function revealOverlay(faceHtml: string, name: string, sub: string, rarity: string): void {
+  sfx.reveal();
+  const ov = document.createElement("div");
+  ov.className = `reveal-ov r-${rarity}`;
+  ov.innerHTML = `<div class="rv-card"><div class="rv-face">${faceHtml}</div><div class="rv-name">${name}</div>${sub ? `<div class="rv-sub">${sub}</div>` : ""}<div class="rv-tap">Toca para continuar</div></div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add("show"));
+  ov.onclick = () => { ov.classList.remove("show"); setTimeout(() => ov.remove(), 250); };
+}
+
 function equipCard(rarity: string, owned: boolean, eq: boolean, ic: IconName, name: string, desc: string, pick: string): string {
   return `<button class="item-card r-${rarity} ${owned ? "" : "locked"} ${eq ? "equipped" : ""}" ${pick} ${owned ? "" : "disabled"}>
     <span class="ic-lead">${icon(ic, 22)}</span>
@@ -333,6 +345,7 @@ export function renderGacha(app: App) {
       `<div class="pull-pop r-${res.rarity}"><div class="pp-name">${icon(res.isFlow ? "bolt" : "glove", 18)} <b>${res.itemName}</b> <i>${res.rarity}</i></div><div class="pp-sub">+${res.fragsGained} frags ${res.crafted ? "· <b class='crafted'>DESBLOQUEADO</b>" : ""}</div></div>`;
     app.root.querySelector(".currency")!.innerHTML = `<span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("gem", 16)} ${s.premium}</span>`;
     b.disabled = !canPull(s, b.dataset.pull as any);
+    revealOverlay(icon(res.isFlow ? "bolt" : "glove", 130), res.itemName, `+${res.fragsGained} frags${res.crafted ? " · ¡DESBLOQUEADO!" : ""}`, res.rarity);
   });
   const adBtn = app.root.querySelector<HTMLButtonElement>("[data-ad]");
   if (adBtn) adBtn.onclick = () => {
@@ -346,6 +359,7 @@ export function renderGacha(app: App) {
     const adCount = app.root.querySelector<HTMLElement>("#ad-count");
     if (adCount) adCount.innerHTML = `${gicon("ads", 13)} ${nowAds}/${AD_MAX}${nowAds < AD_MAX ? ` · ${Math.max(1, Math.ceil(nextMs / 60000))}m` : ""}`;
     adBtn.disabled = nowAds <= 0;
+    revealOverlay(icon(res.isFlow ? "bolt" : "glove", 130), res.itemName, `+${res.fragsGained} frags${res.crafted ? " · ¡DESBLOQUEADO!" : ""}`, res.rarity);
   };
 }
 
@@ -370,7 +384,14 @@ export function renderFragments(app: App) {
     <div class="scroll">${rows}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-craft]").forEach((b) => b.onclick = () => {
-    if (craftItem(s, b.dataset.craft!)) { app.persist(); sfx.upgrade(); app.toast("¡Objeto creado!"); renderFragments(app); }
+    const id = b.dataset.craft!;
+    if (craftItem(s, id)) {
+      app.persist();
+      const flow = FLOW_STATES.find((f) => f.id === id); const eq = EQUIPMENT.find((e) => e.id === id);
+      const face = icon(flow ? "bolt" : slotIcon[(eq as any)?.slot] ?? "glove", 130);
+      revealOverlay(face, flow?.name ?? eq?.name ?? "Objeto", "¡Creado!", (flow?.rarity ?? eq?.rarity ?? "common"));
+      renderFragments(app);
+    }
   });
   const ca = app.root.querySelector<HTMLButtonElement>("#craftAll");
   if (ca) ca.onclick = () => {

@@ -214,7 +214,22 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 /* fragments craft list */
 .frag-row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; background: #141415e6; border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 11px; margin-bottom: 8px; }
 .frag-row.r-common { border-left-color: var(--r-common); } .frag-row.r-rare { border-left-color: var(--r-rare); } .frag-row.r-epic { border-left-color: var(--r-epic); } .frag-row.r-legendary { border-left-color: var(--r-legendary); }
-.frag-row.owned { opacity: .55; } .frag-row.ready { border-color: var(--gold); box-shadow: 0 0 12px #ffd23b33; }
+.frag-row.ready { border-color: var(--gold); box-shadow: 0 0 12px #ffd23b33; }
+.reveal-ov { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: #000d; opacity: 0; transition: opacity .25s ease; cursor: pointer; }
+.reveal-ov.show { opacity: 1; }
+.rv-card { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; transform: scale(.7); transition: transform .3s cubic-bezier(.2,1.4,.4,1); }
+.reveal-ov.show .rv-card { transform: scale(1); }
+.rv-face { position: relative; width: 170px; height: 170px; display: grid; place-items: center; color: #fff; filter: drop-shadow(0 0 26px currentColor); animation: rvFloat 2.4s ease-in-out infinite; }
+.rv-face svg, .rv-face img { width: 100%; height: 100%; }
+.rv-face::before { content: ""; position: absolute; width: 230px; height: 230px; border-radius: 50%; background: radial-gradient(closest-side, currentColor 0%, transparent 72%); opacity: .35; animation: rvGlow 2.4s ease-in-out infinite; }
+@keyframes rvFloat { 0%, 100% { transform: translateY(-8px) rotate(-4deg); } 50% { transform: translateY(8px) rotate(4deg); } }
+@keyframes rvGlow { 0%, 100% { transform: scale(.9); opacity: .25; } 50% { transform: scale(1.12); opacity: .5; } }
+.reveal-ov.r-common .rv-face { color: var(--r-common); } .reveal-ov.r-rare .rv-face { color: var(--r-rare); }
+.reveal-ov.r-epic .rv-face { color: var(--r-epic); } .reveal-ov.r-legendary .rv-face { color: var(--r-legendary); }
+.rv-name { font-size: 26px; font-weight: 900; color: #fff; text-shadow: 0 2px 10px #000; }
+.rv-sub { font-size: 14px; color: #ffd23b; font-weight: 800; }
+.rv-tap { margin-top: 18px; font-size: 12px; color: #ffffff99; letter-spacing: 1px; animation: rvTap 1.4s ease-in-out infinite; }
+@keyframes rvTap { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
 .fr-body { flex: 1; min-width: 0; } .fr-body b { font-size: 14px; }
 .fr-side { flex: none; } .fr-craft { padding: 8px 14px; border-radius: 9px; background: var(--gold); color: #2a1f00; font-weight: 800; }
 .fr-n { color: var(--dim); font-size: 12px; font-weight: 700; } .fr-have .ic { color: var(--green); }
