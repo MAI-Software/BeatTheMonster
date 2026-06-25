@@ -156,7 +156,7 @@ export function renderLuchar(app: App) {
     { nav: "songs", ic: "cassette", label: "Canciones", sub: "Juego libre con tus temas" },
   ];
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar", false, false, cur)}<div class="scroll">
-    ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 30)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span></button>`).join("")}
+    ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 46)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span></button>`).join("")}
   </div></div>`;
   wireNav(app);
 }
