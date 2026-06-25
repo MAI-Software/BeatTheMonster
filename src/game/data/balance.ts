@@ -17,7 +17,7 @@ export const TIMING = {
 export const COMBO = {
   SUPER_THRESHOLD: 8, // perfects in a row to enter Super Combo
   SUPER_DMG_MULT: 2.5, // damage multiplier while in Super Combo
-  PERFECT_DMG_MULT: 1.5,
+  PERFECT_DMG_MULT: 2.0,
   GOOD_DMG_MULT: 1.0,
   MISS_DMG_MULT: 0,
 } as const;
@@ -27,21 +27,21 @@ export function xpToNext(level: number): number {
   return Math.floor(50 * Math.pow(level, 1.35) + 50);
 }
 
-// Hit damage: attacker atk vs defender def, scaled by judgement mult and flow buffs.
+// Hit damage: flat atk minus defender def, minimum 1. Perfect doubles it
+// (PERFECT_DMG_MULT = 2). Flow buffs still apply on top.
 export function hitDamage(
   atk: number,
   defenderDef: number,
   judgementMult: number,
   flowDmgMult = 1
 ): number {
-  const base = atk * (100 / (100 + defenderDef)); // soft diminishing def
+  const base = Math.max(1, atk - defenderDef);
   return Math.max(1, Math.round(base * judgementMult * flowDmgMult));
 }
 
-// Incoming damage to player when a beat is missed (enemy counter).
+// Incoming damage to player when a beat is missed: enemy atk minus player def, min 1.
 export function counterDamage(enemyAtk: number, playerDef: number): number {
-  const base = enemyAtk * (100 / (100 + playerDef));
-  return Math.max(1, Math.round(base));
+  return Math.max(1, enemyAtk - playerDef);
 }
 
 // Training cost (coins) to raise a stat, scales with current value AND steps up
