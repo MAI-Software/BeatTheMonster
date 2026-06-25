@@ -4,7 +4,7 @@ import { LEVELS, ENEMIES, BOSS_IDS, CAMPAIGN_LORE } from "../data/enemies";
 import { EQUIPMENT, SLOT_LABEL, RARITY_RANK, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
 import { FLOW_STATES, getFlowState, type Rarity } from "../data/flowStates";
 import { canTrain, effectiveStats, gemTrainCost, spendVoucher, train, trainCost, trainWithGems, xpToNext } from "../systems/progression";
-import { AD_MAX, PULL_COST, adMsToNext, anyCraftable, canCraft, canPull, craftItem, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
+import { AD_MAX, PULL_COST, adMsToNext, anyCraftable, canCraft, canPull, canPullN, craftItem, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
 import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../systems/stamina";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
@@ -353,22 +353,13 @@ export function renderGacha(app: App) {
       <div class="gbanner ad"><b>GRATIS</b><small id="ad-count">${gicon("ads", 13)} ${ads}/${AD_MAX}${ads < AD_MAX ? ` · ${Math.max(1, Math.ceil(adNext / 60000))}m` : ""}</small>
         <button class="pull-btn" data-ad ${ads > 0 ? "" : "disabled"}>Anuncio</button></div>
       <div class="gbanner basic"><b>BÁSICO</b><small>${gicon("coin", 13)} ${PULL_COST.normal}</small>
-        <button class="pull-btn" data-pull="normal" ${canPull(s, "normal") ? "" : "disabled"}>Tirar</button></div>
+        <button class="pull-btn" data-invoke="normal" ${canPull(s, "normal") ? "" : "disabled"}>Invocar</button></div>
       <div class="gbanner premium"><b>PREMIUM</b><small>${gicon("gem", 13)} ${PULL_COST.premium}</small>
-        <button class="pull-btn" data-pull="premium" ${canPull(s, "premium") ? "" : "disabled"}>Tirar</button></div>
+        <button class="pull-btn" data-invoke="premium" ${canPull(s, "premium") ? "" : "disabled"}>Invocar</button></div>
     </div>
   </div>`;
   wireNav(app);
-  app.root.querySelectorAll<HTMLButtonElement>("[data-pull]").forEach((b) => b.onclick = () => {
-    const res = pull(s, b.dataset.pull as any);
-    if (!res) { app.toast("Sin monedas"); return; }
-    app.persist();
-    app.root.querySelector<HTMLDivElement>("#pull-result")!.innerHTML =
-      `<div class="pull-pop r-${res.rarity}"><div class="pp-name">${icon(res.isFlow ? "bolt" : "glove", 18)} <b>${res.itemName}</b> <i>${res.rarity}</i></div><div class="pp-sub">+${res.fragsGained} frags ${res.crafted ? "· <b class='crafted'>DESBLOQUEADO</b>" : ""}</div></div>`;
-    app.root.querySelector(".currency")!.innerHTML = `<span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("gem", 16)} ${s.premium}</span>`;
-    b.disabled = !canPull(s, b.dataset.pull as any);
-    revealOverlay(icon(res.isFlow ? "bolt" : "glove", 130), res.itemName, `+${res.fragsGained} frags${res.crafted ? " · ¡DESBLOQUEADO!" : ""}`, res.rarity);
-  });
+  app.root.querySelectorAll<HTMLButtonElement>("[data-invoke]").forEach((b) => b.onclick = () => openPullDialog(app, b.dataset.invoke as "normal" | "premium"));
   const adBtn = app.root.querySelector<HTMLButtonElement>("[data-ad]");
   if (adBtn) adBtn.onclick = () => {
     // placeholder: a real rewarded ad (Google/Apple) goes here; for now grant instantly
@@ -383,6 +374,55 @@ export function renderGacha(app: App) {
     adBtn.disabled = nowAds <= 0;
     revealOverlay(icon(res.isFlow ? "bolt" : "glove", 130), res.itemName, `+${res.fragsGained} frags${res.crafted ? " · ¡DESBLOQUEADO!" : ""}`, res.rarity);
   };
+}
+
+// Center dialog asking how many to summon (x1 / x10) with each cost.
+function openPullDialog(app: App, banner: "normal" | "premium") {
+  const s = app.save;
+  const cost = banner === "normal" ? PULL_COST.normal : PULL_COST.premium;
+  const ci = gicon(banner === "normal" ? "coin" : "gem", 14);
+  const ov = document.createElement("div");
+  ov.className = "reveal-ov show pull-dialog";
+  ov.innerHTML = `<div class="pd-card">
+    <div class="pd-title">Invocar · ${banner === "normal" ? "Básico" : "Premium"}</div>
+    <button class="pd-opt" data-n="1" ${canPullN(s, banner, 1) ? "" : "disabled"}>x1 · ${ci} ${cost}</button>
+    <button class="pd-opt big" data-n="10" ${canPullN(s, banner, 10) ? "" : "disabled"}>x10 · ${ci} ${cost * 10}</button>
+    <button class="pd-cancel">Cancelar</button>
+  </div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.onclick = (e) => { if (e.target === ov) close(); };
+  ov.querySelector<HTMLButtonElement>(".pd-cancel")!.onclick = close;
+  ov.querySelectorAll<HTMLButtonElement>("[data-n]").forEach((b) => b.onclick = () => { const n = +b.dataset.n!; close(); doPulls(app, banner, n); });
+}
+
+function doPulls(app: App, banner: "normal" | "premium", n: number) {
+  const s = app.save; const results = [];
+  for (let i = 0; i < n; i++) { const r = pull(s, banner); if (!r) break; results.push(r); }
+  if (!results.length) { app.toast(banner === "normal" ? "Sin monedas" : "Sin cristalma"); return; }
+  app.persist(); renderGacha(app);
+  if (results.length === 1) {
+    const r = results[0];
+    revealOverlay(icon(r.isFlow ? "bolt" : "glove", 130), r.itemName, `+${r.fragsGained} frags${r.crafted ? " · ¡DESBLOQUEADO!" : ""}`, r.rarity);
+  } else revealMulti(results);
+}
+
+// x10 reveal: a horizontal, swipeable row of result cards; tap outside or Aceptar to close.
+function revealMulti(results: { itemName: string; rarity: string; fragsGained: number; crafted: boolean; isFlow: boolean }[]) {
+  sfx.reveal();
+  const cards = results.map((r) => `<div class="rvm-card r-${r.rarity}">
+    <div class="rvm-face">${icon(r.isFlow ? "bolt" : "glove", 64)}</div>
+    <div class="rvm-name">${r.itemName}</div>
+    <div class="rvm-sub">+${r.fragsGained}${r.crafted ? " · ¡NUEVO!" : ""}</div>
+  </div>`).join("");
+  const ov = document.createElement("div");
+  ov.className = "reveal-ov multi";
+  ov.innerHTML = `<div class="rvm-wrap"><div class="rvm-row">${cards}</div><button class="rvm-ok">Aceptar</button></div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add("show"));
+  const close = () => { ov.classList.remove("show"); setTimeout(() => ov.remove(), 250); };
+  ov.onclick = (e) => { if (e.target === ov) close(); };
+  ov.querySelector<HTMLButtonElement>(".rvm-ok")!.onclick = close;
 }
 
 // Fragments: craft items once you have enough fragments from the gacha.

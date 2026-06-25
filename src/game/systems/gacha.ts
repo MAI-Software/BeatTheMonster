@@ -6,7 +6,7 @@ import { FLOW_STATES, getFlowState } from "../data/flowStates";
 import type { Rarity } from "../data/flowStates";
 import type { SaveState } from "../core/storage";
 
-export const PULL_COST = { normal: 50, premium: 25 } as const; // premium uses premium currency
+export const PULL_COST = { normal: 1000, premium: 100 } as const; // premium uses premium currency
 
 export interface PullResult {
   itemId: string;
@@ -45,6 +45,10 @@ function fragsForRarity(rarity: Rarity): number {
 
 export function canPull(s: SaveState, banner: "normal" | "premium"): boolean {
   return banner === "normal" ? s.coins >= PULL_COST.normal : s.premium >= PULL_COST.premium;
+}
+export function canPullN(s: SaveState, banner: "normal" | "premium", n: number): boolean {
+  const cost = (banner === "normal" ? PULL_COST.normal : PULL_COST.premium) * n;
+  return banner === "normal" ? s.coins >= cost : s.premium >= cost;
 }
 
 // Watch-ad free pulls: 1 basic pull, recharges 1 every 2h up to 5. Placeholder for
