@@ -157,7 +157,6 @@ export function renderWardrobe(app: App) {
     </button>`;
   };
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Vestuario")}<div class="scroll">
-    <p class="hint">Cambia la apariencia. Solo estético — las copias repetidas dan puntos de álbum.</p>
     <h3>Protagonista</h3><div class="skin-grid">${PLAYER_SKINS.map((sk) => card(sk, "player")).join("")}</div>
     <h3>Entrenador</h3><div class="skin-grid">${COACH_SKINS.map((sk) => card(sk, "coach")).join("")}</div>
   </div></div>`;
@@ -217,7 +216,7 @@ export function renderTraining(app: App, openStat?: string) {
       </div>
     </div>`;
   };
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar", true)}<div class="scroll">
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("training")}${topBar(app, "Entrenar", true)}<div class="scroll train-scroll">
     ${row("vt", "c-green")}${row("atk", "c-orange")}${row("def", "c-blue")}
   </div></div>`;
   wireNav(app);
@@ -423,7 +422,6 @@ export function renderRanking(app: App) {
 
 export function renderPractice(app: App) {
   app.root.innerHTML = `<div class="scene menu">${sectionBg("practice")}${topBar(app, "Práctica")}<div class="scroll">
-    <p class="hint">Entrena una mecánica a la vez. Sin daño ni derrota — solo para coger el ritmo.</p>
     <button class="practice-card p-punch" data-practice="punch">
       <span class="pc-ic">${icon("glove", 26)}</span>
       <div><div class="pc-name">Puños</div><div class="pc-sub">Golpea izquierda/derecha cuando la mitad se llene</div></div>
@@ -443,7 +441,6 @@ export function renderNickname(app: App) {
   app.root.innerHTML = `<div class="scene menu nick-scene">${sectionBg("gym")}
     <div class="nick-box">
       <h2 class="cs-title">Tu nombre de luchador</h2>
-      <p class="hint">Elige tu apodo. Se guarda solo en este dispositivo.</p>
       <input id="nickInput" class="nick-input" type="text" maxlength="14" placeholder="Tu apodo" value="${s.nick}" autocomplete="off">
       <button class="primary" id="nickOk">Continuar</button>
     </div></div>`;
@@ -567,7 +564,6 @@ export function renderSongs(app: App) {
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Canciones")}<div class="scroll">
-    <p class="hint">Toca canciones que hayas conseguido. Los jefes sueltan su <b>cassette</b> (10%). Juego libre, sin derrota. Tocar canciones cuenta para misiones.</p>
     <h3>Cassettes · ${owned.length}/${CASSETTES.length}</h3>
     ${rows}
   </div></div>`;
@@ -601,7 +597,6 @@ export function renderRadio(app: App) {
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Radio", false, false, power)}<div class="scroll">
-    <p class="hint">Elige la canción que sonará en los menús. El botón de arriba enciende o apaga la radio (se guarda). Solo las desbloqueadas (cassettes de jefes + Wasteland).</p>
     ${rows}
   </div></div>`;
   wireNav(app);
@@ -734,7 +729,6 @@ export function renderCollection(app: App) {
   const cnt = (list: ColItem[]) => list.filter((x) => x.owned).length;
 
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección", false, true)}<div class="scroll">
-    <p class="hint">Toca un coleccionable para verlo y <b>ascender su rango</b> gastando duplicados (recompensa en monedas/gemas).</p>
     <h3>Jefes · ${cnt(bosses)}/${bosses.length}</h3>${grid(bosses)}
     <h3>Equipo · ${cnt(gear)}/${gear.length}</h3>${grid(gear)}
     <h3>Estados de Flujo · ${cnt(flows)}/${flows.length}</h3>${grid(flows)}

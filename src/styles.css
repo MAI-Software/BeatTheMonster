@@ -305,6 +305,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .tr-buy[hidden] { display: none; }
 .tr-buy .bb { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 6px; border-radius: 9px; background: #0006; border: 1px solid var(--line); color: var(--txt); font-weight: 800; font-size: 13px; }
 .tr-buy .bb:disabled { opacity: .4; }
+.train-scroll { display: flex; flex-direction: column; justify-content: flex-end; }
 .seg-bar { display: flex; gap: 3px; margin: 9px 0; }
 .seg-bar i { flex: 1; height: 10px; border-radius: 3px; background: #00000066; position: relative; overflow: hidden; }
 .seg-bar i::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--f, 0%); transition: width .3s ease; }
