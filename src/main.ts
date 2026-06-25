@@ -9,7 +9,7 @@ import { effectiveStats, grantXp } from "./game/systems/progression";
 import { applyFightResult, refreshChallenges } from "./game/systems/challenges";
 import { fightScore } from "./game/systems/ranking";
 import { createInput, type InputProvider } from "./game/systems/pose";
-import { DIFFICULTIES, DIFFICULTY_ORDER, isDifficultyUnlocked, unlockHint, type DifficultyId } from "./game/data/difficulty";
+import { DIFFICULTIES, DIFFICULTY_ORDER, diffUnlocked, type DifficultyId } from "./game/data/difficulty";
 import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
 import { icon, gicon } from "./game/ui/icons";
@@ -32,7 +32,9 @@ class Game implements App {
   root = document.getElementById("app")!;
   save: SaveState = loadSave();
   input: InputProvider | null = null;
-  difficulty: DifficultyId = "normal";
+  difficulty: DifficultyId = "easy";
+  diffOptions() { return DIFFICULTY_ORDER.map((d) => ({ id: d as string, name: DIFFICULTIES[d].name, unlocked: diffUnlocked(d, this.save.chapterDone) })); }
+  setDifficulty(id: string) { const d = id as DifficultyId; if (diffUnlocked(d, this.save.chapterDone)) this.difficulty = d; }
   private current = "home";
   private hist: string[] = [];
 
@@ -119,51 +121,25 @@ class Game implements App {
     // block theme song first (the level's default), then per-enemy tracks
     const block = levelByEnemy(enemyId)?.songBlock ?? 0;
     const blockSong = songForBlock(block);
-    const songs = [blockSong, ...(await listSongs(enemyId))];
-    let useCamera = true;
-    let chosenSong: SongMeta | null = songs[0]; // default = this block's theme
-    const unlocked = (d: DifficultyId) => isDifficultyUnlocked(d, this.save.level, this.save.difficultyWins);
-    if (!unlocked(this.difficulty)) this.difficulty = "easy";
+    if (!diffUnlocked(this.difficulty, this.save.chapterDone)) this.difficulty = "easy";
 
     const render = () => {
       this.root.innerHTML = `
         <div class="scene menu prefight">
+          <div class="section-bg"><img src="portal.webp" alt="" onerror="this.style.display='none'"></div>
           <button class="back" id="pfback">${icon("back", 24)}</button>
           <div class="pf-card">
             <div class="pf-enemy">${enemy.name}</div>
             <div class="pf-title">${enemy.title}</div>
-            <p class="hint">Mantén el cuerpo erguido. Inclina la cabeza a los lados para esquivar. Cada mitad del círculo se rellena: golpea ese puño justo cuando llega al borde.</p>
-            <h4>Dificultad</h4>
-            <div class="diff-grid">
-              ${DIFFICULTY_ORDER.map((d) => {
-                const lock = !unlocked(d);
-                return `<button data-diff="${d}" class="diff-card ${this.difficulty === d ? "on" : ""} ${lock ? "locked" : ""}" ${lock ? "disabled" : ""}>
-                  <span class="dc-name">${DIFFICULTIES[d].name}</span>
-                  ${lock ? `<span class="dc-lock">${icon("lock", 13)} ${unlockHint(d)}</span>` : `<span class="dc-ok">Recompensa ×${({ easy: "0.75", normal: "1", hard: "1.4", master: "1.9" } as any)[d]}</span>`}
-                </button>`;
-              }).join("")}
-            </div>
-            <h4>Control</h4>
-            <div class="seg">
-              <button data-ctl="cam" class="${useCamera ? "on" : ""}">Cámara</button>
-              <button data-ctl="kb" class="${!useCamera ? "on" : ""}">Teclado / Táctil</button>
-            </div>
-            <h4>Canción</h4>
-            <div class="songlist">
-              <button data-song="" class="${!chosenSong ? "on" : ""}">${icon("note", 16)} Ritmo del juego</button>
-              ${songs.map((s) => `<button data-song="${s.id}" class="${chosenSong?.id === s.id ? "on" : ""}">${icon("note", 16)} ${s.name}</button>`).join("")}
-            </div>
-            ${songs.length === 0 ? `<p class="hint small">Para tus canciones: pon archivos en <code>public/songs/</code> y añádelos a <code>manifest.json</code>.</p>` : ""}
+            <div class="pf-meta"><span>Dificultad: <b>${DIFFICULTIES[this.difficulty].name}</b></span><span>${gicon("cassette", 15)} ${blockSong.name}</span></div>
             <button class="primary" id="pfstart">${icon("play", 20)} Empezar</button>
+            <button class="opt-btn ghostbtn pf-auto" id="pfauto">AUTO (provisional)</button>
           </div>
         </div>`;
       this.root.querySelector<HTMLButtonElement>("#pfback")!.onclick = () => this.go("campaign");
-      this.root.querySelectorAll<HTMLButtonElement>("[data-diff]").forEach((b) => b.onclick = () => { this.difficulty = b.dataset.diff as DifficultyId; render(); });
-      this.root.querySelectorAll<HTMLButtonElement>("[data-ctl]").forEach((b) => b.onclick = () => { useCamera = b.dataset.ctl === "cam"; render(); });
-      this.root.querySelectorAll<HTMLButtonElement>("[data-song]").forEach((b) => b.onclick = () => {
-        chosenSong = b.dataset.song ? songs.find((s) => s.id === b.dataset.song) ?? null : null; render();
-      });
       this.root.querySelector<HTMLButtonElement>("#pfstart")!.onclick = () => begin();
+      this.root.querySelector<HTMLButtonElement>("#pfauto")!.onclick = () =>
+        this.onFightEnd(enemyId, episodeId, { perfects: 60, goods: 12, dodges: 6, maxCombo: 35, superCombos: 3, won: true, enemyMaxHp: enemy.hp });
     };
 
     const begin = async () => {
@@ -173,15 +149,11 @@ class Game implements App {
       this.persist();
       this.root.innerHTML = this.loadingHTML("Preparando combate…");
       if (this.input) this.input.stop();
-      this.input = await createInput(useCamera);
-      if (useCamera && this.input.kind !== "camera") this.toast("Cámara no disponible — uso teclado");
+      this.input = await createInput(true);
+      if (this.input.kind !== "camera") this.toast("Cámara no disponible — uso teclado");
       let song: SongPlayer;
-      try {
-        song = chosenSong ? await loadSongPlayer(chosenSong) : synthSongPlayer(enemy.bpm);
-      } catch {
-        this.toast("No pude cargar la canción — uso ritmo del juego");
-        song = synthSongPlayer(enemy.bpm);
-      }
+      try { song = await loadSongPlayer(blockSong); }
+      catch { this.toast("No pude cargar la canción — uso ritmo del juego"); song = synthSongPlayer(enemy.bpm); }
       const eff = effectiveStats(this.save);
       const flow = this.save.equippedFlow ? getFlowState(this.save.equippedFlow) : undefined;
       const result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty]);
@@ -234,6 +206,7 @@ class Game implements App {
       // advance the chapter frontier (episodeProgress = furthest level index cleared)
       const lvl = levelByEnemy(enemyId);
       if (lvl && lvl.n - 1 === s.episodeProgress) s.episodeProgress = lvl.n;
+      if (lvl?.finalBoss) { s.chapterDone[this.difficulty] = true; this.toast("¡Capítulo completado! Dificultad superior desbloqueada"); }
     }
     if (ticketsGained > 0) { s.statVouchers += ticketsGained; this.toast(`¡+${ticketsGained} Ticket de refuerzo!`); }
     applyFightResult(s, { perfects: r.perfects, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won });

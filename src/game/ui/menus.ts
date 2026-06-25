@@ -24,6 +24,9 @@ export interface App {
   startPractice(kind: "punch" | "dodge"): void;
   startSong(cassetteId: string): void;
   autoWin(): void;
+  difficulty: string;
+  diffOptions(): { id: string; name: string; unlocked: boolean }[];
+  setDifficulty(id: string): void;
   resetAll(): void;
   toast(msg: string): void;
 }
@@ -191,11 +194,12 @@ export function renderCampaign(app: App) {
     const beaten = lv.n - 1 < s.episodeProgress;
     const afford = energy >= lv.cost;
     const cls = lv.finalBoss ? "final" : lv.boss ? "boss" : "normal";
+    const songName = CASSETTES[Math.floor((lv.n - 1) / 5)]?.name ?? "";
     const badge = beaten ? icon("check", 24) : !unlocked ? icon("lock", 22)
       : lv.finalBoss ? gicon("finalboss", 34) : lv.boss ? gicon("boss", 34) : "";
     return `<button class="lvl-card ${cls} ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${lv.enemyId}" ${unlocked && afford ? "" : "disabled"}>
       <span class="lc-n">${lv.n}</span>
-      <span class="lc-body"><b>${unlocked ? e.name : "???"}</b><small>${lv.finalBoss ? "JEFE FINAL" : lv.boss ? "JEFE" : e.title}</small></span>
+      <span class="lc-body"><b>${unlocked ? e.name : "???"}</b><small>${lv.finalBoss ? "JEFE FINAL" : lv.boss ? "JEFE" : e.title}</small><small class="lc-song">${gicon("cassette", 11)} ${songName}</small></span>
       <span class="lc-cost ${afford ? "" : "no"}">${gicon("stamina", 20)}${lv.cost}</span>
       <span class="lc-badge">${badge}</span>
     </button>`;
@@ -206,13 +210,20 @@ export function renderCampaign(app: App) {
     const songName = CASSETTES[b]?.name ?? "";
     blocks += `<div class="menu-block"><div class="mb-title">Niveles ${b * 5 + 1}–${b * 5 + 5}${songName ? ` · ${songName}` : ""}</div>${lvls.map(card).join("")}</div>`;
   }
+  const diffs = app.diffOptions(); const curDiff = diffs.find((d) => d.id === app.difficulty);
+  const diffMenu = `<div class="camp-diff" id="campDiff">
+    <button class="cd-toggle" id="cdToggle">${curDiff?.name ?? "Dificultad"} ▾</button>
+    <div class="cd-menu" hidden>${diffs.map((d) => `<button class="cd-opt ${d.id === app.difficulty ? "on" : ""}" data-diff="${d.id}" ${d.unlocked ? "" : "disabled"}>${d.name}${d.unlocked ? "" : ` ${icon("lock", 12)}`}</button>`).join("")}</div>
+  </div>`;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}
     <div class="topbar"><button class="back" data-back>${icon("back", 22)}</button><h2>Capítulo 1</h2>
-      <div class="currency"><span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("stamina", 16)} ${energy}/${eMax}</span></div></div>
-    <button class="claim-all top-action ready" id="autoBtn">AUTO</button>
-    <div class="scroll">${blocks}</div></div>`;
+      <div class="currency"><span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("gem", 16)} ${s.premium}</span><span>${gicon("stamina", 16)} ${energy}/${eMax}</span></div></div>
+    <div class="scroll">${diffMenu}${blocks}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!));
+  const cdMenu = app.root.querySelector<HTMLElement>(".cd-menu")!;
+  app.root.querySelector<HTMLButtonElement>("#cdToggle")!.onclick = () => { cdMenu.hidden = !cdMenu.hidden; };
+  app.root.querySelectorAll<HTMLButtonElement>("[data-diff]").forEach((b) => b.onclick = () => { app.setDifficulty(b.dataset.diff!); renderCampaign(app); });
   app.root.querySelector<HTMLButtonElement>("#autoBtn")!.onclick = () => app.autoWin();
 }
 

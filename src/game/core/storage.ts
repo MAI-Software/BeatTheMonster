@@ -46,6 +46,7 @@ export interface SaveState {
   collectRanks: Record<string, number>; // "kind:id" -> ascended rank index (0=F)
   craftCopies: Record<string, number>; // equipment/flow id -> extra crafted copies (album dups)
   redeemed: string[]; // promo codes already redeemed
+  chapterDone: Record<string, boolean>; // difficulty id -> chapter cleared (unlocks next)
   energy: number; // stamina for the adventure
   energyTs: number; // last regen timestamp
   ads: number; // watch-ad free pulls available
@@ -92,6 +93,7 @@ export function defaultSave(): SaveState {
     collectRanks: {},
     craftCopies: {},
     redeemed: [],
+    chapterDone: {},
     energy: 10,
     energyTs: Date.now(),
     ads: 5,

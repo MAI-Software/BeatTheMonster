@@ -38,6 +38,12 @@ export function isDifficultyUnlocked(id: DifficultyId, level: number, wins: Reco
   return true;
 }
 
+// New rule: a difficulty unlocks once the chapter is completed on the previous one.
+export function diffUnlocked(id: DifficultyId, chapterDone: Record<string, boolean>): boolean {
+  const prev = UNLOCK[id].prev;
+  return !prev || !!chapterDone[prev];
+}
+
 export function unlockHint(id: DifficultyId): string {
   const req = UNLOCK[id];
   const parts: string[] = [];
