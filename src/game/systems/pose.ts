@@ -148,6 +148,12 @@ export class PoseInput implements InputProvider {
   private fHeadX = new OneEuro(); private fHeadY = new OneEuro();
   private fLX = new OneEuro(); private fLY = new OneEuro();
   private fRX = new OneEuro(); private fRY = new OneEuro();
+  // reversal-aware extrapolation: cut the prediction horizon on a direction reversal (the
+  // punch retract), where constant-velocity prediction would overshoot the real hand.
+  private prevVelHead: Vec2 = { x: 0, y: 0 };
+  private prevVelL: Vec2 = { x: 0, y: 0 };
+  private prevVelR: Vec2 = { x: 0, y: 0 };
+  private extHead = 1; private extL = 1; private extR = 1;
 
   protected prevT = 0; // previous detection time (for velocity dt)
   private punches: Punch[] = [];
@@ -165,6 +171,8 @@ export class PoseInput implements InputProvider {
   private prevFwd: Record<Side, number> = { L: 0, R: 0 };
   private peakReach: Record<Side, number> = { L: 0, R: 0 };
   private armed: Record<Side, boolean> = { L: true, R: true };
+  private hotFrames: Record<Side, number> = { L: 0, R: 0 }; // consecutive frames meeting the punch threshold
+  private hotStart: Record<Side, number> = { L: 0, R: 0 };  // onset time of the current hot streak (for back-dating)
 
   constructor() {
     this.videoEl = document.createElement("video");
@@ -368,6 +376,13 @@ export class PoseInput implements InputProvider {
     filt(this.fHeadX, this.fHeadY, this.detHead, this.velHead, mx(lm[NOSE]), lm[NOSE].y);
     filt(this.fLX, this.fLY, this.detL, this.velL, mx(fistL), fistL.y);
     filt(this.fRX, this.fRY, this.detR, this.velR, mx(fistR), fistR.y);
+    // shrink the extrapolation horizon when a point reverses direction (dot(prevVel,vel)<0),
+    // then recover — kills marker overshoot at the punch retract.
+    const revScale = (prev: Vec2, vel: Vec2, cur: number) =>
+      prev.x * vel.x + prev.y * vel.y < 0 ? 0.15 : Math.min(1, cur + 0.3);
+    this.extHead = revScale(this.prevVelHead, this.velHead, this.extHead); this.prevVelHead.x = this.velHead.x; this.prevVelHead.y = this.velHead.y;
+    this.extL = revScale(this.prevVelL, this.velL, this.extL); this.prevVelL.x = this.velL.x; this.prevVelL.y = this.velL.y;
+    this.extR = revScale(this.prevVelR, this.velR, this.extR); this.prevVelR.x = this.velR.x; this.prevVelR.y = this.velR.y;
     this.lastDetMs = ts;
 
     // body scale = shoulder width; everything below measured in these units
@@ -409,12 +424,18 @@ export class PoseInput implements InputProvider {
     const out = reach - this.restReach[side];   // extension beyond the guard baseline
 
     if (this.armed[side]) {
-      if (up && nowMs > this.punchCooldown[side] && out > 0.15 && thrust > 2.0) {
-        this.punches.push({ side, tMs: nowMs });
+      const hot = up && out > 0.15 && thrust > 2.0;
+      if (hot && this.hotFrames[side] === 0) this.hotStart[side] = nowMs; // onset instant
+      this.hotFrames[side] = hot ? this.hotFrames[side] + 1 : 0;
+      // Require the thrust to hold ~2 frames (rejects single-frame velocity/z spikes = false
+      // punches) but back-date the punch to its ONSET, so this adds NO latency.
+      if (hot && nowMs > this.punchCooldown[side] && this.hotFrames[side] >= 2) {
+        this.punches.push({ side, tMs: this.hotStart[side] });
         if (this.punches.length > 4) this.punches.shift();
         this.punchCooldown[side] = nowMs + 140;
         this.armed[side] = false;
         this.peakReach[side] = reach;
+        this.hotFrames[side] = 0;
       }
     } else {
       this.peakReach[side] = Math.max(this.peakReach[side], reach);
@@ -438,15 +459,16 @@ export class PoseInput implements InputProvider {
     if (!this.ready) return;
     const age = Math.min(0.10, Math.max(0, (nowMs - this.lastDetMs) / 1000)); // s, capped (covers low detection rates)
     const k = 0.6; // ease factor toward the predicted target
-    const ext = (disp: Vec2, det: Vec2, vel: Vec2) => {
-      const tx = clamp01(det.x + vel.x * age);
-      const ty = clamp01(det.y + vel.y * age);
+    const ext = (disp: Vec2, det: Vec2, vel: Vec2, scale: number) => {
+      const a = age * scale;
+      const tx = clamp01(det.x + vel.x * a);
+      const ty = clamp01(det.y + vel.y * a);
       disp.x += (tx - disp.x) * k;
       disp.y += (ty - disp.y) * k;
     };
-    ext(this._head, this.detHead, this.velHead);
-    ext(this._L, this.detL, this.velL);
-    ext(this._R, this.detR, this.velR);
+    ext(this._head, this.detHead, this.velHead, this.extHead);
+    ext(this._L, this.detL, this.velL, this.extL);
+    ext(this._R, this.detR, this.velR, this.extR);
   }
 
   stop(): void {
