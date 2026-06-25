@@ -282,7 +282,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 /* ---------- chapter levels ---------- */
 .energy-pill { font-weight: 800; font-size: 13px; color: var(--txt); background: #141415cc; border: 1px solid var(--line); padding: 6px 10px; border-radius: 18px; white-space: nowrap; }
 .lvl-list { display: flex; flex-direction: column; gap: 8px; }
-.lvl-card { width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px; background: #14141599; border: 1px solid #ffffff1c; border-left: 4px solid #6a6a70; border-radius: 11px; color: var(--txt); text-align: left; text-shadow: 0 1px 4px #000c, 0 0 2px #000; }
+.lvl-card { width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 0; background: #14141599; border: 1px solid #ffffff1c; border-left: 4px solid #6a6a70; border-radius: 11px; color: var(--txt); text-align: left; text-shadow: 0 1px 4px #000c, 0 0 2px #000; }
 .lvl-card.locked { opacity: .45; }
 .lvl-card.beaten { border-color: var(--green); border-left-color: var(--green); }
 .lvl-card.boss { border-left: 6px solid var(--red); animation: bossPulse 1.5s ease-in-out infinite; }

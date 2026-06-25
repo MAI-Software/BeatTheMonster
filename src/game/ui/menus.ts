@@ -208,7 +208,7 @@ export function renderCampaign(app: App) {
   for (let b = 0; b < 6; b++) {
     const lvls = LEVELS.filter((l) => Math.floor((l.n - 1) / 5) === b);
     const songName = CASSETTES[b]?.name ?? "";
-    blocks += `<div class="menu-block"><div class="mb-title">Niveles ${b * 5 + 1}–${b * 5 + 5}${songName ? ` · ${songName}` : ""}</div>${lvls.map(card).join("")}</div>`;
+    blocks += `<div class="menu-block"><div class="mb-title">Niveles ${b * 5 + 1}–${b * 5 + 5}${songName ? ` · ${songName}` : ""}</div><div class="lvl-list">${lvls.map(card).join("")}</div></div>`;
   }
   const diffs = app.diffOptions(); const curDiff = diffs.find((d) => d.id === app.difficulty);
   const diffMenu = `<div class="camp-diff" id="campDiff">
