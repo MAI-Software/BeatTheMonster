@@ -39,6 +39,7 @@ export const sfx = {
   tick: () => blip(440, 0.04, "sine", 0.08),
   upgrade: () => { [659, 880, 1175].forEach((f, i) => setTimeout(() => blip(f, 0.14, "triangle", 0.24), i * 65)); },
   reveal: () => { [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => blip(f, 0.16, "triangle", 0.22), i * 70)); setTimeout(() => blip(1568, 0.28, "sine", 0.18), 380); },
+  track: () => { blip(660, 0.07, "sine", 0.14); setTimeout(() => blip(990, 0.1, "triangle", 0.16), 70); },
   win: () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => blip(f, 0.18, "triangle", 0.22), i * 110)); },
   lose: () => { [392, 330, 262].forEach((f, i) => setTimeout(() => blip(f, 0.25, "sawtooth", 0.2), i * 160)); },
 };

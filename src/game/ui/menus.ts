@@ -667,6 +667,9 @@ export function renderRadio(app: App) {
     s.favSong = b.dataset.fav!; app.persist();
     if (s.settings.menuMusic !== false) ensureMenuMusic(s.favSong);
     renderRadio(app);
+    sfx.track();
+    const top = app.root.querySelector<HTMLElement>(".radio-row.on");
+    if (top) { top.classList.add("picked"); setTimeout(() => top.classList.remove("picked"), 500); }
   });
 }
 

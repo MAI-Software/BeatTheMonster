@@ -354,6 +354,8 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .home-radio:active { transform: scale(.9); }
 .radio-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin-bottom: 9px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; color: var(--txt); }
 .radio-row.on { border-color: var(--red); background: color-mix(in srgb, var(--red) 16%, var(--panel)); }
+.radio-row.picked { animation: trackPick .5s cubic-bezier(.2,1.3,.4,1); }
+@keyframes trackPick { 0% { transform: translateY(-16px) scale(.95); opacity: .25; } 55% { box-shadow: 0 0 24px #ff2a36aa; } 100% { transform: none; opacity: 1; } }
 .radio-row.on .rr-meta b { color: var(--red); }
 .radio-now { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 12px; background: color-mix(in srgb, var(--red) 12%, var(--panel)); border: 1px solid var(--red); border-radius: 14px; }
 .radio-pp { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; background: var(--red); color: #fff; }
