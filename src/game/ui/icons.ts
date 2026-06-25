@@ -47,13 +47,13 @@ export type { IconName };
 export type GIconName =
   | "campaign" | "practice" | "tutorial" | "training" | "equip" | "gacha"
   | "challenges" | "ranking" | "collection" | "songs" | "options" | "profile" | "wardrobe" | "story" | "fragments"
-  | "coin" | "gem" | "flow" | "vt" | "atk" | "def" | "stamina" | "ads" | "ticket" | "radio" | "cassette";
+  | "coin" | "gem" | "flow" | "vt" | "atk" | "def" | "stamina" | "ads" | "ticket" | "radio" | "cassette" | "boss" | "finalboss";
 
 const EMOJI: Record<GIconName, string> = {
   campaign: "⚔️", practice: "🎯", tutorial: "🥊", training: "💪", equip: "🧤", gacha: "🎰",
   challenges: "📅", ranking: "🏆", collection: "📖", songs: "📼", options: "⚙️", profile: "👤",
   wardrobe: "🧥", story: "📜", fragments: "🧩",
-  coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️", stamina: "🥤", ads: "🎬", ticket: "🎟️", radio: "📻", cassette: "📼",
+  coin: "🪙", gem: "💎", flow: "⚡", vt: "❤️", atk: "👊", def: "🛡️", stamina: "🥤", ads: "🎬", ticket: "🎟️", radio: "📻", cassette: "📼", boss: "👹", finalboss: "🐲",
 };
 
 // install the onerror fallback once

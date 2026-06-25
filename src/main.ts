@@ -1,6 +1,6 @@
 // App bootstrap + screen router + fight orchestration (control + song selection).
 import "./styles.css";
-import { ENEMIES, levelByEnemy, isBoss, type Enemy } from "./game/data/enemies";
+import { ENEMIES, LEVELS, levelByEnemy, isBoss, type Enemy } from "./game/data/enemies";
 import { spendEnergy } from "./game/systems/stamina";
 import { getFlowState } from "./game/data/flowStates";
 import { loadSave, writeSave, resetSave, type SaveState } from "./game/core/storage";
@@ -189,6 +189,13 @@ class Game implements App {
     };
 
     render();
+  }
+
+  // Provisional testing helper: instantly win the next campaign level.
+  autoWin() {
+    const next = LEVELS.find((l) => l.n - 1 === this.save.episodeProgress);
+    if (!next) { this.toast("Capítulo completado"); return; }
+    this.onFightEnd(next.enemyId, undefined, { perfects: 60, goods: 12, dodges: 6, maxCombo: 35, superCombos: 3, won: true, enemyMaxHp: 1200 });
   }
 
   private onFightEnd(enemyId: string, episodeId: number | undefined, r: any) {

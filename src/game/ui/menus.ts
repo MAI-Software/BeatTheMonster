@@ -23,6 +23,7 @@ export interface App {
   startFight(enemyId: string, episodeId?: number): void;
   startPractice(kind: "punch" | "dodge"): void;
   startSong(cassetteId: string): void;
+  autoWin(): void;
   resetAll(): void;
   toast(msg: string): void;
 }
@@ -148,11 +149,11 @@ export function renderLuchar(app: App) {
     { nav: "campaign", ic: "campaign", label: "Historia", sub: "Capítulo 1 · contén la horda" },
     { nav: "practice", ic: "practice", label: "Práctica", sub: "Entrena puños o esquivas" },
     { nav: "tutorial", ic: "tutorial", label: "Tutorial", sub: "Cómo se juega" },
-    { nav: "songs", ic: "songs", label: "Canciones", sub: "Juego libre con tus temas" },
+    { nav: "songs", ic: "cassette", label: "Canciones", sub: "Juego libre con tus temas" },
   ];
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}${topBar(app, "Luchar")}<div class="scroll">
     <div class="energy-pill">${gicon("stamina", 20)} ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div>
-    ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 30)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span>${icon("play", 16)}</button>`).join("")}
+    ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 30)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span></button>`).join("")}
   </div></div>`;
   wireNav(app);
 }
@@ -183,26 +184,36 @@ export function renderWardrobe(app: App) {
 
 export function renderCampaign(app: App) {
   const s = app.save;
-  const energy = refreshEnergy(s); const eMax = maxEnergy(s); const eNext = msToNext(s);
-  const cards = LEVELS.map((lv) => {
+  const energy = refreshEnergy(s); const eMax = maxEnergy(s);
+  const card = (lv: typeof LEVELS[number]) => {
     const e = ENEMIES[lv.enemyId];
     const unlocked = lv.n - 1 <= s.episodeProgress;
     const beaten = lv.n - 1 < s.episodeProgress;
     const afford = energy >= lv.cost;
-    const cls = lv.finalBoss ? "final" : lv.boss ? "boss" : "";
-    return `<button class="lvl-card ${cls} ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${lv.enemyId}" ${unlocked && afford ? "" : "disabled"} style="--c:${e.color}">
+    const cls = lv.finalBoss ? "final" : lv.boss ? "boss" : "normal";
+    const badge = beaten ? icon("check", 24) : !unlocked ? icon("lock", 22)
+      : lv.finalBoss ? gicon("finalboss", 34) : lv.boss ? gicon("boss", 34) : "";
+    return `<button class="lvl-card ${cls} ${unlocked ? "" : "locked"} ${beaten ? "beaten" : ""}" data-fight="${lv.enemyId}" ${unlocked && afford ? "" : "disabled"}>
       <span class="lc-n">${lv.n}</span>
       <span class="lc-body"><b>${unlocked ? e.name : "???"}</b><small>${lv.finalBoss ? "JEFE FINAL" : lv.boss ? "JEFE" : e.title}</small></span>
       <span class="lc-cost ${afford ? "" : "no"}">${gicon("stamina", 20)}${lv.cost}</span>
-      <span class="lc-badge">${beaten ? icon("check", 24) : unlocked ? icon("play", 22) : icon("lock", 22)}</span>
+      <span class="lc-badge">${badge}</span>
     </button>`;
-  }).join("");
+  };
+  let blocks = "";
+  for (let b = 0; b < 6; b++) {
+    const lvls = LEVELS.filter((l) => Math.floor((l.n - 1) / 5) === b);
+    const songName = CASSETTES[b]?.name ?? "";
+    blocks += `<div class="menu-block"><div class="mb-title">Niveles ${b * 5 + 1}–${b * 5 + 5}${songName ? ` · ${songName}` : ""}</div>${lvls.map(card).join("")}</div>`;
+  }
   app.root.innerHTML = `<div class="scene menu">${sectionBg("campaign")}
     <div class="topbar"><button class="back" data-back>${icon("back", 22)}</button><h2>Capítulo 1</h2>
-      <div class="energy-pill">${gicon("stamina", 20)} ${energy}/${eMax}${energy < eMax ? ` · ${fmtTime(eNext)}` : ""}</div></div>
-    <div class="scroll"><p class="hint lore">${CAMPAIGN_LORE}</p><div class="lvl-list">${cards}</div></div></div>`;
+      <div class="currency"><span>${gicon("coin", 16)} ${s.coins}</span><span>${gicon("stamina", 16)} ${energy}/${eMax}</span></div></div>
+    <button class="claim-all top-action ready" id="autoBtn">AUTO</button>
+    <div class="scroll">${blocks}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-fight]").forEach((b) => b.onclick = () => app.startFight(b.dataset.fight!));
+  app.root.querySelector<HTMLButtonElement>("#autoBtn")!.onclick = () => app.autoWin();
 }
 
 const UP_LIMIT = 100; // upgrades per stat before the cap must be broken (future)
@@ -366,7 +377,11 @@ export function renderGacha(app: App) {
 // Fragments: craft items once you have enough fragments from the gacha.
 export function renderFragments(app: App) {
   const s = app.save;
-  const items = [...EQUIPMENT, ...FLOW_STATES].sort((a, b) => RARITY_RANK[(a as any).rarity as Rarity] - RARITY_RANK[(b as any).rarity as Rarity]);
+  const items = [...EQUIPMENT, ...FLOW_STATES].sort((a, b) => {
+    const ca = canCraft(s, a.id) ? 0 : 1, cb = canCraft(s, b.id) ? 0 : 1;
+    if (ca !== cb) return ca - cb; // craftable first
+    return RARITY_RANK[(a as any).rarity as Rarity] - RARITY_RANK[(b as any).rarity as Rarity];
+  });
   const rows = items.map((it) => {
     const fi = fragInfo(s, it.id); const pct = Math.min(100, (fi.have / fi.need) * 100);
     const craft = fi.have >= fi.need; const copies = s.craftCopies[it.id] ?? 0;
@@ -404,7 +419,7 @@ export function renderFragments(app: App) {
 export function renderChallenges(app: App) {
   const s = app.save;
   const block = (title: string, list: any[], scope: "daily" | "weekly") =>
-    `<h3>${title}</h3>` + list.map((ch) => {
+    `<div class="menu-block"><div class="mb-title">${title}</div>` + list.map((ch) => {
       const def = defFor(ch.id)!; const pct = Math.min(100, (ch.progress / def.goal) * 100); const done = ch.progress >= def.goal;
       return `<div class="chal ${ch.claimed ? "claimed" : done ? "ready" : ""}">
         <div class="chal-text">${def.text}</div><div class="bar tiny"><i class="fill" style="width:${pct}%"></i></div>
@@ -412,7 +427,7 @@ export function renderChallenges(app: App) {
           <span class="reward">${gicon("coin", 13)}${def.rewardCoins}${def.rewardPremium ? ` ${gicon("gem", 13)}${def.rewardPremium}` : ""}${def.rewardVoucher ? ` ${gicon("ticket", 13)}${def.rewardVoucher}` : ""}</span>
           ${ch.claimed ? icon("check", 18) : done ? `<button data-claim="${ch.id}" data-scope="${scope}">Cobrar</button>` : ""}
         </div></div>`;
-    }).join("");
+    }).join("") + `</div>`;
   const achv = ACHIEVEMENTS.map((a) => {
     const ap = s.achievements.find((x: any) => x.id === a.id) ?? { tier: 0, progress: 0 };
     const next = (ap.tier + 1) * a.step; const pct = Math.min(100, ((ap.progress % a.step) / a.step) * 100);
@@ -421,7 +436,7 @@ export function renderChallenges(app: App) {
   }).join("");
   const claimableN = (list: any[]) => list.filter((c) => !c.claimed && c.progress >= (defFor(c.id)?.goal ?? Infinity)).length;
   const canClaimAll = claimableN(s.daily.challenges) + claimableN(s.weekly.challenges) > 0;
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos", true)}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<h3>Logros</h3>${achv}</div>
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("challenges")}${topBar(app, "Desafíos", true)}<div class="scroll">${block("Diarios", s.daily.challenges, "daily")}${block("Semanales", s.weekly.challenges, "weekly")}<div class="menu-block"><div class="mb-title">Logros</div>${achv}</div></div>
     <button class="claim-all ${canClaimAll ? "ready" : "off"}" id="claimAll" ${canClaimAll ? "" : "disabled"}>${icon("check", 16)} Reclamar todo</button></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-claim]").forEach((b) => b.onclick = () => { if (claimChallenge(s, b.dataset.claim!, b.dataset.scope as any)) { app.persist(); renderChallenges(app); } });
