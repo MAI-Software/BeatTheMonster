@@ -437,20 +437,25 @@ export function renderChallenges(app: App) {
 export function renderRanking(app: App) {
   const s = app.save; const board = leaderboard(s);
   const rows = board.map((e, i) => `<div class="rank-row ${e.you ? "you" : ""}"><span class="pos">${i + 1}</span><span class="nm">${e.name}</span><span class="sc">${e.score.toLocaleString()}</span></div>`).join("");
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Ranking")}<div class="scroll"><p class="hint">Tu mejor: <b>${s.bestScore.toLocaleString()}</b> · Puesto #${myRank(s)}. Sin PvP.</p><div class="rank-list">${rows}</div></div></div>`;
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Ranking")}<div class="scroll">
+    <div class="menu-block"><div class="mb-title">Tu récord</div><div class="mb-stat"><b>${s.bestScore.toLocaleString()}</b> pts · Puesto #${myRank(s)}</div></div>
+    <div class="menu-block"><div class="mb-title">Clasificación</div><div class="rank-list">${rows}</div></div>
+  </div></div>`;
   wireNav(app);
 }
 
 export function renderPractice(app: App) {
   app.root.innerHTML = `<div class="scene menu">${sectionBg("practice")}${topBar(app, "Práctica")}<div class="scroll">
-    <button class="practice-card p-punch" data-practice="punch">
-      <span class="pc-ic">${icon("glove", 26)}</span>
-      <div><div class="pc-name">Puños</div><div class="pc-sub">Golpea izquierda/derecha cuando la mitad se llene</div></div>
-    </button>
-    <button class="practice-card p-dodge" data-practice="dodge">
-      <span class="pc-ic">${icon("target", 26)}</span>
-      <div><div class="pc-name">Esquivas</div><div class="pc-sub">Inclina la cabeza hacia la esfera para esquivar</div></div>
-    </button>
+    <div class="menu-block"><div class="mb-title">Modos de práctica</div>
+      <button class="practice-card p-punch" data-practice="punch">
+        <span class="pc-ic">${icon("glove", 26)}</span>
+        <div><div class="pc-name">Puños</div><div class="pc-sub">Golpea izquierda/derecha cuando la mitad se llene</div></div>
+      </button>
+      <button class="practice-card p-dodge" data-practice="dodge">
+        <span class="pc-ic">${icon("target", 26)}</span>
+        <div><div class="pc-name">Esquivas</div><div class="pc-sub">Inclina la cabeza hacia la esfera para esquivar</div></div>
+      </button>
+    </div>
   </div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-practice]").forEach((b) => b.onclick = () => app.startPractice(b.dataset.practice as "punch" | "dodge"));
@@ -585,8 +590,7 @@ export function renderSongs(app: App) {
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Canciones")}<div class="scroll">
-    <h3>Cassettes · ${owned.length}/${CASSETTES.length}</h3>
-    ${rows}
+    <div class="menu-block"><div class="mb-title">Cassettes · ${owned.length}/${CASSETTES.length}</div>${rows}</div>
   </div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-song]").forEach((b) => b.onclick = () => app.startSong(b.dataset.song!));
@@ -618,7 +622,7 @@ export function renderRadio(app: App) {
     </button>`;
   }).join("");
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Radio", false, false, power)}<div class="scroll">
-    ${rows}
+    <div class="menu-block"><div class="mb-title">Biblioteca</div>${rows}</div>
   </div></div>`;
   wireNav(app);
   app.root.querySelector<HTMLButtonElement>("#radioPower")!.onclick = () => {
