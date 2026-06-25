@@ -536,21 +536,27 @@ export function renderTutorial(app: App) {
 export function renderOptions(app: App) {
   const s = app.save;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("gym")}${topBar(app, "Opciones")}<div class="scroll">
-    <h3>Nombre</h3>
-    <div class="opt-row"><input id="nickEdit" class="nick-input" type="text" maxlength="14" value="${s.nick}" placeholder="Tu apodo"><button class="opt-btn ghostbtn" id="nickSave">Guardar</button></div>
-    <h3>Volumen</h3>
-    <div class="opt-row"><label>Música</label><input type="range" id="volMusic" min="0" max="100" value="${Math.round(s.settings.musicVol * 100)}"><b id="volMusicV">${Math.round(s.settings.musicVol * 100)}</b></div>
-    <div class="opt-row"><label>Efectos</label><input type="range" id="volSfx" min="0" max="100" value="${Math.round(s.settings.sfxVol * 100)}"><b id="volSfxV">${Math.round(s.settings.sfxVol * 100)}</b></div>
-    <h3>Sesión</h3>
-    <div class="opt-card">
-      <div><b>No has iniciado sesión</b><small>El inicio de sesión con Google Play llegará pronto.</small></div>
-      <button class="opt-btn ghostbtn" disabled>Conectar (próximamente)</button>
+    <div class="menu-block"><div class="mb-title">Nombre</div>
+      <div class="opt-row"><input id="nickEdit" class="nick-input" type="text" maxlength="14" value="${s.nick}" placeholder="Tu apodo"><button class="opt-btn ghostbtn" id="nickSave">Guardar</button></div>
     </div>
-    <button class="opt-btn danger" id="resetBtn">Reiniciar progreso</button>
-    <p class="hint small">Versión de pruebas. Reiniciar borra todo tu avance en este dispositivo.</p>
-    <h3>Código promocional</h3>
-    <div class="opt-row"><input id="promoInput" class="nick-input" type="text" maxlength="20" placeholder="Introduce un código"><button class="opt-btn ghostbtn" id="promoRedeem">Canjear</button></div>
-    <p class="hint small">Canjea códigos para privilegios y recompensas especiales.</p>
+    <div class="menu-block"><div class="mb-title">Volumen</div>
+      <div class="opt-row"><label>Música</label><input type="range" id="volMusic" min="0" max="100" value="${Math.round(s.settings.musicVol * 100)}"><b id="volMusicV">${Math.round(s.settings.musicVol * 100)}</b></div>
+      <div class="opt-row"><label>Efectos</label><input type="range" id="volSfx" min="0" max="100" value="${Math.round(s.settings.sfxVol * 100)}"><b id="volSfxV">${Math.round(s.settings.sfxVol * 100)}</b></div>
+    </div>
+    <div class="menu-block"><div class="mb-title">Sesión</div>
+      <div class="opt-card">
+        <div><b>No has iniciado sesión</b><small>El inicio de sesión con Google Play llegará pronto.</small></div>
+        <button class="opt-btn ghostbtn" disabled>Conectar (próximamente)</button>
+      </div>
+    </div>
+    <div class="menu-block"><div class="mb-title">Código promocional</div>
+      <div class="opt-row"><input id="promoInput" class="nick-input" type="text" maxlength="20" placeholder="Introduce un código"><button class="opt-btn ghostbtn" id="promoRedeem">Canjear</button></div>
+      <p class="hint small">Canjea códigos para privilegios y recompensas especiales.</p>
+    </div>
+    <div class="menu-block"><div class="mb-title">Cuenta</div>
+      <button class="opt-btn danger" id="resetBtn">Reiniciar progreso</button>
+      <p class="hint small">Versión de pruebas. Reiniciar borra todo tu avance en este dispositivo.</p>
+    </div>
   </div></div>`;
   wireNav(app);
   const m = app.root.querySelector<HTMLInputElement>("#volMusic")!;
@@ -754,13 +760,14 @@ export function renderCollection(app: App) {
   const grid = (list: ColItem[]) => `<div class="col-sq-grid">${list.map(tile).join("")}</div>`;
   const cnt = (list: ColItem[]) => list.filter((x) => x.owned).length;
 
+  const sect = (title: string, list: ColItem[], g: string) => `<div class="menu-block"><div class="mb-title">${title} · ${cnt(list)}/${list.length}</div>${g}</div>`;
   app.root.innerHTML = `<div class="scene menu">${sectionBg("ranking")}${topBar(app, "Colección", false, true)}<div class="scroll">
-    <h3>Jefes · ${cnt(bosses)}/${bosses.length}</h3>${grid(bosses)}
-    <h3>Equipo · ${cnt(gear)}/${gear.length}</h3>${grid(gear)}
-    <h3>Estados de Flujo · ${cnt(flows)}/${flows.length}</h3>${grid(flows)}
-    <h3>Canciones · ${cnt(cassettes)}/${cassettes.length}</h3>${grid(cassettes)}
-    <h3>Apariencias · Protagonista · ${cnt(pskins)}/${pskins.length}</h3>${grid(pskins)}
-    <h3>Apariencias · Entrenador · ${cnt(cskins)}/${cskins.length}</h3>${grid(cskins)}
+    ${sect("Jefes", bosses, grid(bosses))}
+    ${sect("Equipo", gear, grid(gear))}
+    ${sect("Estados de Flujo", flows, grid(flows))}
+    ${sect("Canciones", cassettes, grid(cassettes))}
+    ${sect("Apariencias · Protagonista", pskins, grid(pskins))}
+    ${sect("Apariencias · Entrenador", cskins, grid(cskins))}
   </div>
   <button class="claim-all ${canAny ? "ready" : "off"}" id="ascendAll" ${canAny ? "" : "disabled"}>${icon("arrowup", 16)} Mejorar todo</button>
   <div class="col-detail" id="colDetail" hidden>
