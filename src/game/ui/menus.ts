@@ -1,8 +1,8 @@
 // All non-combat screens. SVG icons only (no emoji). Render-to-HTML + wire buttons.
 import { CAPS, playerRank } from "../data/balance";
 import { LEVELS, ENEMIES, BOSS_IDS, CAMPAIGN_LORE } from "../data/enemies";
-import { EQUIPMENT, SLOT_LABEL, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
-import { FLOW_STATES, getFlowState } from "../data/flowStates";
+import { EQUIPMENT, SLOT_LABEL, RARITY_RANK, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
+import { FLOW_STATES, getFlowState, type Rarity } from "../data/flowStates";
 import { canTrain, effectiveStats, gemTrainCost, spendVoucher, train, trainCost, trainWithGems, xpToNext } from "../systems/progression";
 import { AD_MAX, PULL_COST, adMsToNext, anyCraftable, canCraft, canPull, craftItem, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
 import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../systems/stamina";
@@ -366,7 +366,7 @@ export function renderGacha(app: App) {
 // Fragments: craft items once you have enough fragments from the gacha.
 export function renderFragments(app: App) {
   const s = app.save;
-  const items = [...EQUIPMENT, ...FLOW_STATES];
+  const items = [...EQUIPMENT, ...FLOW_STATES].sort((a, b) => RARITY_RANK[(a as any).rarity as Rarity] - RARITY_RANK[(b as any).rarity as Rarity]);
   const rows = items.map((it) => {
     const fi = fragInfo(s, it.id); const pct = Math.min(100, (fi.have / fi.need) * 100);
     const craft = fi.have >= fi.need; const copies = s.craftCopies[it.id] ?? 0;
@@ -734,8 +734,9 @@ export function renderCollection(app: App) {
     return { k, id, name, owned, rank: rankByIndex(idx), spare, rankIdx: idx, canAscend, desc: baseDesc + nextTxt, ...extra };
   };
   const bosses = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => build("boss", e.id, e.name, !!s.defeated[e.id], { glyph: e.emoji }, `${e.title}. Derrota al jefe (5%) para sus sellos.`));
-  const gear = EQUIPMENT.map((e) => build("gear", e.id, e.name, s.ownedEquipment.includes(e.id), { iconHtml: icon(slotIcon[e.slot] ?? "glove", 42), rarity: e.rarity }, `${SLOT_LABEL[e.slot]} · ${e.rarity}. ${bonusOf(e.bonus)}`));
-  const flows = FLOW_STATES.map((f) => build("flow", f.id, f.name, s.ownedFlow.includes(f.id), { iconHtml: icon("bolt", 42), rarity: f.rarity }, f.desc));
+  const byRar = <T extends { rarity: Rarity }>(arr: T[]) => arr.slice().sort((a, b) => RARITY_RANK[a.rarity] - RARITY_RANK[b.rarity]);
+  const gear = byRar(EQUIPMENT).map((e) => build("gear", e.id, e.name, s.ownedEquipment.includes(e.id), { iconHtml: icon(slotIcon[e.slot] ?? "glove", 42), rarity: e.rarity }, `${SLOT_LABEL[e.slot]} · ${e.rarity}. ${bonusOf(e.bonus)}`));
+  const flows = byRar(FLOW_STATES).map((f) => build("flow", f.id, f.name, s.ownedFlow.includes(f.id), { iconHtml: icon("bolt", 42), rarity: f.rarity }, f.desc));
   const cassettes = CASSETTES.map((c) => build("cassette", c.id, c.name, (s.cassettes[c.id] ?? 0) > 0, { iconHtml: gicon("cassette", 42), rarity: "rare" }, `Canción · ${c.bpm} BPM. Cassette de ${ENEMIES[c.enemyId]?.name ?? "?"}.`));
   const skinItem = (sk: typeof ALL_SKINS[number]) => build("skin", sk.id, sk.name, s.ownedSkins[sk.id] ?? true, { img: sk.img, rarity: "epic" }, `Apariencia ${sk.kind === "coach" ? "de entrenador" : "de luchador"}.`);
   const pskins = PLAYER_SKINS.map(skinItem);
