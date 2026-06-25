@@ -44,6 +44,8 @@ export interface SaveState {
   defeated: Record<string, boolean>; // boss id -> ever defeated (album reveal)
   cassettes: Record<string, number>; // cassette id -> copies owned (>=1 = unlocked)
   collectRanks: Record<string, number>; // "kind:id" -> ascended rank index (0=F)
+  craftCopies: Record<string, number>; // equipment/flow id -> extra crafted copies (album dups)
+  redeemed: string[]; // promo codes already redeemed
   energy: number; // stamina for the adventure
   energyTs: number; // last regen timestamp
   ads: number; // watch-ad free pulls available
@@ -88,6 +90,8 @@ export function defaultSave(): SaveState {
     defeated: {},
     cassettes: { cs_1: 1 }, // Wasteland unlocked from the start
     collectRanks: {},
+    craftCopies: {},
+    redeemed: [],
     energy: 10,
     energyTs: Date.now(),
     ads: 5,

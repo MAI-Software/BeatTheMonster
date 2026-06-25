@@ -4,7 +4,7 @@ import { LEVELS, ENEMIES, BOSS_IDS, CAMPAIGN_LORE } from "../data/enemies";
 import { EQUIPMENT, SLOT_LABEL, equipmentForSlot, getEquipment, type Slot } from "../data/equipment";
 import { FLOW_STATES, getFlowState } from "../data/flowStates";
 import { canTrain, effectiveStats, gemTrainCost, spendVoucher, train, trainCost, trainWithGems, xpToNext } from "../systems/progression";
-import { AD_MAX, PULL_COST, adMsToNext, anyCraftable, canPull, craftItem, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
+import { AD_MAX, PULL_COST, adMsToNext, anyCraftable, canCraft, canPull, craftItem, fragInfo, pull, refreshAds, watchAd } from "../systems/gacha";
 import { maxEnergy, refreshEnergy, msToNext, canAfford, fmtTime } from "../systems/stamina";
 import { ACHIEVEMENTS, claimChallenge, defFor } from "../systems/challenges";
 import { leaderboard, myRank } from "../systems/ranking";
@@ -353,20 +353,32 @@ export function renderGacha(app: App) {
 // Fragments: craft items once you have enough fragments from the gacha.
 export function renderFragments(app: App) {
   const s = app.save;
-  const rows = [...EQUIPMENT, ...FLOW_STATES].map((it) => {
+  const items = [...EQUIPMENT, ...FLOW_STATES];
+  const rows = items.map((it) => {
     const fi = fragInfo(s, it.id); const pct = Math.min(100, (fi.have / fi.need) * 100);
-    const craft = !fi.owned && fi.have >= fi.need;
+    const craft = fi.have >= fi.need; const copies = s.craftCopies[it.id] ?? 0;
+    const side = craft
+      ? `<button class="fr-craft" data-craft="${it.id}">Crear</button>`
+      : fi.owned ? `<span class="fr-have">${icon("check", 18)}${copies > 0 ? ` ×${copies + 1}` : ""}</span>` : `<span class="fr-n">${fi.have}/${fi.need}</span>`;
     return `<div class="frag-row ${fi.owned ? "owned" : ""} ${craft ? "ready" : ""} r-${(it as any).rarity}">
-      <div class="fr-body"><b>${(it as any).name}</b><div class="bar tiny"><i class="fill" style="width:${pct}%"></i></div></div>
-      <div class="fr-side">${fi.owned ? `<span class="fr-have">${icon("check", 18)}</span>` : craft ? `<button class="fr-craft" data-craft="${it.id}">Crear</button>` : `<span class="fr-n">${fi.have}/${fi.need}</span>`}</div>
+      <div class="fr-body"><b>${(it as any).name}</b>${fi.owned && copies > 0 ? ` <i class="fr-cop">×${copies + 1}</i>` : ""}<div class="bar tiny"><i class="fill" style="width:${pct}%"></i></div></div>
+      <div class="fr-side">${side}</div>
     </div>`;
   }).join("");
-  app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Fragmentos")}<div class="scroll">
-    <p class="hint">Consigue fragmentos en el Gacha y crea el objeto al superar el máximo.</p>${rows}</div></div>`;
+  const canAny = items.some((it) => canCraft(s, it.id));
+  app.root.innerHTML = `<div class="scene menu">${sectionBg("gacha")}${topBar(app, "Fragmentos")}
+    <button class="claim-all top-action ${canAny ? "ready" : "off"}" id="craftAll" ${canAny ? "" : "disabled"}>${icon("check", 16)} Crear todo</button>
+    <div class="scroll">${rows}</div></div>`;
   wireNav(app);
   app.root.querySelectorAll<HTMLButtonElement>("[data-craft]").forEach((b) => b.onclick = () => {
-    if (craftItem(s, b.dataset.craft!)) { app.persist(); app.toast("¡Objeto creado!"); renderFragments(app); }
+    if (craftItem(s, b.dataset.craft!)) { app.persist(); sfx.upgrade(); app.toast("¡Objeto creado!"); renderFragments(app); }
   });
+  const ca = app.root.querySelector<HTMLButtonElement>("#craftAll");
+  if (ca) ca.onclick = () => {
+    let n = 0;
+    for (const it of items) if (craftItem(s, it.id)) n++;
+    if (n > 0) { app.persist(); sfx.upgrade(); app.toast(`¡${n} objeto(s) creado(s)!`); renderFragments(app); }
+  };
 }
 
 export function renderChallenges(app: App) {
@@ -513,6 +525,9 @@ export function renderOptions(app: App) {
     </div>
     <button class="opt-btn danger" id="resetBtn">Reiniciar progreso</button>
     <p class="hint small">Versión de pruebas. Reiniciar borra todo tu avance en este dispositivo.</p>
+    <h3>Código promocional</h3>
+    <div class="opt-row"><input id="promoInput" class="nick-input" type="text" maxlength="20" placeholder="Introduce un código"><button class="opt-btn ghostbtn" id="promoRedeem">Canjear</button></div>
+    <p class="hint small">Canjea códigos para privilegios y recompensas especiales.</p>
   </div></div>`;
   wireNav(app);
   const m = app.root.querySelector<HTMLInputElement>("#volMusic")!;
@@ -526,7 +541,19 @@ export function renderOptions(app: App) {
   let confirm = false;
   const rb = app.root.querySelector<HTMLButtonElement>("#resetBtn")!;
   rb.onclick = () => { if (!confirm) { confirm = true; rb.textContent = "¿Seguro? Pulsa otra vez"; } else app.resetAll(); };
+  const pi = app.root.querySelector<HTMLInputElement>("#promoInput")!;
+  app.root.querySelector<HTMLButtonElement>("#promoRedeem")!.onclick = () => {
+    const code = pi.value.trim().toUpperCase();
+    if (!code) return;
+    const promo = PROMO_CODES[code];
+    if (!promo) { app.toast("Código no válido"); return; }
+    if (s.redeemed.includes(code)) { app.toast("Ya canjeado"); return; }
+    promo.apply(s); s.redeemed.push(code); app.persist(); app.toast(promo.msg); renderOptions(app);
+  };
 }
+
+// Promo codes (empty for now — add entries to grant rewards/privileges).
+const PROMO_CODES: Record<string, { msg: string; apply: (s: any) => void }> = {};
 
 export function renderSongs(app: App) {
   const s = app.save;
@@ -648,11 +675,14 @@ function colFace(it: ColItem): string {
   return it.iconHtml ?? `<span class="cs-ph">?</span>`;
 }
 
+const ASCEND_KINDS = ["boss", "cassette", "skin", "gear", "flow"];
+
 // Spare DUPLICATE copies available to spend on rank-ups (first copy = owning).
 function colSpare(s: any, k: string, id: string): number {
   if (k === "boss") return s.seals[id] ?? 0;
   if (k === "cassette") return Math.max(0, (s.cassettes[id] ?? 0) - 1);
   if (k === "skin") return s.skinCopies[id] ?? 0;
+  if (k === "gear" || k === "flow") return s.craftCopies[id] ?? 0;
   return 0;
 }
 function colRankIdx(s: any, k: string, id: string): number { return s.collectRanks[`${k}:${id}`] ?? 0; }
@@ -664,6 +694,7 @@ function ascendOnce(s: any, k: string, id: string): { coins: number; gems: numbe
   if (k === "boss") s.seals[id] = (s.seals[id] ?? 0) - cost;
   else if (k === "cassette") s.cassettes[id] = (s.cassettes[id] ?? 0) - cost;
   else if (k === "skin") s.skinCopies[id] = (s.skinCopies[id] ?? 0) - cost;
+  else if (k === "gear" || k === "flow") s.craftCopies[id] = (s.craftCopies[id] ?? 0) - cost;
   else return null;
   s.collectRanks[`${k}:${id}`] = idx + 1;
   const rew = ascendReward(idx + 1);
@@ -678,8 +709,8 @@ export function renderCollection(app: App) {
     const idx = owned ? colRankIdx(s, k, id) : -1;
     const spare = owned ? colSpare(s, k, id) : 0;
     const cost = ascendCost(idx < 0 ? 0 : idx);
-    const canAscend = owned && ["boss", "cassette", "skin"].includes(k) && spare >= cost;
-    const nextTxt = owned && ["boss", "cassette", "skin"].includes(k) ? ` Duplicados: ${spare}/${cost} para subir a ${rankByIndex((idx < 0 ? 0 : idx) + 1)}.` : "";
+    const canAscend = owned && ASCEND_KINDS.includes(k) && spare >= cost;
+    const nextTxt = owned && ASCEND_KINDS.includes(k) ? ` Duplicados: ${spare}/${cost} para subir a ${rankByIndex((idx < 0 ? 0 : idx) + 1)}.` : "";
     return { k, id, name, owned, rank: rankByIndex(idx), spare, rankIdx: idx, canAscend, desc: baseDesc + nextTxt, ...extra };
   };
   const bosses = BOSS_IDS.map((id) => ENEMIES[id]).map((e) => build("boss", e.id, e.name, !!s.defeated[e.id], { glyph: e.emoji }, `${e.title}. Derrota al jefe (5%) para sus sellos.`));
@@ -731,7 +762,7 @@ export function renderCollection(app: App) {
     const it = lookup[b.dataset.col!]; if (!it || !it.owned) return;
     app.root.querySelector<HTMLElement>("#cdFace")!.innerHTML = colFace(it);
     app.root.querySelector<HTMLElement>("#cdName")!.textContent = it.name;
-    app.root.querySelector<HTMLElement>("#cdRank")!.innerHTML = `Rango <b>${it.rank}</b>${["boss", "cassette", "skin"].includes(it.k) ? ` · ${it.spare} duplicados` : ""}`;
+    app.root.querySelector<HTMLElement>("#cdRank")!.innerHTML = `Rango <b>${it.rank}</b>${ASCEND_KINDS.includes(it.k) ? ` · ${it.spare} duplicados` : ""}`;
     app.root.querySelector<HTMLElement>("#cdDesc")!.textContent = it.desc;
     const rew = it.canAscend ? ascendReward((it.rankIdx ?? 0) + 1) : null;
     app.root.querySelector<HTMLElement>("#cdAscend")!.innerHTML = it.canAscend
@@ -750,7 +781,7 @@ export function renderCollection(app: App) {
   if (asc) asc.onclick = () => {
     let tc = 0, tg = 0, n = 0; const upIds: string[] = [];
     for (const it of all) {
-      if (!it.owned || !["boss", "cassette", "skin"].includes(it.k)) continue;
+      if (!it.owned || !ASCEND_KINDS.includes(it.k)) continue;
       let did = false, r; while ((r = ascendOnce(s, it.k, it.id))) { tc += r.coins; tg += r.gems; n++; did = true; }
       if (did) upIds.push(`${it.k}:${it.id}`);
     }

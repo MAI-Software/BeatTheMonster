@@ -118,7 +118,7 @@ export function fragInfo(s: SaveState, id: string): { have: number; need: number
 function isFlowId(id: string) { return !!getFlowState(id); }
 export function canCraft(s: SaveState, id: string): boolean {
   const fi = fragInfo(s, id);
-  return !fi.owned && fi.have >= fi.need;
+  return fi.have >= fi.need; // can craft duplicates too (extra copies go to the album)
 }
 export function anyCraftable(s: SaveState): boolean {
   return [...EQUIPMENT, ...FLOW_STATES].some((it) => canCraft(s, it.id));
@@ -127,6 +127,7 @@ export function craftItem(s: SaveState, id: string): boolean {
   if (!canCraft(s, id)) return false;
   const fi = fragInfo(s, id);
   s.fragments[id] = (s.fragments[id] ?? 0) - fi.need;
-  if (isFlowId(id)) s.ownedFlow.push(id); else s.ownedEquipment.push(id);
+  if (fi.owned) s.craftCopies[id] = (s.craftCopies[id] ?? 0) + 1; // duplicate -> album copy
+  else if (isFlowId(id)) s.ownedFlow.push(id); else s.ownedEquipment.push(id);
   return true;
 }
