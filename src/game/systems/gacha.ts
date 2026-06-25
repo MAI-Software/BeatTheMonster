@@ -17,13 +17,13 @@ export interface PullResult {
   isFlow: boolean;
 }
 
-const NORMAL_ODDS: Record<Rarity, number> = { common: 0.78, rare: 0.18, epic: 0.035, legendary: 0.005 };
-const PREMIUM_ODDS: Record<Rarity, number> = { common: 0.45, rare: 0.35, epic: 0.16, legendary: 0.04 };
+const NORMAL_ODDS: Record<Rarity, number> = { common: 0.70, uncommon: 0.18, rare: 0.08, epic: 0.03, legendary: 0.008, unique: 0.002 };
+const PREMIUM_ODDS: Record<Rarity, number> = { common: 0.35, uncommon: 0.30, rare: 0.22, epic: 0.10, legendary: 0.025, unique: 0.005 };
 
 function pickRarity(odds: Record<Rarity, number>): Rarity {
   const r = Math.random();
   let acc = 0;
-  for (const k of ["legendary", "epic", "rare", "common"] as Rarity[]) {
+  for (const k of ["unique", "legendary", "epic", "rare", "uncommon", "common"] as Rarity[]) {
     acc += odds[k];
     if (r < acc) return k;
   }
@@ -31,12 +31,15 @@ function pickRarity(odds: Record<Rarity, number>): Rarity {
 }
 
 function fragsForRarity(rarity: Rarity): number {
-  // common 4-5, scaling down for higher (rarer = fewer per pull).
+  // common gives the most fragments; rarer = fewer per pull.
   switch (rarity) {
     case "common": return 4 + Math.floor(Math.random() * 2); // 4-5
+    case "uncommon": return 3 + Math.floor(Math.random() * 2); // 3-4
     case "rare": return 3 + Math.floor(Math.random() * 2); // 3-4
     case "epic": return 2 + Math.floor(Math.random() * 2); // 2-3
     case "legendary": return 1 + Math.floor(Math.random() * 2); // 1-2
+    case "unique": return 1;
+    default: return 2;
   }
 }
 
