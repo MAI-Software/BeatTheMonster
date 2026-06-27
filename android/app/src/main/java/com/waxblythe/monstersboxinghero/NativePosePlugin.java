@@ -1,5 +1,6 @@
 package com.waxblythe.monstersboxinghero;
 
+import android.Manifest;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -22,10 +23,13 @@ import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mediapipe.framework.image.BitmapImageBuilder;
 import com.google.mediapipe.framework.image.MPImage;
@@ -48,7 +52,10 @@ import java.util.concurrent.Executors;
  * landmarks + the capture->result latency are sent to the web game; camera pixels never
  * cross the bridge. The web game's existing detection pipeline consumes them unchanged.
  */
-@CapacitorPlugin(name = "NativePose")
+@CapacitorPlugin(
+        name = "NativePose",
+        permissions = { @Permission(strings = { Manifest.permission.CAMERA }, alias = "camera") }
+)
 public class NativePosePlugin extends Plugin {
     private static final String TAG = "NativePose";
     private static final String MODEL = "public/mediapipe/models/pose_landmarker_lite.task";
@@ -59,6 +66,7 @@ public class NativePosePlugin extends Plugin {
     private PreviewView previewView;
     private String delegateName = "gpu";
     private double infEma = 0;
+    private Bitmap inFlight; // the bitmap submitted to the last detectAsync (recycled next frame)
 
     // Startup delegate benchmark: measure REAL end-to-end latency on GPU vs CPU and keep the
     // faster (MediaPipe's "GPU" can silently run on software). A comparison decides — no magic
@@ -70,17 +78,34 @@ public class NativePosePlugin extends Plugin {
 
     @PluginMethod
     public void start(PluginCall call) {
+        // Gate on the camera permission via Capacitor so a result is actually delivered and a
+        // denial REJECTS the call (the JS side then falls back to the web/keyboard path).
+        if (getPermissionState("camera") != PermissionState.GRANTED) {
+            requestPermissionForAlias("camera", call, "onCamPerm");
+            return;
+        }
+        startSession(call);
+    }
+
+    @PermissionCallback
+    private void onCamPerm(PluginCall call) {
+        if (getPermissionState("camera") == PermissionState.GRANTED) startSession(call);
+        else call.reject("camera-permission-denied");
+    }
+
+    private void startSession(PluginCall call) {
         getActivity().runOnUiThread(() -> {
             try {
+                teardown(); // idempotent: drop any prior session before re-initializing
                 // Motion game = no touch input, so keep the screen awake (else it sleeps mid-fight).
                 getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 setupPreview();
                 try { setupLandmarker(Delegate.GPU, "gpu"); phase = 0; } // benchmark GPU vs CPU at startup
                 catch (Exception gpuErr) { Log.w(TAG, "GPU delegate failed, CPU", gpuErr); setupLandmarker(Delegate.CPU, "cpu"); phase = 2; }
-                startCamera();
-                call.resolve();
+                startCamera(call); // resolves/rejects the call once the camera actually binds
             } catch (Exception e) {
                 Log.e(TAG, "start failed", e);
+                teardown();
                 call.reject("start: " + e.getMessage());
             }
         });
@@ -88,14 +113,29 @@ public class NativePosePlugin extends Plugin {
 
     @PluginMethod
     public void stop(PluginCall call) {
-        getActivity().runOnUiThread(() -> {
-            try { getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Exception ignored) {}
-            try { if (cameraProvider != null) cameraProvider.unbindAll(); } catch (Exception ignored) {}
-            if (analysisExecutor != null) { analysisExecutor.shutdown(); analysisExecutor = null; }
-            if (landmarker != null) { try { landmarker.close(); } catch (Exception ignored) {} landmarker = null; }
-            removePreview();
-            call.resolve();
-        });
+        getActivity().runOnUiThread(() -> { teardown(); call.resolve(); });
+    }
+
+    // Full teardown, reused by stop() and by start() (so a re-start can't stack a second
+    // preview/landmarker/executor). The landmarker close is posted onto the analysis thread so
+    // it runs strictly AFTER any in-flight analyze(), never concurrently (no native use-after-close).
+    private void teardown() {
+        try { getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Exception ignored) {}
+        try { if (cameraProvider != null) cameraProvider.unbindAll(); } catch (Exception ignored) {}
+        final ExecutorService ex = analysisExecutor; analysisExecutor = null;
+        final PoseLandmarker lm = landmarker; landmarker = null;
+        final Bitmap fb = inFlight; inFlight = null;
+        if (ex != null) {
+            ex.execute(() -> {
+                try { if (lm != null) lm.close(); } catch (Exception ignored) {}
+                if (fb != null) { try { fb.recycle(); } catch (Exception ignored) {} }
+            });
+            ex.shutdown();
+        } else {
+            if (lm != null) { try { lm.close(); } catch (Exception ignored) {} }
+            if (fb != null) { try { fb.recycle(); } catch (Exception ignored) {} }
+        }
+        removePreview();
     }
 
     private void setupLandmarker(Delegate delegate, String name) {
@@ -137,7 +177,7 @@ public class NativePosePlugin extends Plugin {
         if (webView != null) webView.setBackgroundColor(Color.WHITE);
     }
 
-    private void startCamera() {
+    private void startCamera(PluginCall call) {
         ListenableFuture<ProcessCameraProvider> future = ProcessCameraProvider.getInstance(getContext());
         future.addListener(() -> {
             try {
@@ -159,8 +199,13 @@ public class NativePosePlugin extends Plugin {
                 analysis.setAnalyzer(analysisExecutor, this::analyze);
                 cameraProvider.unbindAll();
                 cameraProvider.bindToLifecycle(getActivity(), CameraSelector.DEFAULT_FRONT_CAMERA, preview, analysis);
+                call.resolve();
             } catch (Exception e) {
+                // The bind runs async (after start() returned), so surface the failure by
+                // REJECTING the held call — the JS side then engages the web/keyboard fallback.
                 Log.e(TAG, "camera bind failed", e);
+                teardown();
+                call.reject("camera-bind: " + e.getMessage());
             }
         }, ContextCompat.getMainExecutor(getContext()));
     }
@@ -190,8 +235,17 @@ public class NativePosePlugin extends Plugin {
                 m.postRotate(rotation);
                 upright = Bitmap.createBitmap(raw, 0, 0, raw.getWidth(), raw.getHeight(), m, true);
             }
-            MPImage mpImage = new BitmapImageBuilder(upright).build();
-            if (landmarker != null) landmarker.detectAsync(mpImage, ts);
+            if (upright != raw) raw.recycle(); // raw no longer needed once the rotated copy exists
+            if (landmarker != null) {
+                MPImage mpImage = new BitmapImageBuilder(upright).build();
+                // Recycle the PREVIOUS frame's bitmap now that its detectAsync has completed
+                // (single-thread executor + KEEP_ONLY_LATEST -> at most one outstanding frame).
+                if (inFlight != null) inFlight.recycle();
+                inFlight = upright;
+                landmarker.detectAsync(mpImage, ts);
+            } else {
+                upright.recycle(); // torn down mid-frame: don't leak the bitmap
+            }
         } catch (Exception e) {
             Log.e(TAG, "analyze", e);
         } finally {
@@ -240,6 +294,10 @@ public class NativePosePlugin extends Plugin {
             }
         } catch (Exception e) {
             Log.e(TAG, "onResult", e);
+        } finally {
+            // The callback's input is the graph's output bitmap (GC-managed, never reused). Close
+            // it eagerly so its memory frees now instead of waiting for GC — idempotent + safe.
+            try { input.close(); } catch (Exception ignored) {}
         }
     }
 

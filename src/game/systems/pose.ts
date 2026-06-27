@@ -34,10 +34,27 @@ export interface InputProvider {
   inferenceHz?(): number;   // measured detections per second
   engineMs?(): number;      // measured inference time per frame (ms)
   usesNativePreview?: boolean; // camera shown by a native layer behind a transparent WebView
+  beginCalibration?(): void; // start recording prep jabs to personalize thresholds
+  endCalibration?(): void;   // apply the recorded jabs (or silently keep defaults)
+  calCount?(): number;       // how many calibration jabs captured so far
   stop(): void;
 }
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+// Population-grounded firing presets (shoulder-width units / sw-per-second / ms), validated
+// against anthropometry (ANSUR) + boxing-jab kinematics. The player picks sensitivity; the
+// optional prep calibration nudges per side on top (a clamped factor, never off a cliff).
+export type Sensitivity = "sensitive" | "normal" | "strict";
+const PRESETS: Record<Sensitivity, { ext: number; thrust: number; cooldown: number }> = {
+  sensitive: { ext: 0.12, thrust: 1.7, cooldown: 140 },
+  normal: { ext: 0.15, thrust: 2.0, cooldown: 140 },
+  strict: { ext: 0.18, thrust: 2.4, cooldown: 160 },
+};
+let currentSens: Sensitivity = "normal";
+try { const s = localStorage.getItem("mbh-sens"); if (s === "sensitive" || s === "normal" || s === "strict") currentSens = s; } catch { /* ignore */ }
+export function setSensitivity(s: Sensitivity) { if (PRESETS[s]) { currentSens = s; try { localStorage.setItem("mbh-sens", s); } catch { /* ignore */ } } }
+export function getSensitivity(): Sensitivity { return currentSens; }
 
 // One Euro Filter (Casiez et al. 2012). Speed-adaptive low-pass: heavy smoothing when the
 // signal is slow (kills jitter) and light smoothing when it moves fast (low lag). The
@@ -165,14 +182,23 @@ export class PoseInput implements InputProvider {
 
   // Punch detector state, per side. Distances are in "shoulder-widths" so thresholds
   // are independent of how far the player stands from the camera.
-  private restReach: Record<Side, number> = { L: 0, R: 0 }; // adaptive guard baseline
+  private restReach: Record<Side, number> = { L: 0, R: 0 }; // adaptive guard baseline (2D reach)
   private prevReach: Record<Side, number> = { L: 0, R: 0 };
-  private vReach: Record<Side, number> = { L: 0, R: 0 };     // smoothed extension velocity
-  private prevFwd: Record<Side, number> = { L: 0, R: 0 };
+  private vReach: Record<Side, number> = { L: 0, R: 0 };     // smoothed 2D extension velocity
+  private restFore: Record<Side, number> = { L: 0, R: 0 };   // adaptive forearm-length baseline
+  private prevFore: Record<Side, number> = { L: 0, R: 0 };
+  private vFore: Record<Side, number> = { L: 0, R: 0 };       // smoothed foreshortening rate (forward jab)
   private peakReach: Record<Side, number> = { L: 0, R: 0 };
   private armed: Record<Side, boolean> = { L: true, R: true };
   private hotFrames: Record<Side, number> = { L: 0, R: 0 }; // consecutive frames meeting the punch threshold
   private hotStart: Record<Side, number> = { L: 0, R: 0 };  // onset time of the current hot streak (for back-dating)
+  // optional prep calibration: per-side multiplier on the preset thresholds (1 = preset default)
+  private calFactorExt: Record<Side, number> = { L: 1, R: 1 };
+  private calFactorThrust: Record<Side, number> = { L: 1, R: 1 };
+  private calOn = false;
+  private calPeakT: Record<Side, number> = { L: 0, R: 0 }; // current jab's peak thrust during calibration
+  private calPeakE: Record<Side, number> = { L: 0, R: 0 }; // current jab's peak extension
+  private calSamples: Record<Side, { t: number; e: number }[]> = { L: [], R: [] };
 
   constructor() {
     this.videoEl = document.createElement("video");
@@ -398,51 +424,70 @@ export class PoseInput implements InputProvider {
     this.depthL += (dl - this.depthL) * 0.5;
     this.depthR += (dr - this.depthR) * 0.5;
 
-    // Do NOT gate firing on visibility: a fast real punch blurs and its confidence drops
-    // exactly when you throw it, so gating here ate real punches. Visibility only damps the
-    // on-screen marker (above); detection relies purely on the motion thresholds.
-    this.detectPunch("L", fistL, lm[L_SH], sw, shZ, dt, ts, upL);
-    this.detectPunch("R", fistR, lm[R_SH], sw, shZ, dt, ts, upR);
+    // Forearm apparent length (elbow->wrist, shoulder-width-normalized). It SHRINKS when the
+    // arm points at the camera — a straight jab — so its shrink rate is the forward signal,
+    // replacing the noisy MediaPipe normalized-z the jab was failing on. (Do NOT gate firing
+    // on visibility: a fast real punch blurs and drops confidence exactly when thrown.)
+    const foreArm = (wIdx: number, eIdx: number) =>
+      Math.hypot(mx(lm[wIdx]) - mx(lm[eIdx]), lm[wIdx].y - lm[eIdx].y) / sw;
+    this.detectPunch("L", fistL, lm[L_SH], sw, foreArm(L_WRIST, L_ELBOW), dt, ts, upL);
+    this.detectPunch("R", fistR, lm[R_SH], sw, foreArm(R_WRIST, R_ELBOW), dt, ts, upR);
   }
 
   // A jab = the wrist thrusting OUT / FORWARD fast. Fire on the ONSET of that thrust
   // (not at full extension) to minimise latency, and re-arm as soon as the arm starts
   // coming back so quick combos register. Units are shoulder-widths and sw/second.
-  private detectPunch(side: Side, wrist: LM, sh: LM, sw: number, shZ: number, dt: number, nowMs: number, up: boolean): void {
+  private detectPunch(side: Side, wrist: LM, sh: LM, sw: number, foreArm: number, dt: number, nowMs: number, up: boolean): void {
     const mx = (p: { x: number }) => 1 - p.x;
-    const reach = Math.hypot(mx(wrist) - mx(sh), wrist.y - sh.y) / sw; // arm extension
-    const fwd = (shZ - (wrist.z ?? 0)) / sw;                          // lunge toward camera
+    const reach = Math.hypot(mx(wrist) - mx(sh), wrist.y - sh.y) / sw; // 2D arm extension
 
     if (this.restReach[side] === 0) this.restReach[side] = reach;
+    if (this.restFore[side] === 0) this.restFore[side] = foreArm;
     const prevReach = this.prevReach[side]; this.prevReach[side] = reach;
-    const prevFwd = this.prevFwd[side]; this.prevFwd[side] = fwd;
+    const prevFore = this.prevFore[side]; this.prevFore[side] = foreArm;
 
     this.vReach[side] += (((reach - prevReach) / dt) - this.vReach[side]) * 0.5;
     const v = this.vReach[side];
-    const vFwd = (fwd - prevFwd) / dt;
-    const thrust = v + 0.8 * Math.max(0, vFwd); // straight jabs barely change 2D reach → add forward
-    const out = reach - this.restReach[side];   // extension beyond the guard baseline
+    // foreshortening rate: the forearm SHRINKS as it points at the camera (a straight jab).
+    // Same units as reach velocity (shoulder-widths/s), so it shares the thrust scale + gate.
+    this.vFore[side] += ((-(foreArm - prevFore) / dt) - this.vFore[side]) * 0.5;
+    const vFore = this.vFore[side];
 
+    const thrust = v + 0.9 * Math.max(0, vFore);   // a jab toward the camera rides vFore
+    const out = reach - this.restReach[side];      // extension in the image plane (hooks/crosses)
+    const outFwd = this.restFore[side] - foreArm;  // extension TOWARD the camera (forearm shorter)
+    const ext = Math.max(out, outFwd);             // extended in 2D OR toward the lens
+
+    if (this.calOn) { // record each jab's PEAK thrust/ext for optional threshold personalization
+      if (ext > 0.1 && thrust > 1.0) { this.calPeakT[side] = Math.max(this.calPeakT[side], thrust); this.calPeakE[side] = Math.max(this.calPeakE[side], ext); }
+      else if (this.calPeakT[side] > 1.2) { this.calSamples[side].push({ t: this.calPeakT[side], e: this.calPeakE[side] }); this.calPeakT[side] = 0; this.calPeakE[side] = 0; }
+    }
+
+    // firing gates = chosen preset scaled by the optional per-side calibration factor
+    const gExt = PRESETS[currentSens].ext * this.calFactorExt[side];
+    const gThrust = PRESETS[currentSens].thrust * this.calFactorThrust[side];
     if (this.armed[side]) {
-      const hot = up && out > 0.15 && thrust > 2.0;
+      const hot = up && ext > gExt && thrust > gThrust;
       if (hot && this.hotFrames[side] === 0) this.hotStart[side] = nowMs; // onset instant
       this.hotFrames[side] = hot ? this.hotFrames[side] + 1 : 0;
-      // Require the thrust to hold ~2 frames (rejects single-frame velocity/z spikes = false
-      // punches) but back-date the punch to its ONSET, so this adds NO latency.
+      // hold ~2 frames (rejects single-frame spikes = false punches) but back-date to the
+      // ONSET, so this adds NO latency.
       if (hot && nowMs > this.punchCooldown[side] && this.hotFrames[side] >= 2) {
         this.punches.push({ side, tMs: this.hotStart[side] });
         if (this.punches.length > 4) this.punches.shift();
-        this.punchCooldown[side] = nowMs + 140;
+        this.punchCooldown[side] = nowMs + PRESETS[currentSens].cooldown;
         this.armed[side] = false;
-        this.peakReach[side] = reach;
+        this.peakReach[side] = ext;
         this.hotFrames[side] = 0;
       }
     } else {
-      this.peakReach[side] = Math.max(this.peakReach[side], reach);
-      if (v < -1.0 || reach < this.peakReach[side] - 0.22 || out < 0.10) this.armed[side] = true;
+      this.peakReach[side] = Math.max(this.peakReach[side], ext);
+      if (v < -1.0 || vFore < -1.0 || ext < this.peakReach[side] - 0.22 || ext < 0.10) this.armed[side] = true;
     }
 
+    // adapt both guard baselines slowly while the arm is fairly still and not extended
     if (Math.abs(v) < 1.2 && out < 0.5) this.restReach[side] += (reach - this.restReach[side]) * 0.04;
+    if (Math.abs(vFore) < 1.2 && outFwd < 0.5) this.restFore[side] += (foreArm - this.restFore[side]) * 0.04;
   }
 
   head() { return this._head; }
@@ -451,6 +496,26 @@ export class PoseInput implements InputProvider {
   guardUp() { return this.guard; }
   inferenceHz() { return this.detHz; }
   engineMs() { return this.useWorker ? this.workerMs : Math.round(this.infMs); }
+
+  beginCalibration() { this.calOn = true; this.calSamples = { L: [], R: [] }; this.calPeakT = { L: 0, R: 0 }; this.calPeakE = { L: 0, R: 0 }; }
+  // Progress toward a usable calibration: endCalibration applies PER SIDE only with >=2 samples,
+  // so report the best-covered side (not the L+R sum, which could read "2" as 1L+1R and apply nothing).
+  calCount() { return Math.max(this.calSamples.L.length, this.calSamples.R.length); }
+  endCalibration() {
+    this.calOn = false;
+    const med = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 0; };
+    (["L", "R"] as Side[]).forEach((side) => {
+      const s = this.calSamples[side];
+      if (s.length < 2) return; // too few clean jabs -> keep the preset default for this side
+      const peakT = med(s.map((x) => x.t)), peakE = med(s.map((x) => x.e));
+      const w = s.length / (s.length + 3); // empirical-Bayes shrink toward the default (N=3 -> 0.5)
+      // gate at ~55% of the player's median peak, shrunk toward 1, clamped (a bad calib can't go off a cliff)
+      const fT = w * (peakT * 0.55 / PRESETS[currentSens].thrust) + (1 - w);
+      const fE = w * (peakE * 0.55 / PRESETS[currentSens].ext) + (1 - w);
+      this.calFactorThrust[side] = Math.max(0.6, Math.min(1.6, fT));
+      this.calFactorExt[side] = Math.max(0.6, Math.min(1.6, fE));
+    });
+  }
   tracking() { return { head: this._head, L: this._L, R: this._R, detected: this.detected, depthL: this.depthL, depthR: this.depthR }; }
 
   // Render-rate step: extrapolate the tracked points to "now" using their last velocity,
@@ -512,7 +577,7 @@ export class NativePoseInput extends PoseInput {
     if (typeof d.ms === "number") this.nativeMs = d.ms;
     this.mode = "native-" + (d.delegate || "?");
     const flat = d.lm;
-    if (!flat || flat.length < 68) { this.detected = false; return; } // 17 landmarks x (x,y,z,visibility)
+    if (!flat || flat.length < 68) { this.detected = false; return; } // native sends 33 landmarks x 4 floats; need >=17 (68 floats) for the wrist/elbow indices (max idx R_WRIST=16)
     const n = Math.floor(flat.length / 4);
     const lm: LM[] = new Array(n);
     for (let i = 0; i < n; i++) lm[i] = { x: flat[i * 4], y: flat[i * 4 + 1], z: flat[i * 4 + 2], v: flat[i * 4 + 3] };

@@ -2,7 +2,7 @@
 // to git. The wasm ships inside node_modules (@mediapipe/tasks-vision); the pose model is
 // downloaded once and cached on disk. Runtime stays fully offline (assets get bundled into
 // dist / the APK). Wired as a `prebuild`/`predev` npm hook — runs automatically.
-import { existsSync, mkdirSync, copyFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, copyFileSync, statSync, writeFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,8 +37,9 @@ for (const f of WASM_FILES) {
 }
 console.log(`[mediapipe] wasm ready${copied ? ` (copied ${copied})` : " (cached)"}`);
 
-// 2) model — download once, cache on disk
-if (existsSync(modelDst) && statSync(modelDst).size > 1_000_000) {
+// 2) model — download once, cache on disk. The real file is ~5.78 MB; require >5 MB so a
+// partial/poisoned cache (e.g. an interrupted write) is rejected and re-downloaded.
+if (existsSync(modelDst) && statSync(modelDst).size > 5_000_000) {
   console.log("[mediapipe] model ready (cached)");
 } else {
   if (typeof fetch !== "function") {
@@ -52,6 +53,10 @@ if (existsSync(modelDst) && statSync(modelDst).size > 1_000_000) {
     process.exit(1);
   }
   const buf = Buffer.from(await res.arrayBuffer());
-  writeFileSync(modelDst, buf);
+  // Write to a temp file then atomically rename, so a killed process can only ever leave a
+  // stray .part file — never a half-written model at the final path that the cache check trusts.
+  const tmp = modelDst + ".part";
+  writeFileSync(tmp, buf);
+  renameSync(tmp, modelDst);
   console.log(`[mediapipe] model ready (downloaded ${(buf.length / 1048576).toFixed(1)} MB)`);
 }

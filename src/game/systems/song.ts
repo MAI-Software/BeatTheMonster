@@ -9,11 +9,17 @@ export interface SongMeta { id: string; name: string; file: string; bpm?: number
 export const GLOBAL_SONG: SongMeta = { id: "god_is_dead", name: "God Is Dead", file: "god-is-dead.mp3" };
 
 let _ctx: AudioContext | null = null;
+let _bg = false; // app backgrounded — don't auto-resume the song context
 function ctx(): AudioContext {
   if (!_ctx) _ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  if (_ctx.state === "suspended") _ctx.resume();
+  if (!_bg && _ctx.state === "suspended") _ctx.resume();
   return _ctx;
 }
+
+// Lifecycle: suspend the song context on background. This also freezes c.currentTime, so the
+// audio-locked combat clock (timeMs) stays aligned with the frozen render loop on resume.
+export function suspendSong(): void { _bg = true; if (_ctx && _ctx.state === "running") _ctx.suspend().catch(() => {}); }
+export function resumeSong(): void { _bg = false; if (_ctx && _ctx.state === "suspended") _ctx.resume().catch(() => {}); }
 
 // Each enemy/mode has its own folder under /public/songs/<id>/ with a manifest.json.
 // Drop an audio file there + list it and it becomes that enemy's battle music.

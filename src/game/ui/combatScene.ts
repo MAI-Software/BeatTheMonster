@@ -9,6 +9,7 @@ import type { EffectiveStats } from "../systems/progression";
 import { Combat, type CombatResult } from "../systems/combat";
 import type { FlowState } from "../data/flowStates";
 import type { InputProvider } from "../systems/pose";
+import { getSensitivity, setSensitivity, type Sensitivity } from "../systems/pose";
 import type { SongPlayer } from "../systems/song";
 import { unlockAudio } from "../systems/audio";
 import { icon } from "./icons";
@@ -55,8 +56,9 @@ export function runCombat(
         <div id="prephint" class="prep-hint"></div>
         <div id="countdown" class="countdown"></div>
         <button id="quit" class="quit">${icon("close", 18)}</button>
-        <button id="dbgtoggle" style="position:absolute;top:12px;right:64px;z-index:21;width:34px;height:34px;border-radius:50%;border:0;background:#0007;color:#9fffce;font:700 15px system-ui">i</button>
-        <div id="dbg" style="position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:21;font:700 11px/1.3 system-ui;color:#9fffce;background:#000a;padding:4px 9px;border-radius:10px;pointer-events:none;white-space:nowrap"></div>
+        <button id="dbgtoggle" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:64px;z-index:21;width:34px;height:34px;border-radius:50%;border:0;background:#0007;color:#9fffce;font:700 15px system-ui">i</button>
+        <button id="sensbtn" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:106px;z-index:21;height:34px;padding:0 12px;border-radius:17px;border:0;background:#0007;color:#ffe11a;font:700 12px system-ui">Sens</button>
+        <div id="dbg" style="display:none;position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:21;font:700 11px/1.3 system-ui;color:#9fffce;background:#000a;padding:4px 9px;border-radius:10px;pointer-events:none;white-space:nowrap"></div>
       </div>`;
 
     const $ = <T extends Element>(s: string) => root.querySelector<T>(s)!;
@@ -90,7 +92,7 @@ export function runCombat(
     let raf = 0, quit = false;
     let phase: "prep" | "countdown" | "play" = "prep";
     let countStart = 0, holdStart = 0;
-    let dbgOn = true, frames = 0, lastFpsT = 0, fps = 0;
+    let dbgOn = false, frames = 0, lastFpsT = 0, fps = 0;
     $<HTMLButtonElement>("#quit").onclick = () => { quit = true; };
     $<HTMLButtonElement>("#dbgtoggle").onclick = () => { dbgOn = !dbgOn; dbgEl.style.display = dbgOn ? "block" : "none"; };
     const updateDbg = () => {
@@ -100,23 +102,43 @@ export function runCombat(
       dbgEl.textContent = `${fps}fps · ${input.mode ?? "?"} ${hz}Hz/${ems}ms · lat ${Math.round(combat.lastPunchLatencyMs)}ms`;
     };
 
+    // sensitivity preset (population default) + optional prep calibration
+    let calStart = 0, calDone = false;
+    const sensLabel = (s: Sensitivity) => (s === "sensitive" ? "Sensible" : s === "strict" ? "Estricto" : "Normal");
+    const sensBtn = $<HTMLButtonElement>("#sensbtn");
+    const sensCycle: Sensitivity[] = ["sensitive", "normal", "strict"];
+    sensBtn.textContent = sensLabel(getSensitivity());
+    sensBtn.onclick = () => { const next = sensCycle[(sensCycle.indexOf(getSensitivity()) + 1) % 3]; setSensitivity(next); sensBtn.textContent = sensLabel(next); };
+    if (isCam) input.beginCalibration?.();
+
     function beginCountdown() { if (phase !== "prep") return; phase = "countdown"; countStart = performance.now(); prephint.textContent = ""; }
 
     function headX(): number { return Math.max(-1, Math.min(1, (input.head().x - 0.5) * 2)); }
 
     function loop(now: number) {
+     try {
       input.update(now);
       frames++;
       if (now - lastFpsT >= 500) { fps = Math.round((frames * 1000) / (now - lastFpsT)); frames = 0; lastFpsT = now; updateDbg(); }
       if (phase === "prep") {
-        // start automatically once in guard + head aligned (camera). No instructions box.
-        const centered = Math.abs(headX()) < 0.26;
-        const guard = input.guardUp?.() ?? true;
-        if (isCam) {
-          if (!guard) { holdStart = 0; prephint.textContent = "GUARDIA"; prephint.className = "prep-hint"; }
-          else if (!centered) { holdStart = 0; prephint.textContent = "ALINEA"; prephint.className = "prep-hint"; }
-          else { if (!holdStart) holdStart = now; prephint.textContent = "¡LISTO!"; prephint.className = "prep-hint ok"; if (now - holdStart > 900) beginCountdown(); }
-        } else { if (!holdStart) holdStart = now; prephint.textContent = "ALÍNEATE"; if (now - holdStart > 1400) beginCountdown(); }
+        if (isCam && !calDone) {
+          // optional calibration: throw 2 quick jabs. Auto-skips after 6s (or if no jabs land),
+          // and endCalibration() silently keeps the preset defaults when there aren't enough.
+          if (!calStart) calStart = now;
+          const got = input.calCount?.() ?? 0;
+          prephint.textContent = got >= 2 ? "¡LISTO!" : `TIRA 2 GOLPES PARA CALIBRAR (${got}/2)`;
+          prephint.className = got >= 2 ? "prep-hint ok" : "prep-hint";
+          if (got >= 2 || now - calStart > 6000) { input.endCalibration?.(); calDone = true; holdStart = 0; }
+        } else {
+          // start automatically once in guard + head aligned (camera). No instructions box.
+          const centered = Math.abs(headX()) < 0.26;
+          const guard = input.guardUp?.() ?? true;
+          if (isCam) {
+            if (!guard) { holdStart = 0; prephint.textContent = "GUARDIA"; prephint.className = "prep-hint"; }
+            else if (!centered) { holdStart = 0; prephint.textContent = "ALINEA"; prephint.className = "prep-hint"; }
+            else { if (!holdStart) holdStart = now; prephint.textContent = "¡LISTO!"; prephint.className = "prep-hint ok"; if (now - holdStart > 900) beginCountdown(); }
+          } else { if (!holdStart) holdStart = now; prephint.textContent = "ALÍNEATE"; if (now - holdStart > 1400) beginCountdown(); }
+        }
         drawPrep();
       } else if (phase === "countdown") {
         const left = 2200 - (now - countStart);
@@ -135,11 +157,20 @@ export function runCombat(
       if (quit) return finish({ won: false, perfects: 0, goods: 0, misses: 0, maxCombo: 0, superCombos: 0, dodges: 0, enemyMaxHp: enemy.hp });
       if (combat.finished && combat.result) return finish(combat.result);
       raf = requestAnimationFrame(loop);
+     } catch (e) {
+       // A frame threw — never strand the player: route through finish() so the native-cam
+       // class is cleared, audio stops, the camera/wake-lock is released and the promise resolves.
+       console.error("combat loop error", e);
+       return finish({ won: false, perfects: 0, goods: 0, misses: 0, maxCombo: 0, superCombos: 0, dodges: 0, enemyMaxHp: enemy.hp });
+     }
     }
 
+    let finished = false;
     function finish(r: CombatResult) {
+      if (finished) return; finished = true; // guard against re-entrancy (e.g. error during finish path)
       document.documentElement.classList.remove("native-cam");
       cancelAnimationFrame(raf); window.removeEventListener("resize", resize); song.stop();
+      try { input.stop(); } catch { /* idempotent: main.ts also stops on next createInput */ }
       resolve(combat.result ?? r);
     }
 
@@ -169,6 +200,17 @@ export function runCombat(
       // centre divider (L/R fists)
       ctx.lineWidth = 2; ctx.strokeStyle = COL.guard + "88";
       ctx.beginPath(); ctx.moveTo(g.cx, g.baseY); ctx.lineTo(g.cx, g.apexY + g.R * 0.5); ctx.stroke();
+      // dashed guard line across the UPPER THIRD — where your fists should rest before & after a punch
+      const gy = g.apexY + (g.baseY - g.apexY) / 3;
+      const t3 = 1 / 3; // fraction from apex -> base
+      const lx = g.apex.x + t3 * (g.BL.x - g.apex.x), rx = g.apex.x + t3 * (g.BR.x - g.apex.x);
+      ctx.save();
+      ctx.setLineDash([7, 6]); ctx.lineWidth = 2.5; ctx.strokeStyle = COL.guard + "cc";
+      ctx.shadowColor = COL.guard; ctx.shadowBlur = 6;
+      ctx.beginPath(); ctx.moveTo(lx, gy); ctx.lineTo(rx, gy); ctx.stroke();
+      ctx.restore();
+      ctx.font = "600 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = COL.guard + "aa";
+      ctx.fillText("GUARDIA", g.cx, gy - 6);
       // fixed apex node (the head's home corner) — anchors the triangle visually
       ctx.fillStyle = COL.guard; ctx.shadowColor = COL.guard; ctx.shadowBlur = 10;
       ctx.beginPath(); ctx.arc(g.apex.x, g.apex.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
@@ -224,27 +266,31 @@ export function runCombat(
       drawHead(g, headX(), Math.abs(headX()) < 0.22);
     }
 
-    // Guitar-Hero style: a target ring sits at the middle of each half; an approach
-    // ring shrinks onto it and you punch the instant it lands ("justo encima").
-    function drawApproach(g: Tri, side: "L" | "R", songMs: number, depth: number) {
-      const c = side === "L" ? COL.L : COL.R;
-      const t = target(g, side);
-      const targetR = 24 + depth * 18; // the punch circle grows as your hand nears the camera
-      // static target ring
-      ctx.lineWidth = 3; ctx.strokeStyle = c + "66";
-      ctx.beginPath(); ctx.arc(t.x, t.y, targetR, 0, Math.PI * 2); ctx.stroke();
+    // Each triangle HALF fills with colour from the base up as the beat approaches; the half
+    // is FULL right at tHit — punch THAT fist then for a Perfect (white flash = the window).
+    // Only the half with an incoming punch fills, so it also tells you which fist to throw.
+    function halfPath(g: Tri, side: "L" | "R") {
+      ctx.beginPath();
+      ctx.moveTo(g.apex.x, g.apex.y);
+      if (side === "L") { ctx.lineTo(g.cx, g.baseY); ctx.lineTo(g.BL.x, g.BL.y); }
+      else { ctx.lineTo(g.BR.x, g.BR.y); ctx.lineTo(g.cx, g.baseY); }
+      ctx.closePath();
+    }
+    function drawHalfFill(g: Tri, side: "L" | "R", songMs: number) {
       const f = combat.fillFor(side, songMs); if (!f) return;
-      const p = Math.min(1, f.p);
-      const approachR = targetR + (1 - p) * g.R * 0.95; // converges onto the target at tHit
+      const c = side === "L" ? COL.L : COL.R;
+      const p = Math.max(0, Math.min(1, f.p));
       ctx.save();
-      ctx.lineWidth = f.full ? 7 : 5; ctx.strokeStyle = c;
-      ctx.shadowColor = c; ctx.shadowBlur = f.full ? 30 : 12; ctx.globalAlpha = 0.4 + p * 0.6;
-      ctx.beginPath(); ctx.arc(t.x, t.y, approachR, 0, Math.PI * 2); ctx.stroke();
-      ctx.restore();
-      if (f.full) { // landed — flash the target
-        ctx.save(); ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = 26; ctx.globalAlpha = f.flash;
-        ctx.beginPath(); ctx.arc(t.x, t.y, targetR, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      halfPath(g, side); ctx.clip(); // paint only inside this half of the triangle
+      const fillTop = g.baseY - p * (g.baseY - g.apex.y); // the "liquid" level rises with p
+      ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = f.full ? 28 : 8;
+      ctx.globalAlpha = f.full ? 0.9 : 0.3 + p * 0.45;
+      ctx.fillRect(g.cx - g.baseHalf - 2, fillTop, g.baseHalf * 2 + 4, g.baseY - fillTop + 4);
+      if (f.full) { // perfect window — bright flash over the full half
+        ctx.globalAlpha = f.flash * 0.6; ctx.fillStyle = "#fff";
+        ctx.fillRect(g.cx - g.baseHalf - 2, g.apex.y, g.baseHalf * 2 + 4, g.baseY - g.apex.y + 4);
       }
+      ctx.restore();
     }
 
     // a chevron arrow ABOVE the triangle pointing up-and-out. Lean the head a little
@@ -286,10 +332,9 @@ export function runCombat(
     function draw(songMs: number, now: number) {
       const { w, h } = geom();
       ctx.clearRect(0, 0, w, h);
-      const trk = isCam ? input.tracking?.() : null;
       drawTracking();
       const g = tri(combat.headX, now);
-      drawApproach(g, "L", songMs, trk?.depthL ?? 0); drawApproach(g, "R", songMs, trk?.depthR ?? 0);
+      drawHalfFill(g, "L", songMs); drawHalfFill(g, "R", songMs);
       drawGuard(g);
       drawDodge(g, songMs);
       const d = combat.dodgeState(songMs);
