@@ -1,9 +1,10 @@
 // Minimal WebAudio beat clock + synthesized SFX (no asset files needed for prototype).
 let ctx: AudioContext | null = null;
+let bg = false; // app backgrounded — don't auto-resume the context nor emit SFX
 
 function ac(): AudioContext {
   if (!ctx) ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  if (ctx.state === "suspended") ctx.resume();
+  if (!bg && ctx.state === "suspended") ctx.resume();
   return ctx;
 }
 
@@ -11,12 +12,17 @@ export function unlockAudio(): void {
   ac();
 }
 
+// Lifecycle: pause/resume on app background so audio doesn't keep playing off-screen.
+// Suspending freezes the context clock, so anything timing off it stays in sync on resume.
+export function suspendAudio(): void { bg = true; if (ctx && ctx.state === "running") ctx.suspend().catch(() => {}); }
+export function resumeAudio(): void { bg = false; if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {}); }
+
 // global volumes (0..1), set from save settings
 export const volumes = { music: 0.85, sfx: 0.8 };
 export function setVolumes(music: number, sfx: number) { volumes.music = music; volumes.sfx = sfx; }
 
 function blip(freq: number, dur: number, type: OscillatorType, gain = 0.2): void {
-  if (volumes.sfx <= 0) return;
+  if (volumes.sfx <= 0 || bg) return; // skip while backgrounded (don't queue on a suspended ctx)
   const c = ac();
   const osc = c.createOscillator();
   const g = c.createGain();

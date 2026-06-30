@@ -2,6 +2,10 @@ node_modules/
 dist/
 *.apk
 
+# MediaPipe runtime assets — generated at build time (npm run mediapipe / prebuild).
+# wasm is copied from node_modules, the model is downloaded once. Keeps them out of git.
+public/mediapipe/
+
 # stray tsc output (vite builds from .ts)
 src/**/*.js
 

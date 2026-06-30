@@ -4,13 +4,13 @@ import { ENEMIES, LEVELS, levelByEnemy, isBoss, type Enemy } from "./game/data/e
 import { spendEnergy } from "./game/systems/stamina";
 import { getFlowState } from "./game/data/flowStates";
 import { loadSave, writeSave, resetSave, type SaveState } from "./game/core/storage";
-import { setVolumes } from "./game/systems/audio";
+import { setVolumes, suspendAudio, resumeAudio } from "./game/systems/audio";
 import { effectiveStats, grantXp } from "./game/systems/progression";
 import { applyFightResult, refreshChallenges } from "./game/systems/challenges";
 import { fightScore } from "./game/systems/ranking";
 import { createInput, type InputProvider } from "./game/systems/pose";
 import { DIFFICULTIES, DIFFICULTY_ORDER, diffUnlocked, type DifficultyId } from "./game/data/difficulty";
-import { GLOBAL_SONG, listSongs, loadSongPlayer, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
+import { GLOBAL_SONG, listSongs, loadSongPlayer, suspendSong, resumeSong, synthSongPlayer, unlockSongAudio, type SongMeta, type SongPlayer } from "./game/systems/song";
 import { runCombat } from "./game/ui/combatScene";
 import { icon, gicon } from "./game/ui/icons";
 import { SEAL_DROP_CHANCE, collectTicketGain } from "./game/data/collection";
@@ -37,14 +37,26 @@ class Game implements App {
   setDifficulty(id: string) { const d = id as DifficultyId; if (diffUnlocked(d, this.save.chapterDone)) this.difficulty = d; }
   private current = "home";
   private hist: string[] = [];
+  private inCombat = false;
 
   constructor() {
     refreshChallenges(this.save);
     setVolumes(this.save.settings.musicVol, this.save.settings.sfxVol);
     this.persist();
     this.go(!this.save.tutorialDone ? "tutorial" : !this.save.gender ? "charselect" : !this.save.nick ? "nickname" : "home");
+    // Pause ALL audio when the app is backgrounded (Home / app-switch) and restore on return.
+    // Covers the SFX context, the battle-song context and the menu-music <audio> element.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) { suspendAudio(); suspendSong(); stopMenuMusic(); }
+      else { resumeAudio(); resumeSong(); this.syncMenuMusic(); }
+    });
   }
   persist() { writeSave(this.save); }
+  // Menu music plays across menu screens when enabled — never during combat.
+  private syncMenuMusic() {
+    if (!this.inCombat && this.save.tutorialDone && this.save.settings.menuMusic !== false) ensureMenuMusic(this.save.favSong);
+    else stopMenuMusic();
+  }
   resetAll() { resetSave(); location.reload(); }
   private loadingHTML(text: string) {
     return `<div class="scene loading"><img class="load-bg" src="portal.webp" alt="" onerror="this.style.display='none'"><div class="spinner"></div><p>${text}</p></div>`;
@@ -75,8 +87,7 @@ class Game implements App {
     // bottom; screens reached from the top of home keep it at the top.
     this.root.classList.toggle("bar-bottom", BOTTOM_BAR_SCREENS.has(screen));
     // menu music plays across menu screens when enabled in settings (off during combat)
-    if (this.save.tutorialDone && this.save.settings.menuMusic !== false) ensureMenuMusic(this.save.favSong);
-    else stopMenuMusic();
+    this.syncMenuMusic();
   }
 
   async startPractice(kind: "punch" | "dodge") {
@@ -87,7 +98,9 @@ class Game implements App {
     if (this.input.kind !== "camera") this.toast("Sin cámara — practica con teclado (A/D, ratón)");
     const song = synthSongPlayer(TRAINING_ENEMY.bpm);
     const eff = effectiveStats(this.save);
-    await runCombat(this.root, TRAINING_ENEMY, eff, null, this.input, song, DIFFICULTIES.easy, { practiceKind: kind });
+    this.inCombat = true;
+    try { await runCombat(this.root, TRAINING_ENEMY, eff, null, this.input, song, DIFFICULTIES.easy, { practiceKind: kind }); }
+    finally { this.inCombat = false; }
     this.go("practice");
   }
 
@@ -104,7 +117,9 @@ class Game implements App {
     catch { song = synthSongPlayer(cas.bpm); }
     const eff = effectiveStats(this.save);
     const flow = this.save.equippedFlow ? getFlowState(this.save.equippedFlow) : undefined;
-    await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty], { freeplay: true });
+    this.inCombat = true;
+    try { await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty], { freeplay: true }); }
+    finally { this.inCombat = false; }
     applySongPlay(this.save); this.persist();
     this.go("songs");
   }
@@ -156,7 +171,10 @@ class Game implements App {
       catch { this.toast("No pude cargar la canción — uso ritmo del juego"); song = synthSongPlayer(enemy.bpm); }
       const eff = effectiveStats(this.save);
       const flow = this.save.equippedFlow ? getFlowState(this.save.equippedFlow) : undefined;
-      const result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty]);
+      this.inCombat = true;
+      let result;
+      try { result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty]); }
+      finally { this.inCombat = false; }
       this.onFightEnd(enemyId, episodeId, result);
     };
 

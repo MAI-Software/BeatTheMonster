@@ -4,7 +4,10 @@
   "description": "JRPG rhythm-sparring brawler with camera motion combat",
   "type": "module",
   "scripts": {
+    "mediapipe": "node scripts/fetch-mediapipe.mjs",
+    "predev": "node scripts/fetch-mediapipe.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/fetch-mediapipe.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "cap:add": "cap add android",
@@ -16,8 +19,10 @@
   },
   "devDependencies": {
     "@capacitor/android": "^6.1.2",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.1.2",
     "@capacitor/core": "^6.1.2",
+    "@resvg/resvg-js": "^2.6.2",
     "typescript": "^5.5.4",
     "vite": "^5.4.2"
   }
