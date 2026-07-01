@@ -210,7 +210,7 @@ class Game implements App {
       s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
       s.defeated[enemyId] = true;
       if (firstClear) ticketsGained += 1; // first-time scenario clear = 1 ticket
-      if (enemy.drop && Math.random() < enemy.drop.chance) {
+      if (enemy.drop && (s.guiding || Math.random() < enemy.drop.chance)) { // guided first fight: guaranteed
         s.materials[enemy.drop.id] = (s.materials[enemy.drop.id] ?? 0) + 1;
         droppedMat = { id: enemy.drop.id, name: enemy.drop.name };
         this.toast(`¡Botín: ${enemy.drop.name}!`);

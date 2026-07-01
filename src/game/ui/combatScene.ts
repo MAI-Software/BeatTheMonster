@@ -56,6 +56,7 @@ export function runCombat(
         <div id="prephint" class="prep-hint"></div>
         <div id="countdown" class="countdown"></div>
         <button id="quit" class="quit">${icon("close", 18)}</button>
+        <button id="omit" class="omit-btn">OMITIR COMBATE</button>
         <button id="dbgtoggle" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:64px;z-index:21;width:34px;height:34px;border-radius:50%;border:0;background:#0007;color:#9fffce;font:700 15px system-ui">i</button>
         <button id="sensbtn" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:106px;z-index:21;height:34px;padding:0 12px;border-radius:17px;border:0;background:#0007;color:#ffe11a;font:700 12px system-ui">Sens</button>
         <div id="dbg" style="display:none;position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:21;font:700 11px/1.3 system-ui;color:#9fffce;background:#000a;padding:4px 9px;border-radius:10px;pointer-events:none;white-space:nowrap"></div>
@@ -94,6 +95,8 @@ export function runCombat(
     let countStart = 0, holdStart = 0;
     let dbgOn = false, frames = 0, lastFpsT = 0, fps = 0;
     $<HTMLButtonElement>("#quit").onclick = () => { quit = true; };
+    let omit = false;
+    $<HTMLButtonElement>("#omit").onclick = () => { omit = true; };
     $<HTMLButtonElement>("#dbgtoggle").onclick = () => { dbgOn = !dbgOn; dbgEl.style.display = dbgOn ? "block" : "none"; };
     const updateDbg = () => {
       if (!dbgOn) return;
@@ -154,6 +157,7 @@ export function runCombat(
       }
       sync();
 
+      if (omit) { combat.forceEnd(true); return finish(combat.result ?? { won: true, perfects: 0, goods: 0, misses: 0, maxCombo: 0, superCombos: 0, dodges: 0, enemyMaxHp: enemy.hp }); }
       if (quit) return finish({ won: false, perfects: 0, goods: 0, misses: 0, maxCombo: 0, superCombos: 0, dodges: 0, enemyMaxHp: enemy.hp });
       if (combat.finished && combat.result) return finish(combat.result);
       raf = requestAnimationFrame(loop);
