@@ -21,7 +21,7 @@ const COL = { L: "#1fa2ff", R: "#ff2436", guard: "#ffe11a", rim: "#4a451c", on: 
 export function runCombat(
   root: HTMLElement, enemy: Enemy, stats: EffectiveStats, flow: FlowState | null,
   input: InputProvider, song: SongPlayer, diff: Difficulty,
-  opts: { practiceKind?: "punch" | "dodge"; freeplay?: boolean; tutorial?: boolean } = {}
+  opts: { practiceKind?: "punch" | "dodge"; freeplay?: boolean; tutorial?: boolean; coachImg?: string } = {}
 ): Promise<CombatResult> {
   return new Promise((resolve) => {
     unlockAudio();
@@ -110,7 +110,7 @@ export function runCombat(
       let ci = 0;
       const co = document.createElement("div");
       co.className = "combat-coach";
-      const paint = () => { co.innerHTML = `<div class="cc-bubble"><span class="cc-name">${COACH_NAME}</span>${lines[ci]}<div class="cc-next">${ci < lines.length - 1 ? "Toca para continuar" : "¡Entendido!"}</div></div>`; };
+      const paint = () => { co.innerHTML = `<div class="cc-bubble">${opts.coachImg ? `<img class="cc-coach" src="${opts.coachImg}" alt="" onerror="this.remove()">` : ""}<div class="cc-txt"><span class="cc-name">${COACH_NAME}</span>${lines[ci]}<div class="cc-next">${ci < lines.length - 1 ? "Toca para continuar" : "¡Entendido!"}</div></div></div>`; };
       paint();
       co.onclick = () => { ci++; if (ci >= lines.length) co.remove(); else paint(); };
       root.appendChild(co);

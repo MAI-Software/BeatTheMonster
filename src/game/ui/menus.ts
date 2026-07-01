@@ -59,11 +59,14 @@ function showGuide(app: App, selector: string, text: string) {
   el.scrollIntoView({ block: "center" });
   requestAnimationFrame(() => {
     const r = el.getBoundingClientRect(); const pad = 8;
+    // put the bubble on the opposite half so it never covers the highlighted button
+    const belowMid = (r.top + r.height / 2) > window.innerHeight * 0.5;
+    const bubbleStyle = belowMid ? "top:calc(env(safe-area-inset-top) + 80px);bottom:auto" : "bottom:100px;top:auto";
     const g = document.createElement("div");
     g.className = "guide-fx";
     g.innerHTML = `<div class="guide-hole" style="left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px"></div>
       <div class="guide-arrow" style="left:${r.left + r.width / 2}px;top:${r.top - 12}px">▼</div>
-      <div class="guide-bubble"><span class="gb-name">${COACH_NAME}</span>${text}</div>`;
+      <div class="guide-bubble" style="${bubbleStyle}"><img class="gb-coach" src="${coachSkinImg(app.save.coachSkin)}" alt="" onerror="this.remove()"><div class="gb-txt"><span class="gb-name">${COACH_NAME}</span>${text}</div></div>`;
     document.body.appendChild(g);
     g.onclick = (e) => {
       const t = e.target as HTMLElement;
