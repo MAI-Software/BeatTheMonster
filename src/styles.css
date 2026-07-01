@@ -559,7 +559,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .guide-arrow { position: fixed; transform: translate(-50%, -100%); color: var(--red); font-size: 34px; text-shadow: 0 0 10px var(--red); pointer-events: none; animation: guideArrow .8s ease-in-out infinite; }
 @keyframes guideArrow { 0%, 100% { transform: translate(-50%, -100%); } 50% { transform: translate(-50%, -140%); } }
 .guide-bubble { position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); width: min(92%, 440px); display: flex; align-items: center; gap: 12px; background: var(--panel2); border: 1px solid var(--red); border-radius: 14px; padding: 12px 16px; font-size: 14px; line-height: 1.4; box-shadow: 0 8px 24px #000b; pointer-events: none; }
-.guide-bubble .gb-coach { width: 54px; height: 54px; flex: none; border-radius: 12px; object-fit: cover; object-position: top center; border: 1px solid var(--red); background: #0006; }
+.guide-bubble .gb-coach { width: 88px; height: 108px; flex: none; margin: -22px 0 -22px -4px; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 4px 10px #000a); }
 .guide-bubble .gb-txt { flex: 1; min-width: 0; }
 .guide-bubble .gb-name { color: var(--red); display: block; font-size: 12px; font-weight: 800; margin-bottom: 3px; }
 .guide-bubble b { color: #fff; }
@@ -637,7 +637,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .omit-btn:active { transform: translateX(-50%) scale(.95); }
 .combat-coach { position: absolute; inset: 0; z-index: 30; background: #0007; display: flex; align-items: flex-end; justify-content: center; padding: 0 16px calc(env(safe-area-inset-bottom) + 26px); }
 .cc-bubble { width: min(94%, 460px); display: flex; align-items: center; gap: 12px; background: var(--panel2); border: 1px solid var(--red); border-radius: 16px; padding: 14px 18px; font-size: 14px; line-height: 1.45; box-shadow: 0 10px 30px #000c; }
-.cc-coach { width: 60px; height: 60px; flex: none; border-radius: 12px; object-fit: cover; object-position: top center; border: 1px solid var(--red); background: #0006; }
+.cc-coach { width: 92px; height: 112px; flex: none; margin: -24px 0 -24px -4px; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 4px 10px #000a); }
 .cc-txt { flex: 1; min-width: 0; }
 .cc-name { color: var(--red); display: block; font-size: 12px; font-weight: 800; margin-bottom: 4px; }
 .cc-next { margin-top: 8px; font-size: 11px; color: #ffffff88; letter-spacing: .5px; }

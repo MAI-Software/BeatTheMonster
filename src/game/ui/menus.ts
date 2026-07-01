@@ -57,24 +57,36 @@ function showGuide(app: App, selector: string, text: string) {
   const el = app.root.querySelector<HTMLElement>(selector);
   if (!el) return;
   el.scrollIntoView({ block: "center" });
-  requestAnimationFrame(() => {
-    const r = el.getBoundingClientRect(); const pad = 8;
-    // put the bubble on the opposite half so it never covers the highlighted button
+  const g = document.createElement("div");
+  g.className = "guide-fx";
+  g.innerHTML = `<div class="guide-hole"></div>
+    <div class="guide-arrow">▼</div>
+    <div class="guide-bubble"><img class="gb-coach" src="${coachSkinImg(app.save.coachSkin)}" alt="" onerror="this.remove()"><div class="gb-txt"><span class="gb-name">${COACH_NAME}</span>${text}</div></div>`;
+  document.body.appendChild(g);
+  const hole = g.querySelector<HTMLElement>(".guide-hole")!;
+  const arrow = g.querySelector<HTMLElement>(".guide-arrow")!;
+  const bubble = g.querySelector<HTMLElement>(".guide-bubble")!;
+  const pad = 8;
+  // re-measure every frame: the target can grow late (e.g. its bg image loads),
+  // so a one-shot rect would freeze the hole as a thin strip.
+  const place = () => {
+    if (!g.isConnected) return;
+    const r = el.getBoundingClientRect();
+    hole.style.left = `${r.left - pad}px`; hole.style.top = `${r.top - pad}px`;
+    hole.style.width = `${r.width + pad * 2}px`; hole.style.height = `${r.height + pad * 2}px`;
+    arrow.style.left = `${r.left + r.width / 2}px`; arrow.style.top = `${r.top - 12}px`;
     const belowMid = (r.top + r.height / 2) > window.innerHeight * 0.5;
-    const bubbleStyle = belowMid ? "top:calc(env(safe-area-inset-top) + 80px);bottom:auto" : "bottom:100px;top:auto";
-    const g = document.createElement("div");
-    g.className = "guide-fx";
-    g.innerHTML = `<div class="guide-hole" style="left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px"></div>
-      <div class="guide-arrow" style="left:${r.left + r.width / 2}px;top:${r.top - 12}px">▼</div>
-      <div class="guide-bubble" style="${bubbleStyle}"><img class="gb-coach" src="${coachSkinImg(app.save.coachSkin)}" alt="" onerror="this.remove()"><div class="gb-txt"><span class="gb-name">${COACH_NAME}</span>${text}</div></div>`;
-    document.body.appendChild(g);
-    g.onclick = (e) => {
-      const t = e.target as HTMLElement;
-      if (t.closest(".guide-bubble")) return;
-      const rr = el.getBoundingClientRect();
-      if (e.clientX >= rr.left && e.clientX <= rr.right && e.clientY >= rr.top && e.clientY <= rr.bottom) el.click();
-    };
-  });
+    bubble.style.top = belowMid ? "calc(env(safe-area-inset-top) + 80px)" : "auto";
+    bubble.style.bottom = belowMid ? "auto" : "100px";
+    requestAnimationFrame(place);
+  };
+  place();
+  g.onclick = (e) => {
+    const t = e.target as HTMLElement;
+    if (t.closest(".guide-bubble")) return;
+    const rr = el.getBoundingClientRect();
+    if (e.clientX >= rr.left && e.clientX <= rr.right && e.clientY >= rr.top && e.clientY <= rr.bottom) el.click();
+  };
 }
 export function clearGuide(_app: App) { document.querySelectorAll(".guide-fx").forEach((e) => e.remove()); }
 
@@ -254,7 +266,6 @@ export function renderCampaign(app: App) {
   const cdMenu = app.root.querySelector<HTMLElement>(".cd-menu")!;
   app.root.querySelector<HTMLButtonElement>("#cdToggle")!.onclick = () => { cdMenu.hidden = !cdMenu.hidden; };
   app.root.querySelectorAll<HTMLButtonElement>("[data-diff]").forEach((b) => b.onclick = () => { app.setDifficulty(b.dataset.diff!); renderCampaign(app); });
-  app.root.querySelector<HTMLButtonElement>("#autoBtn")!.onclick = () => app.autoWin();
   if (s.guiding) showGuide(app, '.lvl-card[data-fight]', "Muchas oleadas y portales por venir. Empieza por el <b>nivel 1</b>.");
 }
 
