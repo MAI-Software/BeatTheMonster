@@ -102,10 +102,10 @@ export function runCombat(
     // Tutorial: coach explains guard + combat over the ring (DOM overlay, tap to advance).
     if (opts.tutorial) {
       const lines = [
-        "Sube la GUARDIA: manos a la altura de la cara. La línea de arriba se pone ROJA si la bajas.",
+        "Sube la GUARDIA: las dos manos a la altura de la cara, firme y erguido.",
         "Cuando una mitad del triángulo se llene, lanza ESE puño. Justo al borde = PERFECT (×1.2 de daño).",
         "Si aciertas, pegas: tu ATK menos la DEF del rival (mínimo 1). Si fallas, te pega él a ti.",
-        "Para esquivar, lleva la cabeza por el RAIL curvo de arriba hacia la señal, sin agacharte.",
+        "Para esquivar, inclina la CABEZA hacia la señal y déjala ahí en el momento justo.",
       ];
       let ci = 0;
       const co = document.createElement("div");
