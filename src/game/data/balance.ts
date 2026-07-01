@@ -17,7 +17,7 @@ export const TIMING = {
 export const COMBO = {
   SUPER_THRESHOLD: 8, // perfects in a row to enter Super Combo
   SUPER_DMG_MULT: 2.5, // damage multiplier while in Super Combo
-  PERFECT_DMG_MULT: 2.0,
+  PERFECT_DMG_MULT: 1.2,
   GOOD_DMG_MULT: 1.0,
   MISS_DMG_MULT: 0,
 } as const;

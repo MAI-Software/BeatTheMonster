@@ -144,6 +144,7 @@ class Game implements App {
           <div class="section-bg"><img src="portal.webp" alt="" onerror="this.style.display='none'"></div>
           <button class="back" id="pfback">${icon("back", 24)}</button>
           <div class="pf-card">
+            <div class="pf-photo">${enemy.img ? `<img src="${enemy.img}" alt="" onerror="this.parentElement.classList.add('empty')">` : ""}</div>
             <div class="pf-enemy">${enemy.name}</div>
             <div class="pf-title">${enemy.title}</div>
             <div class="pf-meta"><span>Dificultad: <b>${DIFFICULTIES[this.difficulty].name}</b></span><span>${gicon("cassette", 15)} ${blockSong.name}</span></div>
@@ -201,11 +202,17 @@ class Game implements App {
     s.bestScore = Math.max(s.bestScore, score);
     let ticketsGained = 0;
     let droppedCas: { id: string; name: string } | null = null;
+    let droppedMat: { id: string; name: string } | null = null;
     if (r.won) {
       const firstClear = !s.defeated[enemyId];
       s.difficultyWins[this.difficulty] = (s.difficultyWins[this.difficulty] ?? 0) + 1;
       s.defeated[enemyId] = true;
       if (firstClear) ticketsGained += 1; // first-time scenario clear = 1 ticket
+      if (enemy.drop && Math.random() < enemy.drop.chance) {
+        s.materials[enemy.drop.id] = (s.materials[enemy.drop.id] ?? 0) + 1;
+        droppedMat = { id: enemy.drop.id, name: enemy.drop.name };
+        this.toast(`¡Botín: ${enemy.drop.name}!`);
+      }
       if (isBoss(enemyId)) {
         if (Math.random() < SEAL_DROP_CHANCE) {
           const before = s.seals[enemyId] ?? 0;
@@ -257,8 +264,9 @@ class Game implements App {
     this.root.querySelector<HTMLButtonElement>("#again")!.onclick = () => this.startFight(enemyId, episodeId);
     this.root.querySelector<HTMLButtonElement>("#toCampaign")!.onclick = () => this.go("campaign");
     this.root.querySelector<HTMLButtonElement>("#toHome")!.onclick = () => this.go("home");
-    // big reveal for a rare combat drop (cassette > ticket)
+    // big reveal for a rare combat drop (cassette > material > ticket)
     if (droppedCas) revealOverlay(gicon("cassette", 130), droppedCas.name, "¡Cassette!", "rare");
+    else if (droppedMat) revealOverlay(`<img src="enemies/${droppedMat.id === "muela_orco" ? "muela-orco" : droppedMat.id}.webp" style="width:100%;height:100%;object-fit:contain">`, droppedMat.name, "¡Material!", "uncommon");
     else if (ticketsGained > 0) revealOverlay(gicon("ticket", 130), "Ticket de refuerzo", `+${ticketsGained}`, "legendary");
   }
 }

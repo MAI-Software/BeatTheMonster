@@ -13,7 +13,13 @@ export interface Enemy {
   intensity: number;
   color: string;
   emoji: string;
+  img?: string; // portrait shown in prefight / level card (transparent bg)
+  drop?: { id: string; name: string; chance: number }; // material drop on win
 }
+
+// Weak orc uses the same art on the early non-boss levels.
+const WEAK_ORC_LEVELS = new Set([1, 2, 3, 4, 6, 7, 8, 9]);
+export const MUELA_DROP = { id: "muela_orco", name: "Muela de Orco", chance: 0.05 };
 
 export interface Level {
   n: number; // 1..30
@@ -56,6 +62,8 @@ for (let n = 1; n <= 30; n++) {
     intensity: Math.min(0.95, 0.34 + n * 0.02),
     color: ORC_COLORS[block],
     emoji: ORC_EMOJI[boss ? 1 : n % ORC_EMOJI.length],
+    img: WEAK_ORC_LEVELS.has(n) ? "enemies/orco-debil.webp" : undefined,
+    drop: WEAK_ORC_LEVELS.has(n) ? MUELA_DROP : undefined,
   };
   LEVELS.push({ n, enemyId: id, cost: finalBoss ? 3 : boss ? 2 : 1, boss, finalBoss, songBlock: block });
 }

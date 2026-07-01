@@ -548,6 +548,9 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .diff-card.on { border-color: var(--gold); background: #ffd23b14; }
 .diff-card.locked { opacity: .55; }
 .pf-enemy { font-size: 26px; font-weight: 900; } .pf-title { color: var(--gold); font-weight: 700; margin-bottom: 6px; }
+.pf-photo { width: 150px; height: 150px; margin: 0 auto 8px; display: grid; place-items: center; }
+.pf-photo img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 8px 20px #000); }
+.pf-photo:empty, .pf-photo.empty { border: 2px dashed #ffffff33; border-radius: 16px; }
 .seg { display: flex; gap: 8px; }
 .seg button { flex: 1; padding: 12px; border-radius: 11px; background: var(--bg2); border: 1px solid var(--line); font-weight: 700; font-size: 13px; }
 .seg button.on { background: var(--pink); border-color: var(--pink); color: #fff; }
