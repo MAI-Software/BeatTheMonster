@@ -196,7 +196,7 @@ export function runCombat(
     function target(g: Tri, side: "L" | "R") { return { x: g.cx + (side === "L" ? -g.baseHalf * 0.42 : g.baseHalf * 0.42), y: g.cy + g.R * 0.12 }; }
     function triPath(g: Tri) { ctx.beginPath(); ctx.moveTo(g.apex.x, g.apex.y); ctx.lineTo(g.BR.x, g.BR.y); ctx.lineTo(g.BL.x, g.BL.y); ctx.closePath(); }
 
-    function drawGuard(g: Tri) {
+    function drawGuard(g: Tri, guarded: boolean) {
       ctx.save();
       triPath(g); ctx.lineWidth = 4; ctx.strokeStyle = COL.guard; ctx.lineJoin = "round";
       ctx.shadowColor = COL.guard; ctx.shadowBlur = 16; ctx.stroke();
@@ -204,17 +204,20 @@ export function runCombat(
       // centre divider (L/R fists)
       ctx.lineWidth = 2; ctx.strokeStyle = COL.guard + "88";
       ctx.beginPath(); ctx.moveTo(g.cx, g.baseY); ctx.lineTo(g.cx, g.apexY + g.R * 0.5); ctx.stroke();
-      // dashed guard line across the UPPER THIRD — where your fists should rest before & after a punch
-      const gy = g.apexY + (g.baseY - g.apexY) / 3;
-      const t3 = 1 / 3; // fraction from apex -> base
-      const lx = g.apex.x + t3 * (g.BL.x - g.apex.x), rx = g.apex.x + t3 * (g.BR.x - g.apex.x);
-      ctx.save();
-      ctx.setLineDash([7, 6]); ctx.lineWidth = 2.5; ctx.strokeStyle = COL.guard + "cc";
-      ctx.shadowColor = COL.guard; ctx.shadowBlur = 6;
-      ctx.beginPath(); ctx.moveTo(lx, gy); ctx.lineTo(rx, gy); ctx.stroke();
-      ctx.restore();
-      ctx.font = "600 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = COL.guard + "aa";
-      ctx.fillText("GUARDIA", g.cx, gy - 6);
+      // dashed guard TRIGGER line across the UPPER THIRD: RED when the guard is DOWN, hidden
+      // once you're covered up (so it stops obscuring the rest of the ring).
+      if (!guarded) {
+        const gy = g.apexY + (g.baseY - g.apexY) / 3;
+        const t3 = 1 / 3; // fraction from apex -> base
+        const lx = g.apex.x + t3 * (g.BL.x - g.apex.x), rx = g.apex.x + t3 * (g.BR.x - g.apex.x);
+        ctx.save();
+        ctx.setLineDash([7, 6]); ctx.lineWidth = 2.6; ctx.strokeStyle = "#ff3b3b";
+        ctx.shadowColor = "#ff3b3b"; ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.moveTo(lx, gy); ctx.lineTo(rx, gy); ctx.stroke();
+        ctx.restore();
+        ctx.font = "700 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = "#ff5b5b";
+        ctx.fillText("SUBE LA GUARDIA", g.cx, gy - 6);
+      }
       // fixed apex node (the head's home corner) — anchors the triangle visually
       ctx.fillStyle = COL.guard; ctx.shadowColor = COL.guard; ctx.shadowBlur = 10;
       ctx.beginPath(); ctx.arc(g.apex.x, g.apex.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
@@ -225,12 +228,29 @@ export function runCombat(
       ctx.fillText("DER", g.cx + g.baseHalf * 0.45, g.baseY + 22);
     }
 
-    // the head marker slides horizontally with the lean; it can travel out past the
+    // curved "rail" arc over the apex: the head slides along it left/right to dodge
+    // WITHOUT crouching. Dome shape — highest at centre, dipping toward the sides.
+    function railPos(g: Tri, lean: number) {
+      const r = Math.max(20, g.R * 0.12);
+      const l = Math.max(-1, Math.min(1, lean));
+      const half = g.baseHalf * 1.12; const dip = g.R * 0.26;
+      return { x: g.cx + l * half, y: g.apexY - r - 16 + (1 - Math.cos(l * 1.1)) * dip, r };
+    }
+    function drawRail(g: Tri, active: boolean) {
+      ctx.save();
+      ctx.lineWidth = active ? 4 : 2.5; ctx.lineCap = "round";
+      ctx.strokeStyle = active ? COL.head : COL.head + "66";
+      ctx.shadowColor = COL.head; ctx.shadowBlur = active ? 16 : 0;
+      ctx.beginPath();
+      for (let i = 0; i <= 40; i++) { const p = railPos(g, -1 + (i / 40) * 2); if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }
+      ctx.stroke(); ctx.restore();
+    }
+
+    // the head marker rides the rail with the lean; it can travel out past the
     // triangle edges to reach the dodge arrows.
     function drawHead(g: Tri, headLean: number, glow: boolean) {
-      const r = Math.max(20, g.R * 0.12);
-      const x = g.cx + Math.max(-1, Math.min(1, headLean)) * g.baseHalf * 1.08;
-      const y = g.apexY - r - 14; // floats clearly ABOVE the (fixed) triangle
+      const pos = railPos(g, headLean);
+      const r = pos.r; const x = pos.x; const y = pos.y;
       ctx.save();
       ctx.shadowColor = glow ? COL.on : COL.head; ctx.shadowBlur = glow ? 32 : 16;
       ctx.fillStyle = glow ? COL.on : "#10131f"; ctx.strokeStyle = glow ? "#eaffe9" : COL.head; ctx.lineWidth = 4;
@@ -263,7 +283,9 @@ export function runCombat(
       ctx.clearRect(0, 0, w, h);
       drawTracking();
       const g = tri(headX(), performance.now());
-      drawGuard(g);
+      const guarded = isCam ? input.guardUp() : true;
+      drawGuard(g, guarded);
+      drawRail(g, false);
       // centre guide line for aligning the head
       ctx.setLineDash([6, 6]); ctx.strokeStyle = "#9fb0c8"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(g.cx, g.apexY - 20); ctx.lineTo(g.cx, g.apexY + 20); ctx.stroke(); ctx.setLineDash([]);
@@ -338,10 +360,12 @@ export function runCombat(
       ctx.clearRect(0, 0, w, h);
       drawTracking();
       const g = tri(combat.headX, now);
-      drawHalfFill(g, "L", songMs); drawHalfFill(g, "R", songMs);
-      drawGuard(g);
-      drawDodge(g, songMs);
+      const guarded = isCam ? input.guardUp() : true;
       const d = combat.dodgeState(songMs);
+      drawHalfFill(g, "L", songMs); drawHalfFill(g, "R", songMs);
+      drawGuard(g, guarded);
+      drawRail(g, !!d);
+      drawDodge(g, songMs);
       drawHead(g, combat.headX, !!d?.aligned);
     }
 
