@@ -546,25 +546,45 @@ export function renderNickname(app: App) {
 // Choose the player skin (after the tutorial). Gym backdrop, both fighters big,
 // male preselected & highlighted; selecting grows/illuminates + shifts focus.
 export function renderCharacterSelect(app: App) {
-  let sel: "male" | "female" = "male";
-  app.root.innerHTML = `<div class="scene menu charsel">
-    <div class="section-bg"><img src="menu/gym.webp" alt="" onerror="this.style.display='none'"></div>
-    <h2 class="cs-title">Elige tu luchador</h2>
-    <div class="cs-stage" id="csStage">
-      <button class="cs-fighter" data-sel="male"><img src="characters/player/male.webp" alt="" onerror="this.style.display='none'"><span>Hombre</span></button>
-      <button class="cs-fighter" data-sel="female"><img src="characters/player/female.webp" alt="" onerror="this.style.display='none'"><span>Mujer</span></button>
-    </div>
-    <button class="primary cs-confirm">Elegir</button>
-  </div>`;
-  const stage = app.root.querySelector<HTMLElement>("#csStage")!;
-  const apply = () => {
-    app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.classList.toggle("on", b.dataset.sel === sel));
-    stage.classList.toggle("focus-male", sel === "male");
-    stage.classList.toggle("focus-female", sel === "female");
+  let sel: "male" | "female" = (app.save.gender as "male" | "female") || "male";
+  let coach = app.save.coachSkin || COACH_SKINS[0].id;
+  let phase: "fighter" | "coach" = "fighter";
+  const draw = () => {
+    if (phase === "fighter") {
+      app.root.innerHTML = `<div class="scene menu charsel">
+        <div class="section-bg"><img src="menu/gym.webp" alt="" onerror="this.style.display='none'"></div>
+        <h2 class="cs-title">Elige tu luchador</h2>
+        <div class="cs-stage" id="csStage">
+          <button class="cs-fighter" data-sel="male"><img src="characters/player/male.webp" alt="" onerror="this.style.display='none'"><span>Hombre</span></button>
+          <button class="cs-fighter" data-sel="female"><img src="characters/player/female.webp" alt="" onerror="this.style.display='none'"><span>Mujer</span></button>
+        </div>
+        <button class="primary cs-confirm">Continuar</button>
+      </div>`;
+      const stage = app.root.querySelector<HTMLElement>("#csStage")!;
+      const apply = () => {
+        app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.classList.toggle("on", b.dataset.sel === sel));
+        stage.classList.toggle("focus-male", sel === "male");
+        stage.classList.toggle("focus-female", sel === "female");
+      };
+      apply();
+      app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.onclick = () => { sel = b.dataset.sel as "male" | "female"; apply(); });
+      app.root.querySelector<HTMLButtonElement>(".cs-confirm")!.onclick = () => { app.save.gender = sel; app.persist(); phase = "coach"; draw(); };
+    } else {
+      app.root.innerHTML = `<div class="scene menu charsel">
+        <div class="section-bg"><img src="menu/gym.webp" alt="" onerror="this.style.display='none'"></div>
+        <h2 class="cs-title">Elige tu entrenador</h2>
+        <div class="cs-stage coaches" id="csStage">
+          ${COACH_SKINS.map((c) => `<button class="cs-fighter" data-coach="${c.id}"><img src="${c.img}" alt="" onerror="this.style.display='none'"><span>${c.name}</span></button>`).join("")}
+        </div>
+        <button class="primary cs-confirm">Elegir</button>
+      </div>`;
+      const apply = () => app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.classList.toggle("on", b.dataset.coach === coach));
+      apply();
+      app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.onclick = () => { coach = b.dataset.coach!; apply(); });
+      app.root.querySelector<HTMLButtonElement>(".cs-confirm")!.onclick = () => { app.save.coachSkin = coach; app.persist(); app.go(app.save.nick ? "home" : "nickname"); };
+    }
   };
-  apply();
-  app.root.querySelectorAll<HTMLButtonElement>(".cs-fighter").forEach((b) => b.onclick = () => { sel = b.dataset.sel as "male" | "female"; apply(); });
-  app.root.querySelector<HTMLButtonElement>(".cs-confirm")!.onclick = () => { app.save.gender = sel; app.persist(); app.go(app.save.nick ? "home" : "nickname"); };
+  draw();
 }
 
 // Cinematic intro: coach full-bleed (no frame), story text at the bottom, no voice.
