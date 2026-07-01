@@ -15,6 +15,7 @@ import { runCombat } from "./game/ui/combatScene";
 import { icon, gicon } from "./game/ui/icons";
 import { SEAL_DROP_CHANCE, collectTicketGain } from "./game/data/collection";
 import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassettes";
+import { COACH_NAME } from "./game/data/coach";
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
@@ -176,7 +177,7 @@ class Game implements App {
       const flow = this.save.equippedFlow ? getFlowState(this.save.equippedFlow) : undefined;
       this.inCombat = true;
       let result;
-      try { result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty]); }
+      try { result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty], { tutorial: this.save.guiding }); }
       finally { this.inCombat = false; }
       this.onFightEnd(enemyId, episodeId, result);
     };
@@ -193,6 +194,7 @@ class Game implements App {
 
   private onFightEnd(enemyId: string, episodeId: number | undefined, r: any) {
     const enemy = ENEMIES[enemyId]; const s = this.save;
+    const wasGuided = s.guiding; // guided first fight: show the coach's closing note
     const diffMult: Record<DifficultyId, number> = { easy: 0.75, normal: 1, hard: 1.4, master: 1.9 };
     const dm = diffMult[this.difficulty];
     const score = Math.round(fightScore({ perfects: r.perfects, goods: r.goods, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won, enemyHp: r.enemyMaxHp }) * dm);
@@ -260,6 +262,7 @@ class Game implements App {
           ${ticketsGained > 0 ? `<span>${gicon("ticket", 16)} +${ticketsGained}</span>` : ""}
           ${lv.leveled ? `<div class="lvup">SUBISTE ${lv.levels} NIVEL${lv.levels > 1 ? "ES" : ""}</div>` : ""}
         </div>
+        ${wasGuided ? `<div class="cc-bubble result-coach"><span class="cc-name">${COACH_NAME}</span>Ese asalto te ha costado STAMINA (se recarga con el tiempo). Y mira: has soltado una <b>Muela de Orco</b> — un material para más adelante. Vuelve al menú, seguimos otro día.</div>` : ""}
         <button class="primary" id="again">Reintentar</button>
         <button id="toCampaign">Campaña</button>
         <button class="ghost" id="toHome">Inicio</button>
