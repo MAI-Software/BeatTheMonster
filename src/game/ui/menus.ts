@@ -50,6 +50,31 @@ export function revealOverlay(faceHtml: string, name: string, sub: string, rarit
   ov.onclick = () => { ov.classList.remove("show"); setTimeout(() => ov.remove(), 250); };
 }
 
+// Guided-tour spotlight: dim everything with a "hole" over the target, red arrow + coach
+// line. A full-screen blocker forwards only clicks inside the target's rect (forces the tap).
+function showGuide(app: App, selector: string, text: string) {
+  document.querySelectorAll(".guide-fx").forEach((e) => e.remove());
+  const el = app.root.querySelector<HTMLElement>(selector);
+  if (!el) return;
+  el.scrollIntoView({ block: "center" });
+  requestAnimationFrame(() => {
+    const r = el.getBoundingClientRect(); const pad = 8;
+    const g = document.createElement("div");
+    g.className = "guide-fx";
+    g.innerHTML = `<div class="guide-hole" style="left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px"></div>
+      <div class="guide-arrow" style="left:${r.left + r.width / 2}px;top:${r.top - 12}px">▼</div>
+      <div class="guide-bubble"><span class="gb-name">${COACH_NAME}</span>${text}</div>`;
+    document.body.appendChild(g);
+    g.onclick = (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest(".guide-bubble")) return;
+      const rr = el.getBoundingClientRect();
+      if (e.clientX >= rr.left && e.clientX <= rr.right && e.clientY >= rr.top && e.clientY <= rr.bottom) el.click();
+    };
+  });
+}
+export function clearGuide(_app: App) { document.querySelectorAll(".guide-fx").forEach((e) => e.remove()); }
+
 function equipCard(rarity: string, owned: boolean, eq: boolean, ic: IconName, name: string, desc: string, pick: string): string {
   return `<button class="item-card r-${rarity} ${owned ? "" : "locked"} ${eq ? "equipped" : ""}" ${pick} ${owned ? "" : "disabled"}>
     <span class="ic-lead">${icon(ic, 22)}</span>
@@ -122,6 +147,7 @@ export function renderHome(app: App) {
   const homeTop = app.root.querySelector<HTMLElement>("#homeTop")!;
   app.root.querySelector<HTMLButtonElement>("#menuToggle")!.onclick = () => homeTop.classList.toggle("open");
   app.root.querySelector<HTMLButtonElement>("#radioBtn")!.onclick = () => app.go("radio");
+  if (s.guiding) showGuide(app, ".nav-main", "Primero, a pelear. Toca <b>LUCHAR</b>.");
 }
 const emj = (e: string) => `<span class="gi-emoji" style="font-size:24px">${e}</span>`;
 const navBtn = (nav: string, label: string, notify = false) =>
@@ -159,6 +185,7 @@ export function renderLuchar(app: App) {
     ${modes.map((m) => `<button class="mode-card" data-nav="${m.nav}"><span class="mc-ic">${gicon(m.ic, 46)}</span><span class="mc-body"><b>${m.label}</b><small>${m.sub}</small></span></button>`).join("")}
   </div></div>`;
   wireNav(app);
+  if (s.guiding) showGuide(app, '[data-nav="campaign"]', "Elige <b>HISTORIA</b>. Los demás modos te los enseño luego.");
 }
 
 // Wardrobe: change player + coach appearance (cosmetic).
@@ -225,6 +252,7 @@ export function renderCampaign(app: App) {
   app.root.querySelector<HTMLButtonElement>("#cdToggle")!.onclick = () => { cdMenu.hidden = !cdMenu.hidden; };
   app.root.querySelectorAll<HTMLButtonElement>("[data-diff]").forEach((b) => b.onclick = () => { app.setDifficulty(b.dataset.diff!); renderCampaign(app); });
   app.root.querySelector<HTMLButtonElement>("#autoBtn")!.onclick = () => app.autoWin();
+  if (s.guiding) showGuide(app, '.lvl-card[data-fight]', "Muchas oleadas y portales por venir. Empieza por el <b>nivel 1</b>.");
 }
 
 const UP_LIMIT = 100; // upgrades per stat before the cap must be broken (future)
@@ -607,7 +635,7 @@ export function renderTutorial(app: App) {
     </div>`;
     app.save.tutorialDone = true; app.persist();
     wireNav(app);
-    const advance = () => { if (last) app.go(app.save.gender ? "home" : "charselect"); else { i++; draw(); } };
+    const advance = () => { if (last) { app.save.guiding = true; app.persist(); app.go(app.save.gender ? "home" : "charselect"); } else { i++; draw(); } };
     app.root.querySelector<HTMLButtonElement>(".intro-next")!.onclick = advance;
     // tapping the scene (not the buttons) also advances
     app.root.querySelector<HTMLElement>("#introScene")!.addEventListener("click", (e) => {

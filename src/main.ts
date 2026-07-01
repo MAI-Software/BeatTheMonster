@@ -18,7 +18,7 @@ import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassette
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
-  renderFragments, renderLuchar, renderNickname, renderOptions, renderPractice, renderProfile, renderRanking, renderRadio, renderSongs, renderTraining, renderTutorial, renderWardrobe, revealOverlay, type App,
+  renderFragments, renderLuchar, renderNickname, renderOptions, renderPractice, renderProfile, renderRanking, renderRadio, renderSongs, renderTraining, renderTutorial, renderWardrobe, revealOverlay, clearGuide, type App,
 } from "./game/ui/menus";
 import { ensureMenuMusic, stopMenuMusic } from "./game/systems/menuMusic";
 
@@ -82,6 +82,7 @@ class Game implements App {
       luchar: renderLuchar, wardrobe: renderWardrobe, fragments: renderFragments, nickname: renderNickname,
       radio: renderRadio, profile: renderProfile,
     };
+    clearGuide(this); // drop any stale guided-tour spotlight; the render re-adds if needed
     (map[screen] ?? renderHome)(this);
     // one-handed UX: screens reached from the bottom nav keep their bar at the
     // bottom; screens reached from the top of home keep it at the top.
@@ -132,6 +133,7 @@ class Game implements App {
 
   async startFight(enemyId: string, episodeId?: number) {
     unlockSongAudio();
+    clearGuide(this); // stop the menu spotlight once we reach a fight
     const enemy = ENEMIES[enemyId];
     // block theme song first (the level's default), then per-enemy tracks
     const block = levelByEnemy(enemyId)?.songBlock ?? 0;
@@ -236,6 +238,7 @@ class Game implements App {
       if (lvl?.finalBoss) { s.chapterDone[this.difficulty] = true; this.toast("¡Capítulo completado! Dificultad superior desbloqueada"); }
     }
     if (ticketsGained > 0) { s.statVouchers += ticketsGained; this.toast(`¡+${ticketsGained} Ticket de refuerzo!`); }
+    if (s.guiding) s.guiding = false; // guided tour ends after the first fight
     applyFightResult(s, { perfects: r.perfects, maxCombo: r.maxCombo, superCombos: r.superCombos, won: r.won });
     this.persist();
 

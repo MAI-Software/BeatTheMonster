@@ -48,6 +48,7 @@ export interface SaveState {
   redeemed: string[]; // promo codes already redeemed
   chapterDone: Record<string, boolean>; // difficulty id -> chapter cleared (unlocks next)
   materials: Record<string, number>; // material id -> count (enemy drops)
+  guiding: boolean; // new-player guided tour active (spotlight through menus)
   energy: number; // stamina for the adventure
   energyTs: number; // last regen timestamp
   ads: number; // watch-ad free pulls available
@@ -96,6 +97,7 @@ export function defaultSave(): SaveState {
     redeemed: [],
     chapterDone: {},
     materials: {},
+    guiding: false,
     energy: 10,
     energyTs: Date.now(),
     ads: 5,
