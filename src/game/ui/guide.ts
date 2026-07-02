@@ -84,7 +84,7 @@ export function showSpotlight(coachImg: string, steps: GuideStep[], opts?: { onD
     if (coach) {
       const br = bubble.getBoundingClientRect();
       coach.style.bottom = `${Math.round(H - br.bottom)}px`;
-      coach.style.height = `${Math.round(br.height + 220)}px`;
+      coach.style.height = `${Math.round(br.height + 270)}px`;
       coach.style.left = "auto";
       coach.style.right = `${Math.round(W - br.right + 8)}px`;
     }

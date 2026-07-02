@@ -65,7 +65,7 @@ class Game implements App {
   resetAll() { resetSave(); location.reload(); }
   private loadingHTML(text: string) {
     const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
-    return `<div class="scene loading"><img class="load-bg" src="portal.webp" alt="" onerror="this.style.display='none'"><div class="spinner"></div><p>${text}</p><div class="boot-tip">${tip}</div><div class="boot-hint">Consejo</div></div>`;
+    return `<div class="scene loading"><img class="load-bg" src="portal.webp" alt="" onerror="this.style.display='none'"><div class="spinner"></div><p>${text}</p><div class="boot-tipbox"><div class="boot-tip">${tip}</div><div class="boot-hint">Consejo</div></div></div>`;
   }
 
   back() {
@@ -324,8 +324,7 @@ function showBoot(): Promise<void> {
         <img class="boot-portal" src="portal.webp" alt="" onerror="this.style.display='none'">
         <img class="boot-title" src="title.webp" alt="Beat the Monster" onerror="this.style.display='none'">
         <div class="boot-bar"><i id="bootfill"></i></div>
-        <div class="boot-tip" id="boottip">${TIPS[tip]}</div>
-        <div class="boot-hint">Consejo</div>
+        <div class="boot-tipbox"><div class="boot-tip" id="boottip">${TIPS[tip]}</div><div class="boot-hint">Consejo</div></div>
       </div>`;
     const fill = root.querySelector<HTMLElement>("#bootfill")!;
     const tipEl = root.querySelector<HTMLElement>("#boottip")!;

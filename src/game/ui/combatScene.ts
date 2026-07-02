@@ -114,8 +114,12 @@ export function runCombat(
 
     function triRect(): DOMRect {
       const g = tri(0, performance.now());
-      const left = Math.min(g.apex.x, g.BL.x, g.BR.x) - 12, right = Math.max(g.apex.x, g.BL.x, g.BR.x) + 12;
-      return new DOMRect(left, g.apexY - 40, right - left, g.baseY - g.apexY + 52);
+      // tri()/geom() work in ROOT-LOCAL coordinates. On desktop #app is a centered
+      // "phone frame" (not viewport-filling), so add its on-screen offset to get real
+      // viewport coordinates — same space getBoundingClientRect() returns for DOM targets.
+      const off = root.getBoundingClientRect();
+      const left = off.left + Math.min(g.apex.x, g.BL.x, g.BR.x) - 12, right = off.left + Math.max(g.apex.x, g.BL.x, g.BR.x) + 12;
+      return new DOMRect(left, off.top + g.apexY - 40, right - left, g.baseY - g.apexY + 52);
     }
     function drillCounter(show: boolean, label?: string) {
       drillCountEl.style.display = show ? "block" : "none";
