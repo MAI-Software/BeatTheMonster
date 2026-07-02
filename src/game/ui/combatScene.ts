@@ -59,9 +59,8 @@ export function runCombat(
         <div id="prephint" class="prep-hint"></div>
         <div id="countdown" class="countdown"></div>
         <button id="quit" class="quit">${icon("close", 18)}</button>
-        <button id="omit" class="omit-btn" ${opts.tutorial ? "style=\"display:none\"" : ""}>OMITIR COMBATE</button>
         <button id="dbgtoggle" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:64px;z-index:21;width:34px;height:34px;border-radius:50%;border:0;background:#0007;color:#9fffce;font:700 15px system-ui">i</button>
-        <button id="sensbtn" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:106px;z-index:21;height:34px;padding:0 12px;border-radius:17px;border:0;background:#0007;color:#ffe11a;font:700 12px system-ui">Sens</button>
+        <button id="sensbtn" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:106px;z-index:21;height:34px;padding:0 12px;border-radius:17px;border:0;background:#0007;color:#ffe11a;font:700 12px system-ui">Sens: Normal</button>
         <div id="dbg" style="display:none;position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:21;font:700 11px/1.3 system-ui;color:#9fffce;background:#000a;padding:4px 9px;border-radius:10px;pointer-events:none;white-space:nowrap"></div>
       </div>`;
 
@@ -103,8 +102,31 @@ export function runCombat(
     let dbgOn = false, frames = 0, lastFpsT = 0, fps = 0;
     $<HTMLButtonElement>("#quit").onclick = () => { quit = true; };
     let omit = false;
-    const omitBtn = $<HTMLButtonElement>("#omit");
-    if (!opts.tutorial) omitBtn.onclick = () => { omit = true; }; // mandatory drill: no skipping it via a hidden button
+    // TEMP test aids: "OMITIR TUTORIAL" fast-forwards the staged intro (only shown during
+    // it); "OMITIR COMBATE" instant-wins the real fight (shown once the intro is done).
+    // Appended to <body> (not #app's innerHTML) and position:fixed on purpose: #app is
+    // itself position:fixed, which ALWAYS opens its own stacking context (per spec), so
+    // nothing inside it can out-rank the guide bubble (z-index 55, also on <body>) no
+    // matter its own z-index — these need to share that same outer context to stay
+    // clickable while a coach line is up. Remove this whole block before release.
+    function makeOmitBtn(id: string, label: string): HTMLButtonElement {
+      const b = document.createElement("button");
+      b.id = id; b.className = "omit-btn"; b.textContent = label;
+      b.style.position = "fixed"; b.style.zIndex = "60"; b.style.display = "none";
+      document.body.appendChild(b);
+      return b;
+    }
+    const omitBtn = makeOmitBtn("omit", "OMITIR COMBATE");
+    const omitTutBtn = makeOmitBtn("omitTutorial", "OMITIR TUTORIAL");
+    function positionOmitBtns() {
+      const r = root.getBoundingClientRect();
+      const left = `${Math.round(r.left + r.width / 2)}px`, bottom = `${Math.round(window.innerHeight - r.bottom + 92)}px`;
+      for (const b of [omitBtn, omitTutBtn]) { b.style.left = left; b.style.bottom = bottom; b.style.transform = "translateX(-50%)"; }
+    }
+    positionOmitBtns();
+    window.addEventListener("resize", positionOmitBtns);
+    omitBtn.onclick = () => { omit = true; };
+    omitTutBtn.onclick = () => skipTutorial();
     const hudTop = $<HTMLElement>(".hud-top"), hudBottom = $<HTMLElement>(".hud-bottom");
     const drillCountEl = $<HTMLElement>("#drillCount");
 
@@ -161,6 +183,20 @@ export function runCombat(
         onDone: () => { hudBottom.classList.remove("tut-dim"); phase = "prep"; },
       });
     }
+    // TEMP: jump straight past the staged intro into the real guard-up/countdown/play flow.
+    function skipTutorial() {
+      closeGuide?.(); closeGuide = null;
+      drill = null; drillCounter(false);
+      tutTriRevealed = true;
+      hudTop.classList.remove("tut-dim"); hudBottom.classList.remove("tut-dim");
+      phase = "prep";
+    }
+    function updateOmitVisibility() {
+      const inTutdim = phase === "tutdim";
+      omitTutBtn.style.display = inTutdim ? "block" : "none";
+      omitBtn.style.display = inTutdim ? "none" : "block";
+    }
+    updateOmitVisibility();
     if (opts.tutorial) tutStageHp();
 
     $<HTMLButtonElement>("#dbgtoggle").onclick = () => { dbgOn = !dbgOn; dbgEl.style.display = dbgOn ? "block" : "none"; };
@@ -176,8 +212,8 @@ export function runCombat(
     const sensLabel = (s: Sensitivity) => (s === "sensitive" ? "Sensible" : s === "strict" ? "Estricto" : "Normal");
     const sensBtn = $<HTMLButtonElement>("#sensbtn");
     const sensCycle: Sensitivity[] = ["sensitive", "normal", "strict"];
-    sensBtn.textContent = sensLabel(getSensitivity());
-    sensBtn.onclick = () => { const next = sensCycle[(sensCycle.indexOf(getSensitivity()) + 1) % 3]; setSensitivity(next); sensBtn.textContent = sensLabel(next); };
+    sensBtn.textContent = `Sens: ${sensLabel(getSensitivity())}`; // prefixed so it's never mistaken for the fight's difficulty
+    sensBtn.onclick = () => { const next = sensCycle[(sensCycle.indexOf(getSensitivity()) + 1) % 3]; setSensitivity(next); sensBtn.textContent = `Sens: ${sensLabel(next)}`; };
     if (isCam) input.beginCalibration?.();
 
     function beginCountdown() { if (phase !== "prep") return; phase = "countdown"; countStart = performance.now(); prephint.textContent = ""; }
@@ -260,6 +296,7 @@ export function runCombat(
     function finish(r: CombatResult) {
       if (finished) return; finished = true; // guard against re-entrancy (e.g. error during finish path)
       closeGuide?.(); drillCounter(false); // tear down a lingering tutorial overlay if quit mid-drill
+      omitBtn.remove(); omitTutBtn.remove(); window.removeEventListener("resize", positionOmitBtns); // TEMP buttons live on <body>
       document.documentElement.classList.remove("native-cam");
       cancelAnimationFrame(raf); window.removeEventListener("resize", resize); song.stop();
       try { input.stop(); } catch { /* idempotent: main.ts also stops on next createInput */ }
@@ -298,17 +335,20 @@ export function runCombat(
       // to GRAY once they are so it stops competing for attention with the punch/dodge cues.
       const guardOk = input.guardUp?.() ?? true;
       const gcol = guardOk ? "#7a8296" : "#ff3a44";
+      // blinks while not in guard — a steady dim line once it's fine doesn't need to shout
+      const blink = guardOk ? 1 : 0.5 + 0.5 * Math.sin(performance.now() / 170);
       const gy = g.apexY + (g.baseY - g.apexY) / 3;
       const t3 = 1 / 3; // fraction from apex -> base
       const overhang = 16;
       const lx = g.apex.x + t3 * (g.BL.x - g.apex.x) - overhang, rx = g.apex.x + t3 * (g.BR.x - g.apex.x) + overhang;
       ctx.save();
+      ctx.globalAlpha = blink;
       ctx.setLineDash([7, 6]); ctx.lineWidth = 2.5; ctx.strokeStyle = gcol + "dd";
       ctx.shadowColor = gcol; ctx.shadowBlur = guardOk ? 4 : 12;
       ctx.beginPath(); ctx.moveTo(lx, gy); ctx.lineTo(rx, gy); ctx.stroke();
-      ctx.restore();
       ctx.font = "600 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = gcol + "cc";
       ctx.fillText("GUARDIA", g.cx, gy - 6);
+      ctx.restore();
       // fixed apex node (the head's home corner) — anchors the triangle visually
       ctx.fillStyle = COL.guard; ctx.shadowColor = COL.guard; ctx.shadowBlur = 10;
       ctx.beginPath(); ctx.arc(g.apex.x, g.apex.y, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
@@ -488,6 +528,7 @@ export function runCombat(
     }
 
     function sync() {
+      updateOmitVisibility();
       if (combat.enemyHp < lastEnemyHp) flashBar(ehpFlash);
       if (combat.playerHp < lastPlayerHp) flashBar(phpFlash);
       lastEnemyHp = combat.enemyHp; lastPlayerHp = combat.playerHp;

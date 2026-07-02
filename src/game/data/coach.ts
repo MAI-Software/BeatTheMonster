@@ -24,12 +24,16 @@ export const COMBAT_GUIDE = {
   triangle: ["Este es tu triángulo de combate: desde aquí golpeas y esquivas."],
   punchIntro: ["Vamos a entrenar los puñetazos. Golpea el lado marcado.", "¡Dame 5!"],
   dodgeIntro: ["¡Bien! Ahora las esquivas: inclina la cabeza para llevar la bola hasta la señal, sobre el triángulo.", "¡Dame 5!"],
-  ready: ["Ya estás preparado. Ponte en guardia...", "¡y machácalo!"],
+  ready: [
+    "Ya estás preparado.",
+    "Sube los puños a la línea roja. Se apaga a gris cuando estés en guardia — ahí arranca la cuenta atrás.",
+    "¡Y machácalo!",
+  ],
 };
 
 // Result guide: material (captions the reveal popup) -> XP -> coins, in order.
 export const RESULT_GUIDE = {
-  material: "Esto es un material. Te servirá más adelante para mejorar tu equipo.",
+  material: "Esto es un material. Sirve para añadirlo a tu colección.",
   xp: ["Cada combate te da experiencia: sube tu nivel."],
   coins: ["Y monedas: te sirven para entrenar tus estadísticas."],
 };

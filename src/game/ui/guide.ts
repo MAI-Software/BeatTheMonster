@@ -37,13 +37,7 @@ export function showSpotlight(coachImg: string, steps: GuideStep[], opts?: { onD
   const line = g.querySelector<HTMLElement>(".gb-line")!;
   const coach = g.querySelector<HTMLElement>(".gb-coach");
 
-  const paintText = () => {
-    const cur = steps[si];
-    const isLastLine = li === cur.lines.length - 1;
-    const isLastStep = si === steps.length - 1;
-    const showNext = !(isLastLine && isLastStep); // hide the hint on the very final line
-    line.innerHTML = cur.lines[li] + (showNext ? `<div class="gb-next">Toca para continuar</div>` : "");
-  };
+  const paintText = () => { line.innerHTML = steps[si].lines[li]; }; // no "tap to continue" hint — obvious, wastes space
   paintText();
 
   const close = () => { g.remove(); };
