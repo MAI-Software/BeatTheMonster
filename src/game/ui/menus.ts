@@ -14,7 +14,7 @@ import { CASSETTES } from "../data/cassettes";
 import { setVolumes, sfx } from "../systems/audio";
 import { GLOBAL_SONG } from "../systems/song";
 import { applyMenuVolume, ensureMenuMusic, isMenuPlaying, stopMenuMusic } from "../systems/menuMusic";
-import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg } from "../data/skins";
+import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg, coachDialogImg } from "../data/skins";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
 import { showSpotlight } from "./guide";
 
@@ -48,7 +48,7 @@ export function revealOverlay(faceHtml: string, name: string, sub: string, rarit
   const ov = document.createElement("div");
   ov.className = `reveal-ov r-${rarity}`;
   ov.innerHTML = `<div class="rv-card"><div class="rv-face">${faceHtml}</div><div class="rv-name">${name}</div>${sub ? `<div class="rv-sub">${sub}</div>` : ""}<div class="rv-tap">Toca para continuar</div></div>` +
-    (coachLine ? `<div class="cc-bubble rv-coach"><img class="cc-coach" src="${coachSkinImg(coachLine.app.save.coachSkin)}" alt="" onerror="this.remove()"><div class="cc-txt"><span class="cc-name">${COACH_NAME}</span>${coachLine.text}</div></div>` : "");
+    (coachLine ? `<div class="cc-bubble rv-coach"><img class="cc-coach" src="${coachDialogImg(coachLine.app.save.coachSkin)}" alt="" onerror="this.remove()"><div class="cc-txt"><span class="cc-name">${COACH_NAME}</span>${coachLine.text}</div></div>` : "");
   document.body.appendChild(ov);
   requestAnimationFrame(() => ov.classList.add("show"));
   ov.onclick = () => { ov.classList.remove("show"); setTimeout(() => { ov.remove(); onClose?.(); }, 250); };
@@ -63,7 +63,7 @@ function showGuide(app: App, selector: string, text: string | string[]) {
   const el = app.root.querySelector<HTMLElement>(selector);
   if (!el) return;
   el.scrollIntoView({ block: "center" });
-  showSpotlight(coachSkinImg(app.save.coachSkin), [
+  showSpotlight(coachDialogImg(app.save.coachSkin), [
     { target: () => app.root.querySelector<HTMLElement>(selector), lines: Array.isArray(text) ? text : [text], actionable: true },
   ]);
 }

@@ -16,7 +16,7 @@ import { icon, gicon } from "./game/ui/icons";
 import { SEAL_DROP_CHANCE, collectTicketGain } from "./game/data/collection";
 import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassettes";
 import { PREFIGHT_GUIDE, RESULT_GUIDE } from "./game/data/coach";
-import { coachSkinImg } from "./game/data/skins";
+import { coachDialogImg } from "./game/data/skins";
 import { showSpotlight } from "./game/ui/guide";
 import { applySongPlay } from "./game/systems/challenges";
 import {
@@ -167,7 +167,7 @@ class Game implements App {
         this.onFightEnd(enemyId, episodeId, { perfects: 60, goods: 12, dodges: 6, maxCombo: 35, superCombos: 3, won: true, enemyMaxHp: enemy.hp }));
       // guided first fight: the coach walks the player through the screen, ending on LUCHAR.
       if (guiding) {
-        showSpotlight(coachSkinImg(this.save.coachSkin), [
+        showSpotlight(coachDialogImg(this.save.coachSkin), [
           { target: () => this.root.querySelector<HTMLElement>(".pf-photo"), lines: PREFIGHT_GUIDE.enemy(enemy.name) },
           { target: () => this.root.querySelector<HTMLElement>(".pf-song"), lines: PREFIGHT_GUIDE.song(blockSong.name) },
           { target: () => this.root.querySelector<HTMLElement>("#pfstart"), lines: PREFIGHT_GUIDE.start, actionable: true },
@@ -191,7 +191,7 @@ class Game implements App {
       const flow = this.save.equippedFlow ? getFlowState(this.save.equippedFlow) : undefined;
       this.inCombat = true;
       let result;
-      try { result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty], { tutorial: this.save.guiding, coachImg: coachSkinImg(this.save.coachSkin) }); }
+      try { result = await runCombat(this.root, enemy, eff, flow ?? null, this.input, song, DIFFICULTIES[this.difficulty], { tutorial: this.save.guiding, coachImg: coachDialogImg(this.save.coachSkin) }); }
       finally { this.inCombat = false; }
       this.onFightEnd(enemyId, episodeId, result);
     };
@@ -287,7 +287,7 @@ class Game implements App {
 
     // guided first fight: coach walks the rewards row in order (material -> XP -> coins).
     // The material popup gets a coach caption; once dismissed, the coach points at XP then coins.
-    const guideRewards = () => showSpotlight(coachSkinImg(s.coachSkin), [
+    const guideRewards = () => showSpotlight(coachDialogImg(s.coachSkin), [
       { target: () => this.root.querySelector<HTMLElement>('[data-res="xp"]'), lines: RESULT_GUIDE.xp },
       { target: () => this.root.querySelector<HTMLElement>('[data-res="coin"]'), lines: RESULT_GUIDE.coins },
     ]);
