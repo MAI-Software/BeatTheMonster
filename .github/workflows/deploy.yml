@@ -38,3 +38,8 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # GitHub's own Pages build/propagation has been running close to the
+          # default 10min client timeout today (a successful deploy took ~10:07);
+          # give it real headroom instead of the action giving up right before it lands.
+          timeout: 1800000
