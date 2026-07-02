@@ -45,12 +45,12 @@ export function runCombat(
             </div>
             <div class="enemy-info">
               <div class="enemy-name">${enemy.name}<span>${enemy.title}</span></div>
-              <div class="bar enemy"><i id="ehp" class="fill"></i></div>
+              <div class="bar enemy"><i id="ehpGhost" class="fill-ghost"></i><i id="ehp" class="fill"></i><i id="ehpFlash" class="hp-flash"></i></div>
             </div>
           </div>
         </div>
         <div class="hud-bottom ${opts.tutorial ? "tut-dim" : ""}">
-          <div class="bar player"><i id="php" class="fill"></i><b id="phptext"></b></div>
+          <div class="bar player"><i id="phpGhost" class="fill-ghost"></i><i id="php" class="fill"></i><i id="phpFlash" class="hp-flash"></i><b id="phptext"></b></div>
           <div class="flow-row"><div class="bar flow"><i id="flowfill" class="fill"></i></div><span id="flowlabel"></span></div>
         </div>
         <div id="info" class="combat-info"></div>
@@ -81,6 +81,10 @@ export function runCombat(
 
     const canvas = $<HTMLCanvasElement>("#ring"), ctx = canvas.getContext("2d")!;
     const ehp = $<HTMLElement>("#ehp"), php = $<HTMLElement>("#php"), phptext = $<HTMLElement>("#phptext");
+    const ehpGhost = $<HTMLElement>("#ehpGhost"), phpGhost = $<HTMLElement>("#phpGhost");
+    const ehpFlash = $<HTMLElement>("#ehpFlash"), phpFlash = $<HTMLElement>("#phpFlash");
+    let lastEnemyHp = combat.enemyHp, lastPlayerHp = combat.playerHp;
+    const flashBar = (el: HTMLElement) => { el.classList.remove("on"); void el.offsetWidth; el.classList.add("on"); };
     const infoEl = $<HTMLElement>("#info"), judgeEl = $<HTMLElement>("#judge"), flowfill = $<HTMLElement>("#flowfill"), flowlabel = $<HTMLElement>("#flowlabel");
     const countdown = $<HTMLElement>("#countdown"), prephint = $<HTMLElement>("#prephint");
     const dbgEl = $<HTMLElement>("#dbg");
@@ -287,16 +291,22 @@ export function runCombat(
       // centre divider (L/R fists)
       ctx.lineWidth = 2; ctx.strokeStyle = COL.guard + "88";
       ctx.beginPath(); ctx.moveTo(g.cx, g.baseY); ctx.lineTo(g.cx, g.apexY + g.R * 0.5); ctx.stroke();
-      // dashed guard line across the UPPER THIRD — where your fists should rest before & after a punch
+      // dashed guard line across the UPPER THIRD — where your fists should rest before & after
+      // a punch. Sticks out a bit past the triangle's edges, and reacts to the real guard
+      // state: RED while the player isn't up in guard (combat can't start without it), dims
+      // to GRAY once they are so it stops competing for attention with the punch/dodge cues.
+      const guardOk = input.guardUp?.() ?? true;
+      const gcol = guardOk ? "#7a8296" : "#ff3a44";
       const gy = g.apexY + (g.baseY - g.apexY) / 3;
       const t3 = 1 / 3; // fraction from apex -> base
-      const lx = g.apex.x + t3 * (g.BL.x - g.apex.x), rx = g.apex.x + t3 * (g.BR.x - g.apex.x);
+      const overhang = 16;
+      const lx = g.apex.x + t3 * (g.BL.x - g.apex.x) - overhang, rx = g.apex.x + t3 * (g.BR.x - g.apex.x) + overhang;
       ctx.save();
-      ctx.setLineDash([7, 6]); ctx.lineWidth = 2.5; ctx.strokeStyle = COL.guard + "cc";
-      ctx.shadowColor = COL.guard; ctx.shadowBlur = 6;
+      ctx.setLineDash([7, 6]); ctx.lineWidth = 2.5; ctx.strokeStyle = gcol + "dd";
+      ctx.shadowColor = gcol; ctx.shadowBlur = guardOk ? 4 : 12;
       ctx.beginPath(); ctx.moveTo(lx, gy); ctx.lineTo(rx, gy); ctx.stroke();
       ctx.restore();
-      ctx.font = "600 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = COL.guard + "aa";
+      ctx.font = "600 10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = gcol + "cc";
       ctx.fillText("GUARDIA", g.cx, gy - 6);
       // fixed apex node (the head's home corner) — anchors the triangle visually
       ctx.fillStyle = COL.guard; ctx.shadowColor = COL.guard; ctx.shadowBlur = 10;
@@ -308,12 +318,36 @@ export function runCombat(
       ctx.fillText("DER", g.cx + g.baseHalf * 0.45, g.baseY + 22);
     }
 
-    // the head marker slides horizontally with the lean; it can travel out past the
-    // triangle edges to reach the dodge arrows.
+    // The dodge RAIL: an arc centred on the triangle's apex, dipping down toward each side —
+    // this is the path the head travels along to dodge (t=-1..1). Ties into the same
+    // reference points the head/dodge-target already used (head's resting height at t=0,
+    // the dodge target's height at the extremes) so the curve matches what's actually drawn.
+    function dodgeCurve(g: Tri, t: number, r: number): { x: number; y: number } {
+      const tc = Math.max(-1, Math.min(1, t));
+      const x = g.cx + tc * g.baseHalf * 1.08;
+      const yTop = g.apexY - r - 14;
+      const yEdge = g.apexY + g.R * 0.05;
+      return { x, y: yTop + (yEdge - yTop) * (tc * tc) };
+    }
+    function drawDodgeCurve(g: Tri) {
+      const r = Math.max(20, g.R * 0.12);
+      ctx.save();
+      ctx.strokeStyle = COL.guard + "50"; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      const N = 24;
+      for (let i = 0; i <= N; i++) {
+        const p = dodgeCurve(g, -1 + (2 * i) / N, r);
+        if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // the head marker slides along the dodge rail with the lean — out and slightly DOWN
+    // toward each side, matching where the dodge target sits (never a flat horizontal slide).
     function drawHead(g: Tri, headLean: number, glow: boolean) {
       const r = Math.max(20, g.R * 0.12);
-      const x = g.cx + Math.max(-1, Math.min(1, headLean)) * g.baseHalf * 1.08;
-      const y = g.apexY - r - 14; // floats clearly ABOVE the (fixed) triangle
+      const { x, y } = dodgeCurve(g, headLean, r);
       ctx.save();
       ctx.shadowColor = glow ? COL.on : COL.head; ctx.shadowBlur = glow ? 32 : 16;
       ctx.fillStyle = glow ? COL.on : "#10131f"; ctx.strokeStyle = glow ? "#eaffe9" : COL.head; ctx.lineWidth = 4;
@@ -347,6 +381,7 @@ export function runCombat(
       drawTracking();
       const g = tri(headX(), performance.now());
       drawGuard(g);
+      drawDodgeCurve(g);
       // centre guide line for aligning the head
       ctx.setLineDash([6, 6]); ctx.strokeStyle = "#9fb0c8"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(g.cx, g.apexY - 20); ctx.lineTo(g.cx, g.apexY + 20); ctx.stroke(); ctx.setLineDash([]);
@@ -380,29 +415,22 @@ export function runCombat(
       ctx.restore();
     }
 
-    // a chevron arrow ABOVE the triangle pointing up-and-out. Lean the head a little
-    // toward it (head exits the triangle on that side) to dodge.
-    function arrow(ax: number, ay: number, dir: -1 | 1, size: number, col: string, glow: number) {
-      ctx.save(); ctx.translate(ax, ay); ctx.strokeStyle = col; ctx.fillStyle = col;
-      ctx.lineWidth = 8; ctx.lineCap = "round"; ctx.lineJoin = "round";
-      ctx.shadowColor = col; ctx.shadowBlur = glow;
-      ctx.beginPath();
-      ctx.moveTo(dir * -size, size * 0.7);
-      ctx.lineTo(dir * size, 0);
-      ctx.lineTo(dir * -size, -size * 0.7);
-      ctx.stroke(); ctx.restore();
-    }
-
+    // Dodge target: a glowing ball sitting ON the dodge rail (same curve the head travels).
+    // Yellow while waiting, turns GREEN the instant the head reaches it — tap-and-return,
+    // never a "hold this pose" cue (that's only shown for genuinely sustained notes below).
     function drawDodge(g: Tri, d: DodgeState | null) {
       if (!d) return;
       const dir = d.side === "L" ? -1 : 1;
-      const col = d.aligned ? COL.on : COL.danger;
-      // arrow sits just OUTSIDE the triangle's top corner on that side
-      const ax = g.cx + dir * g.baseHalf * 0.95;
-      const ay = g.apexY + g.R * 0.05;
-      const glow = d.inWindow ? 30 : 14;
-      arrow(ax, ay, dir as -1 | 1, 22 + (1 - d.p) * 10, col, glow);
-      // incoming telegraph ring closing onto the arrow
+      const r = Math.max(20, g.R * 0.12);
+      const { x: ax, y: ay } = dodgeCurve(g, dir, r);
+      const col = d.aligned ? COL.on : COL.ball;
+      const rad = 13 + (1 - d.p) * 6;
+      ctx.save();
+      ctx.shadowColor = col; ctx.shadowBlur = d.inWindow ? 26 : 12;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(ax, ay, rad, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      // incoming telegraph ring closing onto the target
       const rr = 18 + (1 - d.p) * 56;
       ctx.save(); ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.globalAlpha = 0.4 + d.p * 0.6;
       ctx.shadowColor = col; ctx.shadowBlur = 12;
@@ -410,9 +438,9 @@ export function runCombat(
       // sustained note: arc fills while you hold the lean out
       if (d.holdMs > 0) {
         ctx.lineWidth = 5; ctx.strokeStyle = "#0009";
-        ctx.beginPath(); ctx.arc(ax, ay, 34, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(ax, ay, 30, 0, Math.PI * 2); ctx.stroke();
         ctx.strokeStyle = COL.on; ctx.shadowColor = COL.on; ctx.shadowBlur = 12;
-        ctx.beginPath(); ctx.arc(ax, ay, 34, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * d.holdFilled); ctx.stroke(); ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(ax, ay, 30, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * d.holdFilled); ctx.stroke(); ctx.shadowBlur = 0;
       }
     }
 
@@ -440,6 +468,7 @@ export function runCombat(
       const g = tri(0, now);
       if (drill === "punch") drawHalfFill(g, drillSide, drillFillState(now));
       drawGuard(g);
+      drawDodgeCurve(g);
       if (drill === "dodge") drawDodge(g, drillDodgeState(now));
       drawHead(g, headX(), drill === "dodge" && drillDodgeAligned());
     }
@@ -451,14 +480,19 @@ export function runCombat(
       const g = tri(combat.headX, now);
       drawHalfFill(g, "L", combat.fillFor("L", songMs)); drawHalfFill(g, "R", combat.fillFor("R", songMs));
       drawGuard(g);
+      drawDodgeCurve(g);
       const d = combat.dodgeState(songMs);
       drawDodge(g, d);
       drawHead(g, combat.headX, !!d?.aligned);
     }
 
     function sync() {
-      ehp.style.width = `${(combat.enemyHp / combat.enemyMaxHp) * 100}%`;
-      php.style.width = `${(combat.playerHp / combat.playerMaxHp) * 100}%`;
+      if (combat.enemyHp < lastEnemyHp) flashBar(ehpFlash);
+      if (combat.playerHp < lastPlayerHp) flashBar(phpFlash);
+      lastEnemyHp = combat.enemyHp; lastPlayerHp = combat.playerHp;
+      const ePct = `${(combat.enemyHp / combat.enemyMaxHp) * 100}%`, pPct = `${(combat.playerHp / combat.playerMaxHp) * 100}%`;
+      ehp.style.width = ePct; ehpGhost.style.width = ePct;
+      php.style.width = pPct; phpGhost.style.width = pPct;
       phptext.textContent = `${Math.ceil(combat.playerHp)} / ${combat.playerMaxHp}`;
       // combo + points, OUTSIDE the triangle (top-left)
       infoEl.innerHTML =
