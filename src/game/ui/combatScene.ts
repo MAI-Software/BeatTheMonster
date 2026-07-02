@@ -6,14 +6,15 @@ import type { Enemy } from "../data/enemies";
 import { buildBeatmap, practiceBeatmap } from "../data/beatmaps";
 import type { Difficulty } from "../data/difficulty";
 import type { EffectiveStats } from "../systems/progression";
-import { Combat, type CombatResult } from "../systems/combat";
+import { Combat, type CombatResult, type FillState, type DodgeState } from "../systems/combat";
 import type { FlowState } from "../data/flowStates";
 import type { InputProvider } from "../systems/pose";
 import { getSensitivity, setSensitivity, type Sensitivity } from "../systems/pose";
 import type { SongPlayer } from "../systems/song";
 import { unlockAudio } from "../systems/audio";
 import { icon } from "./icons";
-import { COACH_NAME } from "../data/coach";
+import { COMBAT_GUIDE } from "../data/coach";
+import { showSpotlight } from "./guide";
 
 // neon palette: blue = left fist, red = right fist, yellow = the triangle/head
 const COL = { L: "#1fa2ff", R: "#ff2436", guard: "#ffe11a", rim: "#4a451c", on: "#37e09a", head: "#ffe11a", danger: "#ff2e7a", ball: "#ffe11a" };
@@ -36,7 +37,7 @@ export function runCombat(
         <video id="cam" autoplay playsinline muted></video>
         <div class="cam-tint"></div>
         <canvas id="ring"></canvas>
-        <div class="hud-top">
+        <div class="hud-top ${opts.tutorial ? "tut-dim" : ""}">
           <div class="enemy-bar">
             <div class="enemy-face" style="--c:${enemy.color}">
               <img src="characters/enemies/${enemy.id}.png" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
@@ -48,16 +49,17 @@ export function runCombat(
             </div>
           </div>
         </div>
-        <div class="hud-bottom">
+        <div class="hud-bottom ${opts.tutorial ? "tut-dim" : ""}">
           <div class="bar player"><i id="php" class="fill"></i><b id="phptext"></b></div>
           <div class="flow-row"><div class="bar flow"><i id="flowfill" class="fill"></i></div><span id="flowlabel"></span></div>
         </div>
         <div id="info" class="combat-info"></div>
         <div id="judge" class="judge-feed"></div>
+        <div id="drillCount" class="drill-count" style="display:none"></div>
         <div id="prephint" class="prep-hint"></div>
         <div id="countdown" class="countdown"></div>
         <button id="quit" class="quit">${icon("close", 18)}</button>
-        <button id="omit" class="omit-btn">OMITIR COMBATE</button>
+        <button id="omit" class="omit-btn" ${opts.tutorial ? "style=\"display:none\"" : ""}>OMITIR COMBATE</button>
         <button id="dbgtoggle" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:64px;z-index:21;width:34px;height:34px;border-radius:50%;border:0;background:#0007;color:#9fffce;font:700 15px system-ui">i</button>
         <button id="sensbtn" style="position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:106px;z-index:21;height:34px;padding:0 12px;border-radius:17px;border:0;background:#0007;color:#ffe11a;font:700 12px system-ui">Sens</button>
         <div id="dbg" style="display:none;position:absolute;top:calc(env(safe-area-inset-top) + 8px);left:50%;transform:translateX(-50%);z-index:21;font:700 11px/1.3 system-ui;color:#9fffce;background:#000a;padding:4px 9px;border-radius:10px;pointer-events:none;white-space:nowrap"></div>
@@ -92,29 +94,66 @@ export function runCombat(
     resize(); window.addEventListener("resize", resize);
 
     let raf = 0, quit = false;
-    let phase: "prep" | "countdown" | "play" = "prep";
+    let phase: "tutdim" | "prep" | "countdown" | "play" = opts.tutorial ? "tutdim" : "prep";
     let countStart = 0, holdStart = 0;
     let dbgOn = false, frames = 0, lastFpsT = 0, fps = 0;
     $<HTMLButtonElement>("#quit").onclick = () => { quit = true; };
     let omit = false;
-    $<HTMLButtonElement>("#omit").onclick = () => { omit = true; };
+    const omitBtn = $<HTMLButtonElement>("#omit");
+    if (!opts.tutorial) omitBtn.onclick = () => { omit = true; }; // mandatory drill: no skipping it via a hidden button
+    const hudTop = $<HTMLElement>(".hud-top"), hudBottom = $<HTMLElement>(".hud-bottom");
+    const drillCountEl = $<HTMLElement>("#drillCount");
 
-    // Tutorial: coach explains guard + combat over the ring (DOM overlay, tap to advance).
-    if (opts.tutorial) {
-      const lines = [
-        "Sube la GUARDIA: las dos manos a la altura de la cara, firme y erguido.",
-        "Cuando una mitad del triángulo se llene, lanza ESE puño. Justo al borde = PERFECT (×1.2 de daño).",
-        "Si aciertas, pegas: tu ATK menos la DEF del rival (mínimo 1). Si fallas, te pega él a ti.",
-        "Para esquivar, inclina la CABEZA hacia la señal y déjala ahí en el momento justo.",
-      ];
-      let ci = 0;
-      const co = document.createElement("div");
-      co.className = "combat-coach";
-      const paint = () => { co.innerHTML = `<div class="cc-bubble">${opts.coachImg ? `<img class="cc-coach" src="${opts.coachImg}" alt="" onerror="this.remove()">` : ""}<div class="cc-txt"><span class="cc-name">${COACH_NAME}</span>${lines[ci]}<div class="cc-next">${ci < lines.length - 1 ? "Toca para continuar" : "¡Entendido!"}</div></div></div>`; };
-      paint();
-      co.onclick = () => { ci++; if (ci >= lines.length) co.remove(); else paint(); };
-      root.appendChild(co);
+    // ----- Staged first-fight tutorial (opts.tutorial only): coach reveals the HUD piece
+    // by piece, then runs a mandatory 5-punch / 5-dodge drill before the real fight starts.
+    let closeGuide: (() => void) | null = null;
+    let tutTriRevealed = false;
+    let drill: "punch" | "dodge" | null = null;
+    let drillCount = 0, drillSide: "L" | "R" = "R", drillPromptAt = 0, drillWasAligned = false;
+    const DRILL_TARGET = 5, DRILL_LOOP_MS = 1100, DRILL_DODGE_TARGET = 0.18;
+
+    function triRect(): DOMRect {
+      const g = tri(0, performance.now());
+      const left = Math.min(g.apex.x, g.BL.x, g.BR.x) - 12, right = Math.max(g.apex.x, g.BL.x, g.BR.x) + 12;
+      return new DOMRect(left, g.apexY - 40, right - left, g.baseY - g.apexY + 52);
     }
+    function drillCounter(show: boolean, label?: string) {
+      drillCountEl.style.display = show ? "block" : "none";
+      if (label) drillCountEl.textContent = label;
+    }
+    function nextDrillPrompt(now: number) { drillSide = drillSide === "L" ? "R" : "L"; drillPromptAt = now; drillWasAligned = false; }
+    function startDrill(kind: "punch" | "dodge") {
+      drill = kind; drillCount = 0; drillSide = "R"; drillPromptAt = performance.now(); drillWasAligned = false;
+      while (input.consumePunch()) {} // don't let a stray punch thrown while reading count early
+      drillCounter(true, `${kind === "punch" ? "GOLPES" : "ESQUIVAS"} 0/${DRILL_TARGET}`);
+    }
+    function tutStageHp() {
+      closeGuide = showSpotlight(opts.coachImg ?? "", [{ target: () => root.querySelector<HTMLElement>(".enemy-bar"), lines: COMBAT_GUIDE.hp }], {
+        onDone: () => { hudTop.classList.remove("tut-dim"); tutStageTriangle(); },
+      });
+    }
+    function tutStageTriangle() {
+      closeGuide = showSpotlight(opts.coachImg ?? "", [{ target: triRect, lines: COMBAT_GUIDE.triangle }], {
+        onDone: () => { tutTriRevealed = true; tutStagePunchIntro(); },
+      });
+    }
+    function tutStagePunchIntro() {
+      closeGuide = showSpotlight(opts.coachImg ?? "", [{ target: triRect, lines: COMBAT_GUIDE.punchIntro }], {
+        onDone: () => startDrill("punch"),
+      });
+    }
+    function tutStageDodgeIntro() {
+      closeGuide = showSpotlight(opts.coachImg ?? "", [{ target: triRect, lines: COMBAT_GUIDE.dodgeIntro }], {
+        onDone: () => startDrill("dodge"),
+      });
+    }
+    function tutStageReady() {
+      closeGuide = showSpotlight(opts.coachImg ?? "", [{ target: triRect, lines: COMBAT_GUIDE.ready }], {
+        onDone: () => { hudBottom.classList.remove("tut-dim"); phase = "prep"; },
+      });
+    }
+    if (opts.tutorial) tutStageHp();
+
     $<HTMLButtonElement>("#dbgtoggle").onclick = () => { dbgOn = !dbgOn; dbgEl.style.display = dbgOn ? "block" : "none"; };
     const updateDbg = () => {
       if (!dbgOn) return;
@@ -141,7 +180,28 @@ export function runCombat(
       input.update(now);
       frames++;
       if (now - lastFpsT >= 500) { fps = Math.round((frames * 1000) / (now - lastFpsT)); frames = 0; lastFpsT = now; updateDbg(); }
-      if (phase === "prep") {
+      if (phase === "tutdim") {
+        if (drill === "punch") {
+          let p = input.consumePunch();
+          while (p) {
+            if (p.side === drillSide) {
+              drillCount++;
+              if (drillCount >= DRILL_TARGET) { drill = null; drillCounter(false); tutStageDodgeIntro(); break; }
+              drillCounter(true, `GOLPES ${drillCount}/${DRILL_TARGET}`); nextDrillPrompt(now);
+            }
+            p = input.consumePunch();
+          }
+        } else if (drill === "dodge") {
+          const aligned = drillDodgeAligned();
+          if (aligned && !drillWasAligned) {
+            drillCount++;
+            if (drillCount >= DRILL_TARGET) { drill = null; drillCounter(false); tutStageReady(); }
+            else { drillCounter(true, `ESQUIVAS ${drillCount}/${DRILL_TARGET}`); nextDrillPrompt(now); }
+          }
+          drillWasAligned = aligned;
+        }
+        drawTutorial(now);
+      } else if (phase === "prep") {
         if (isCam && !calDone) {
           // optional calibration: throw 2 quick jabs. Auto-skips after 6s (or if no jabs land),
           // and endCalibration() silently keeps the preset defaults when there aren't enough.
@@ -190,6 +250,7 @@ export function runCombat(
     let finished = false;
     function finish(r: CombatResult) {
       if (finished) return; finished = true; // guard against re-entrancy (e.g. error during finish path)
+      closeGuide?.(); drillCounter(false); // tear down a lingering tutorial overlay if quit mid-drill
       document.documentElement.classList.remove("native-cam");
       cancelAnimationFrame(raf); window.removeEventListener("resize", resize); song.stop();
       try { input.stop(); } catch { /* idempotent: main.ts also stops on next createInput */ }
@@ -298,8 +359,8 @@ export function runCombat(
       else { ctx.lineTo(g.BR.x, g.BR.y); ctx.lineTo(g.cx, g.baseY); }
       ctx.closePath();
     }
-    function drawHalfFill(g: Tri, side: "L" | "R", songMs: number) {
-      const f = combat.fillFor(side, songMs); if (!f) return;
+    function drawHalfFill(g: Tri, side: "L" | "R", f: FillState | null) {
+      if (!f) return;
       const c = side === "L" ? COL.L : COL.R;
       const p = Math.max(0, Math.min(1, f.p));
       ctx.save();
@@ -328,8 +389,8 @@ export function runCombat(
       ctx.stroke(); ctx.restore();
     }
 
-    function drawDodge(g: Tri, songMs: number) {
-      const d = combat.dodgeState(songMs); if (!d) return;
+    function drawDodge(g: Tri, d: DodgeState | null) {
+      if (!d) return;
       const dir = d.side === "L" ? -1 : 1;
       const col = d.aligned ? COL.on : COL.danger;
       // arrow sits just OUTSIDE the triangle's top corner on that side
@@ -351,15 +412,43 @@ export function runCombat(
       }
     }
 
+    // Cosmetic-only pacing loop for the drill prompts (never gates hit detection — the
+    // drill teaches which control to use, not rhythm precision; that's the real fight).
+    function drillFillState(now: number): FillState {
+      const p = ((now - drillPromptAt) % DRILL_LOOP_MS) / DRILL_LOOP_MS;
+      const full = p > 0.85;
+      return { p, full, flash: full ? (p - 0.85) / 0.15 : 0 };
+    }
+    // headX() (not combat.headX — that's only updated by combat.update(), which never
+    // runs during the tutorial stages) reads the live lean directly from the input.
+    function drillDodgeAligned(): boolean {
+      return drillSide === "L" ? headX() < -DRILL_DODGE_TARGET : headX() > DRILL_DODGE_TARGET;
+    }
+    function drillDodgeState(now: number): DodgeState {
+      const p = ((now - drillPromptAt) % DRILL_LOOP_MS) / DRILL_LOOP_MS;
+      return { side: drillSide, p, inWindow: true, aligned: drillDodgeAligned(), holdMs: 0, holdProgress: 0, holdFilled: drillDodgeAligned() ? 1 : 0 };
+    }
+    function drawTutorial(now: number) {
+      const { w, h } = geom();
+      ctx.clearRect(0, 0, w, h);
+      drawTracking();
+      if (!tutTriRevealed) return;
+      const g = tri(0, now);
+      if (drill === "punch") drawHalfFill(g, drillSide, drillFillState(now));
+      drawGuard(g);
+      if (drill === "dodge") drawDodge(g, drillDodgeState(now));
+      drawHead(g, headX(), drill === "dodge" && drillDodgeAligned());
+    }
+
     function draw(songMs: number, now: number) {
       const { w, h } = geom();
       ctx.clearRect(0, 0, w, h);
       drawTracking();
       const g = tri(combat.headX, now);
-      drawHalfFill(g, "L", songMs); drawHalfFill(g, "R", songMs);
+      drawHalfFill(g, "L", combat.fillFor("L", songMs)); drawHalfFill(g, "R", combat.fillFor("R", songMs));
       drawGuard(g);
-      drawDodge(g, songMs);
       const d = combat.dodgeState(songMs);
+      drawDodge(g, d);
       drawHead(g, combat.headX, !!d?.aligned);
     }
 

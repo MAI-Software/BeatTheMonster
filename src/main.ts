@@ -15,8 +15,9 @@ import { runCombat } from "./game/ui/combatScene";
 import { icon, gicon } from "./game/ui/icons";
 import { SEAL_DROP_CHANCE, collectTicketGain } from "./game/data/collection";
 import { cassetteForBoss, getCassette, songForBlock } from "./game/data/cassettes";
-import { COACH_NAME } from "./game/data/coach";
+import { PREFIGHT_GUIDE, RESULT_GUIDE } from "./game/data/coach";
 import { coachSkinImg } from "./game/data/skins";
+import { showSpotlight } from "./game/ui/guide";
 import { applySongPlay } from "./game/systems/challenges";
 import {
   renderCampaign, renderCharacterSelect, renderChallenges, renderCollection, renderEquip, renderGacha, renderHome,
@@ -25,6 +26,8 @@ import {
 import { ensureMenuMusic, stopMenuMusic } from "./game/systems/menuMusic";
 
 const TRAINING_ENEMY: Enemy = { id: "training", name: "Saco", title: "Práctica", hp: 999999, atk: 12, def: 0, bpm: 100, intensity: 0.7, color: "#e7202b", emoji: "🥊" };
+// material id -> art filename (muela_orco's webp is named without the underscore)
+const matFile = (id: string) => (id === "muela_orco" ? "muela-orco" : id);
 
 // Screens reached from the BOTTOM nav of home keep their top bar at the bottom
 // (one-handed reach). Top-of-home screens (radio, profile, options, wardrobe…) stay up.
@@ -61,7 +64,8 @@ class Game implements App {
   }
   resetAll() { resetSave(); location.reload(); }
   private loadingHTML(text: string) {
-    return `<div class="scene loading"><img class="load-bg" src="portal.webp" alt="" onerror="this.style.display='none'"><div class="spinner"></div><p>${text}</p></div>`;
+    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    return `<div class="scene loading"><img class="load-bg" src="portal.webp" alt="" onerror="this.style.display='none'"><div class="spinner"></div><p>${text}</p><div class="boot-tip">${tip}</div><div class="boot-hint">Consejo</div></div>`;
   }
 
   back() {
@@ -143,6 +147,7 @@ class Game implements App {
     if (!diffUnlocked(this.difficulty, this.save.chapterDone)) this.difficulty = "easy";
 
     const render = () => {
+      const guiding = this.save.guiding;
       this.root.innerHTML = `
         <div class="scene menu prefight">
           <div class="section-bg"><img src="portal.webp" alt="" onerror="this.style.display='none'"></div>
@@ -151,15 +156,23 @@ class Game implements App {
             <div class="pf-photo">${enemy.img ? `<img src="${enemy.img}" alt="" onerror="this.parentElement.classList.add('empty')">` : ""}</div>
             <div class="pf-enemy">${enemy.name}</div>
             <div class="pf-title">${enemy.title}</div>
-            <div class="pf-meta"><span>Dificultad: <b>${DIFFICULTIES[this.difficulty].name}</b></span><span>${gicon("cassette", 15)} ${blockSong.name}</span></div>
-            <button class="primary" id="pfstart">${icon("play", 20)} Empezar</button>
-            <button class="opt-btn ghostbtn pf-auto" id="pfauto">AUTO (provisional)</button>
+            <div class="pf-meta"><span>Dificultad: <b>${DIFFICULTIES[this.difficulty].name}</b></span><span class="pf-song">${gicon("cassette", 15)} ${blockSong.name}</span></div>
+            <button class="primary" id="pfstart">${icon("play", 20)} LUCHAR</button>
+            ${guiding ? "" : `<button class="opt-btn ghostbtn pf-auto" id="pfauto">AUTO (provisional)</button>`}
           </div>
         </div>`;
       this.root.querySelector<HTMLButtonElement>("#pfback")!.onclick = () => this.go("campaign");
       this.root.querySelector<HTMLButtonElement>("#pfstart")!.onclick = () => begin();
-      this.root.querySelector<HTMLButtonElement>("#pfauto")!.onclick = () =>
-        this.onFightEnd(enemyId, episodeId, { perfects: 60, goods: 12, dodges: 6, maxCombo: 35, superCombos: 3, won: true, enemyMaxHp: enemy.hp });
+      this.root.querySelector<HTMLButtonElement>("#pfauto")?.addEventListener("click", () =>
+        this.onFightEnd(enemyId, episodeId, { perfects: 60, goods: 12, dodges: 6, maxCombo: 35, superCombos: 3, won: true, enemyMaxHp: enemy.hp }));
+      // guided first fight: the coach walks the player through the screen, ending on LUCHAR.
+      if (guiding) {
+        showSpotlight(coachSkinImg(this.save.coachSkin), [
+          { target: () => this.root.querySelector<HTMLElement>(".pf-photo"), lines: PREFIGHT_GUIDE.enemy(enemy.name) },
+          { target: () => this.root.querySelector<HTMLElement>(".pf-song"), lines: PREFIGHT_GUIDE.song(blockSong.name) },
+          { target: () => this.root.querySelector<HTMLElement>("#pfstart"), lines: PREFIGHT_GUIDE.start, actionable: true },
+        ]);
+      }
     };
 
     const begin = async () => {
@@ -259,11 +272,11 @@ class Game implements App {
           <div><b>${score.toLocaleString()}</b><span>Puntos</span></div>
         </div>
         <div class="res-rewards">
-          <span>${icon("coin", 16)} +${coins}</span><span>${icon("gem", 16)} +${premium}</span><span>XP +${xpGain}</span>
+          ${droppedMat ? `<span data-res="mat"><img src="enemies/${matFile(droppedMat.id)}.webp" style="width:16px;height:16px;object-fit:contain"> ${droppedMat.name}</span>` : ""}
+          <span data-res="xp">XP +${xpGain}</span><span data-res="coin">${icon("coin", 16)} +${coins}</span><span>${icon("gem", 16)} +${premium}</span>
           ${ticketsGained > 0 ? `<span>${gicon("ticket", 16)} +${ticketsGained}</span>` : ""}
           ${lv.leveled ? `<div class="lvup">SUBISTE ${lv.levels} NIVEL${lv.levels > 1 ? "ES" : ""}</div>` : ""}
         </div>
-        ${wasGuided ? `<div class="cc-bubble result-coach"><img class="cc-coach" src="${coachSkinImg(s.coachSkin)}" alt="" onerror="this.remove()"><div class="cc-txt"><span class="cc-name">${COACH_NAME}</span>Ese asalto te ha costado STAMINA (se recarga con el tiempo). Y mira: has soltado una <b>Muela de Orco</b> — un material para más adelante. Vuelve al menú, seguimos otro día.</div></div>` : ""}
         <button class="primary" id="again">Reintentar</button>
         <button id="toCampaign">Campaña</button>
         <button class="ghost" id="toHome">Inicio</button>
@@ -271,10 +284,24 @@ class Game implements App {
     this.root.querySelector<HTMLButtonElement>("#again")!.onclick = () => this.startFight(enemyId, episodeId);
     this.root.querySelector<HTMLButtonElement>("#toCampaign")!.onclick = () => this.go("campaign");
     this.root.querySelector<HTMLButtonElement>("#toHome")!.onclick = () => this.go("home");
+
+    // guided first fight: coach walks the rewards row in order (material -> XP -> coins).
+    // The material popup gets a coach caption; once dismissed, the coach points at XP then coins.
+    const guideRewards = () => showSpotlight(coachSkinImg(s.coachSkin), [
+      { target: () => this.root.querySelector<HTMLElement>('[data-res="xp"]'), lines: RESULT_GUIDE.xp },
+      { target: () => this.root.querySelector<HTMLElement>('[data-res="coin"]'), lines: RESULT_GUIDE.coins },
+    ]);
     // big reveal for a rare combat drop (cassette > material > ticket)
     if (droppedCas) revealOverlay(gicon("cassette", 130), droppedCas.name, "¡Cassette!", "rare");
-    else if (droppedMat) revealOverlay(`<img src="enemies/${droppedMat.id === "muela_orco" ? "muela-orco" : droppedMat.id}.webp" style="width:100%;height:100%;object-fit:contain">`, droppedMat.name, "¡Material!", "uncommon");
-    else if (ticketsGained > 0) revealOverlay(gicon("ticket", 130), "Ticket de refuerzo", `+${ticketsGained}`, "legendary");
+    else if (droppedMat) {
+      revealOverlay(
+        `<img src="enemies/${matFile(droppedMat.id)}.webp" style="width:100%;height:100%;object-fit:contain">`,
+        droppedMat.name, "¡Material!", "uncommon",
+        wasGuided ? { app: this, text: RESULT_GUIDE.material } : undefined,
+        wasGuided ? guideRewards : undefined,
+      );
+    } else if (ticketsGained > 0) revealOverlay(gicon("ticket", 130), "Ticket de refuerzo", `+${ticketsGained}`, "legendary");
+    else if (wasGuided) guideRewards();
   }
 }
 

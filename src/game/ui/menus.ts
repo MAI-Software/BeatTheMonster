@@ -16,6 +16,7 @@ import { GLOBAL_SONG } from "../systems/song";
 import { applyMenuVolume, ensureMenuMusic, isMenuPlaying, stopMenuMusic } from "../systems/menuMusic";
 import { PLAYER_SKINS, COACH_SKINS, ALL_SKINS, playerSkinImg, coachSkinImg } from "../data/skins";
 import { icon, gicon, type IconName, type GIconName } from "./icons";
+import { showSpotlight } from "./guide";
 
 export interface App {
   root: HTMLElement; save: any;
@@ -40,74 +41,31 @@ const slotIcon: Record<string, IconName> = { head: "headband", gloves: "glove", 
 
 // Satisfying full-screen reveal when you craft or pull an item. Darkens the
 // screen, shows the item big + animated, dismiss on tap. Plays a reveal sound.
-export function revealOverlay(faceHtml: string, name: string, sub: string, rarity: string): void {
+// coachLine (guided-tour only): captions the reveal with a coach line + portrait;
+// onClose fires after the tap-to-dismiss animation finishes (chain the next guide step).
+export function revealOverlay(faceHtml: string, name: string, sub: string, rarity: string, coachLine?: { app: App; text: string }, onClose?: () => void): void {
   sfx.reveal();
   const ov = document.createElement("div");
   ov.className = `reveal-ov r-${rarity}`;
-  ov.innerHTML = `<div class="rv-card"><div class="rv-face">${faceHtml}</div><div class="rv-name">${name}</div>${sub ? `<div class="rv-sub">${sub}</div>` : ""}<div class="rv-tap">Toca para continuar</div></div>`;
+  ov.innerHTML = `<div class="rv-card"><div class="rv-face">${faceHtml}</div><div class="rv-name">${name}</div>${sub ? `<div class="rv-sub">${sub}</div>` : ""}<div class="rv-tap">Toca para continuar</div></div>` +
+    (coachLine ? `<div class="cc-bubble rv-coach"><img class="cc-coach" src="${coachSkinImg(coachLine.app.save.coachSkin)}" alt="" onerror="this.remove()"><div class="cc-txt"><span class="cc-name">${COACH_NAME}</span>${coachLine.text}</div></div>` : "");
   document.body.appendChild(ov);
   requestAnimationFrame(() => ov.classList.add("show"));
-  ov.onclick = () => { ov.classList.remove("show"); setTimeout(() => ov.remove(), 250); };
+  ov.onclick = () => { ov.classList.remove("show"); setTimeout(() => { ov.remove(); onClose?.(); }, 250); };
 }
 
-// Guided-tour spotlight: dim everything with a "hole" over the target, red arrow + coach
-// line. A full-screen blocker forwards only clicks inside the target's rect (forces the tap).
-function showGuide(app: App, selector: string, text: string) {
-  document.querySelectorAll(".guide-fx").forEach((e) => e.remove());
-  let el = app.root.querySelector<HTMLElement>(selector);
+// Guided-tour spotlight: thin wrapper around the shared spotlight engine for a single
+// on-screen target. Hides any coach art already sitting in this menu first, so it never
+// shows twice (once dim behind, once speaking big). Pass an array to split long dialogue
+// into consecutive ≤3-line boxes.
+function showGuide(app: App, selector: string, text: string | string[]) {
+  app.root.querySelectorAll<HTMLElement>(".ha-coach").forEach((e) => (e.style.visibility = "hidden"));
+  const el = app.root.querySelector<HTMLElement>(selector);
   if (!el) return;
   el.scrollIntoView({ block: "center" });
-  const g = document.createElement("div");
-  g.className = "guide-fx";
-  g.innerHTML = `<div class="guide-hole"></div>
-    <div class="guide-arrow">▼</div>
-    <img class="gb-coach" src="${coachSkinImg(app.save.coachSkin)}" alt="" onerror="this.remove()">
-    <div class="guide-bubble"><div class="gb-txt"><span class="gb-name">${COACH_NAME}</span>${text}</div></div>`;
-  document.body.appendChild(g);
-  const hole = g.querySelector<HTMLElement>(".guide-hole")!;
-  const arrow = g.querySelector<HTMLElement>(".guide-arrow")!;
-  const bubble = g.querySelector<HTMLElement>(".guide-bubble")!;
-  const coach = g.querySelector<HTMLElement>(".gb-coach");
-  const pad = 8;
-  // reposition against the target's CURRENT rect. Runs on a rAF loop (real devices) AND on
-  // timers/events, so it still settles where rAF is throttled (e.g. a hidden preview tab)
-  // and after the target grows late (its bg image loads).
-  const reposition = () => {
-    if (!g.isConnected) return;
-    const live = app.root.querySelector<HTMLElement>(selector); if (live) el = live;
-    const r = el!.getBoundingClientRect(); const H = window.innerHeight;
-    hole.style.left = `${r.left - pad}px`; hole.style.top = `${r.top - pad}px`;
-    hole.style.width = `${r.width + pad * 2}px`; hole.style.height = `${r.height + pad * 2}px`;
-    // box never at the top. If the target sits low (would be covered by a bottom box),
-    // put the box ABOVE the target with the arrow pointing DOWN; otherwise box at the
-    // bottom with the arrow pointing UP at the target.
-    const targetLow = r.top > H * 0.5;
-    arrow.style.left = `${r.left + r.width / 2}px`;
-    if (targetLow) {
-      bubble.style.top = "auto"; bubble.style.bottom = `${Math.round(H - r.top + 14)}px`;
-      arrow.textContent = "▼"; arrow.style.top = `${r.top - 14}px`; arrow.style.transform = "translate(-50%,-100%)";
-    } else {
-      bubble.style.top = "auto"; bubble.style.bottom = "calc(env(safe-area-inset-bottom) + 20px)";
-      arrow.textContent = "▲"; arrow.style.top = `${r.bottom + 6}px`; arrow.style.transform = "translate(-50%,0)";
-    }
-    // coach emerges from BEHIND the box: its bottom sits at the box bottom (fully behind the
-    // box, legs hidden) and it rises above the box top. Box paints over it (later in DOM).
-    if (coach) {
-      const br = bubble.getBoundingClientRect();
-      coach.style.bottom = `${Math.round(H - br.bottom)}px`;
-      coach.style.height = `${Math.round(br.height + 130)}px`;
-      coach.style.left = `${Math.round(br.left + 8)}px`;
-    }
-  };
-  const loop = () => { if (!g.isConnected) return; reposition(); requestAnimationFrame(loop); };
-  loop();
-  [90, 250, 550, 1000, 1600].forEach((ms) => setTimeout(() => { if (g.isConnected) reposition(); }, ms));
-  g.onclick = (e) => {
-    const t = e.target as HTMLElement;
-    if (t.closest(".guide-bubble")) return;
-    const rr = el!.getBoundingClientRect();
-    if (e.clientX >= rr.left && e.clientX <= rr.right && e.clientY >= rr.top && e.clientY <= rr.bottom) el!.click();
-  };
+  showSpotlight(coachSkinImg(app.save.coachSkin), [
+    { target: () => app.root.querySelector<HTMLElement>(selector), lines: Array.isArray(text) ? text : [text], actionable: true },
+  ]);
 }
 export function clearGuide(_app: App) { document.querySelectorAll(".guide-fx").forEach((e) => e.remove()); }
 
@@ -183,7 +141,7 @@ export function renderHome(app: App) {
   const homeTop = app.root.querySelector<HTMLElement>("#homeTop")!;
   app.root.querySelector<HTMLButtonElement>("#menuToggle")!.onclick = () => homeTop.classList.toggle("open");
   app.root.querySelector<HTMLButtonElement>("#radioBtn")!.onclick = () => app.go("radio");
-  if (s.guiding) showGuide(app, ".nav-main", "Primero, a pelear. Toca <b>LUCHAR</b>.");
+  if (s.guiding) showGuide(app, ".nav-main", "Te lo voy a ir explicando todo sobre la marcha. Primero vamos al portal: pulsa <b>LUCHAR</b>.");
 }
 const emj = (e: string) => `<span class="gi-emoji" style="font-size:24px">${e}</span>`;
 const navBtn = (nav: string, label: string, notify = false) =>

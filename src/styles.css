@@ -231,6 +231,7 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .rv-name { font-size: 26px; font-weight: 900; color: #fff; text-shadow: 0 2px 10px #000; }
 .rv-sub { font-size: 14px; color: #ffd23b; font-weight: 800; }
 .rv-tap { margin-top: 18px; font-size: 12px; color: #ffffff99; letter-spacing: 1px; animation: rvTap 1.4s ease-in-out infinite; }
+.rv-coach { margin-top: 10px; cursor: default; }
 @keyframes rvTap { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
 /* pull dialog (x1/x10) */
 .pull-dialog .pd-card { background: var(--panel2); border: 1px solid var(--line); border-radius: 18px; padding: 22px; width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 10px; text-align: center; }
@@ -559,9 +560,10 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .guide-arrow { position: fixed; transform: translate(-50%, -100%); color: var(--red); font-size: 34px; text-shadow: 0 0 10px var(--red); pointer-events: none; animation: guideArrow .8s ease-in-out infinite; }
 @keyframes guideArrow { 0%, 100% { margin-top: 0; } 50% { margin-top: -8px; } }
 .guide-bubble { position: fixed; left: 50%; transform: translateX(-50%); width: min(92%, 440px); background: var(--panel2); border: 1px solid var(--red); border-radius: 14px; padding: 12px 16px; font-size: 14px; line-height: 1.4; box-shadow: 0 8px 24px #000b; pointer-events: none; }
-.gb-coach { position: fixed; width: 150px; object-fit: contain; object-position: bottom center; pointer-events: none; filter: drop-shadow(0 6px 16px #000c); }
+.gb-coach { position: fixed; width: 270px; object-fit: contain; object-position: bottom center; pointer-events: none; filter: drop-shadow(0 6px 16px #000c); }
 .guide-bubble .gb-txt { min-width: 0; }
 .guide-bubble .gb-name { color: var(--red); display: block; font-size: 12px; font-weight: 800; margin-bottom: 3px; }
+.guide-bubble .gb-next { margin-top: 8px; font-size: 11px; color: #ffffff88; letter-spacing: .5px; }
 .guide-bubble b { color: #fff; }
 .seg { display: flex; gap: 8px; }
 .seg button { flex: 1; padding: 12px; border-radius: 11px; background: var(--bg2); border: 1px solid var(--line); font-weight: 700; font-size: 13px; }
@@ -635,13 +637,11 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 .quit { position: absolute; top: calc(env(safe-area-inset-top) + 12px); right: 14px; z-index: 5; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: #000a; color: #fff; display: grid; place-items: center; }
 .omit-btn { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 92px); transform: translateX(-50%); z-index: 22; padding: 10px 18px; border-radius: 12px; border: none; background: var(--red); color: #fff; font-weight: 900; font-size: 13px; box-shadow: 0 4px 14px #000a, 0 0 16px #ff2a3688; }
 .omit-btn:active { transform: translateX(-50%) scale(.95); }
-.combat-coach { position: absolute; inset: 0; z-index: 30; background: #0007; display: flex; align-items: flex-end; justify-content: center; padding: 0 16px calc(env(safe-area-inset-bottom) + 26px); }
 .cc-bubble { width: min(94%, 460px); display: flex; align-items: center; gap: 12px; background: var(--panel2); border: 1px solid var(--red); border-radius: 16px; padding: 14px 18px; font-size: 14px; line-height: 1.45; box-shadow: 0 10px 30px #000c; }
 .cc-coach { width: 92px; height: 112px; flex: none; margin: -24px 0 -24px -4px; object-fit: contain; object-position: bottom center; filter: drop-shadow(0 4px 10px #000a); }
 .cc-txt { flex: 1; min-width: 0; }
 .cc-name { color: var(--red); display: block; font-size: 12px; font-weight: 800; margin-bottom: 4px; }
 .cc-next { margin-top: 8px; font-size: 11px; color: #ffffff88; letter-spacing: .5px; }
-.result-coach { margin: 8px auto 4px; text-align: left; max-width: 460px; }
 
 /* combo + points OUTSIDE the triangle (top-left) */
 .combat-info { position: absolute; top: calc(env(safe-area-inset-top) + 74px); left: 16px; z-index: 3; pointer-events: none; }
@@ -656,6 +656,10 @@ h4 { margin: 16px 0 8px; font-size: 13px; color: var(--dim); text-transform: upp
 /* minimal pre-start hint (no instruction box) */
 .prep-hint { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); z-index: 4; font-weight: 900; letter-spacing: 4px; font-size: 16px; color: #fff; opacity: .9; pointer-events: none; text-shadow: 0 2px 10px #000; }
 .prep-hint.ok { color: var(--green); }
+/* first-fight staged tutorial: HUD starts dark, each stage un-dims its own piece */
+.hud-top.tut-dim, .hud-bottom.tut-dim { opacity: .12; transition: opacity .4s ease; pointer-events: none; }
+.hud-top, .hud-bottom { transition: opacity .4s ease; }
+.drill-count { position: absolute; top: 16%; left: 50%; transform: translateX(-50%); z-index: 21; font-weight: 900; letter-spacing: 2px; font-size: 15px; color: var(--gold); background: #000a; padding: 8px 16px; border-radius: 20px; box-shadow: 0 4px 14px #000a; pointer-events: none; }
 
 /* ---------- toast ---------- */
 .toast { position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%); z-index: 99; background: #000e; color: #fff; padding: 12px 18px; border-radius: 22px; border: 1px solid var(--line); font-size: 14px; animation: pop .2s; }
