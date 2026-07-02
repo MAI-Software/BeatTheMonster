@@ -141,8 +141,9 @@ export function runCombat(
       });
     }
     function tutStageTriangle() {
+      tutTriRevealed = true; // reveal it AS the coach points at it, not after this dialogue closes
       closeGuide = showSpotlight(opts.coachImg ?? "", [{ target: triRect, lines: COMBAT_GUIDE.triangle }], {
-        onDone: () => { tutTriRevealed = true; tutStagePunchIntro(); },
+        onDone: () => tutStagePunchIntro(),
       });
     }
     function tutStagePunchIntro() {
