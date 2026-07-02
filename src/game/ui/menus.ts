@@ -54,38 +54,59 @@ export function revealOverlay(faceHtml: string, name: string, sub: string, rarit
 // line. A full-screen blocker forwards only clicks inside the target's rect (forces the tap).
 function showGuide(app: App, selector: string, text: string) {
   document.querySelectorAll(".guide-fx").forEach((e) => e.remove());
-  const el = app.root.querySelector<HTMLElement>(selector);
+  let el = app.root.querySelector<HTMLElement>(selector);
   if (!el) return;
   el.scrollIntoView({ block: "center" });
   const g = document.createElement("div");
   g.className = "guide-fx";
   g.innerHTML = `<div class="guide-hole"></div>
     <div class="guide-arrow">▼</div>
-    <div class="guide-bubble"><img class="gb-coach" src="${coachSkinImg(app.save.coachSkin)}" alt="" onerror="this.remove()"><div class="gb-txt"><span class="gb-name">${COACH_NAME}</span>${text}</div></div>`;
+    <img class="gb-coach" src="${coachSkinImg(app.save.coachSkin)}" alt="" onerror="this.remove()">
+    <div class="guide-bubble"><div class="gb-txt"><span class="gb-name">${COACH_NAME}</span>${text}</div></div>`;
   document.body.appendChild(g);
   const hole = g.querySelector<HTMLElement>(".guide-hole")!;
   const arrow = g.querySelector<HTMLElement>(".guide-arrow")!;
   const bubble = g.querySelector<HTMLElement>(".guide-bubble")!;
+  const coach = g.querySelector<HTMLElement>(".gb-coach");
   const pad = 8;
-  // re-measure every frame: the target can grow late (e.g. its bg image loads),
-  // so a one-shot rect would freeze the hole as a thin strip.
-  const place = () => {
+  // reposition against the target's CURRENT rect. Runs on a rAF loop (real devices) AND on
+  // timers/events, so it still settles where rAF is throttled (e.g. a hidden preview tab)
+  // and after the target grows late (its bg image loads).
+  const reposition = () => {
     if (!g.isConnected) return;
-    const r = el.getBoundingClientRect();
+    const live = app.root.querySelector<HTMLElement>(selector); if (live) el = live;
+    const r = el!.getBoundingClientRect(); const H = window.innerHeight;
     hole.style.left = `${r.left - pad}px`; hole.style.top = `${r.top - pad}px`;
     hole.style.width = `${r.width + pad * 2}px`; hole.style.height = `${r.height + pad * 2}px`;
-    arrow.style.left = `${r.left + r.width / 2}px`; arrow.style.top = `${r.top - 12}px`;
-    const belowMid = (r.top + r.height / 2) > window.innerHeight * 0.5;
-    bubble.style.top = belowMid ? "calc(env(safe-area-inset-top) + 80px)" : "auto";
-    bubble.style.bottom = belowMid ? "auto" : "100px";
-    requestAnimationFrame(place);
+    // box never at the top. If the target sits low (would be covered by a bottom box),
+    // put the box ABOVE the target with the arrow pointing DOWN; otherwise box at the
+    // bottom with the arrow pointing UP at the target.
+    const targetLow = r.top > H * 0.5;
+    arrow.style.left = `${r.left + r.width / 2}px`;
+    if (targetLow) {
+      bubble.style.top = "auto"; bubble.style.bottom = `${Math.round(H - r.top + 14)}px`;
+      arrow.textContent = "▼"; arrow.style.top = `${r.top - 14}px`; arrow.style.transform = "translate(-50%,-100%)";
+    } else {
+      bubble.style.top = "auto"; bubble.style.bottom = "calc(env(safe-area-inset-bottom) + 20px)";
+      arrow.textContent = "▲"; arrow.style.top = `${r.bottom + 6}px`; arrow.style.transform = "translate(-50%,0)";
+    }
+    // coach emerges from BEHIND the box: its bottom sits at the box bottom (fully behind the
+    // box, legs hidden) and it rises above the box top. Box paints over it (later in DOM).
+    if (coach) {
+      const br = bubble.getBoundingClientRect();
+      coach.style.bottom = `${Math.round(H - br.bottom)}px`;
+      coach.style.height = `${Math.round(br.height + 130)}px`;
+      coach.style.left = `${Math.round(br.left + 8)}px`;
+    }
   };
-  place();
+  const loop = () => { if (!g.isConnected) return; reposition(); requestAnimationFrame(loop); };
+  loop();
+  [90, 250, 550, 1000, 1600].forEach((ms) => setTimeout(() => { if (g.isConnected) reposition(); }, ms));
   g.onclick = (e) => {
     const t = e.target as HTMLElement;
     if (t.closest(".guide-bubble")) return;
-    const rr = el.getBoundingClientRect();
-    if (e.clientX >= rr.left && e.clientX <= rr.right && e.clientY >= rr.top && e.clientY <= rr.bottom) el.click();
+    const rr = el!.getBoundingClientRect();
+    if (e.clientX >= rr.left && e.clientX <= rr.right && e.clientY >= rr.top && e.clientY <= rr.bottom) el!.click();
   };
 }
 export function clearGuide(_app: App) { document.querySelectorAll(".guide-fx").forEach((e) => e.remove()); }
